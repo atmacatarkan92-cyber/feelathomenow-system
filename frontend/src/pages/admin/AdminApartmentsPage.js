@@ -1,0 +1,1020 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { fetchAdminUnits, fetchAdminRooms, normalizeUnit, normalizeRoom } from "../../api/adminData";
+
+const initialUnits = [
+  {
+    id: 1,
+    unitId: "FAH-U-0001",
+    place: "Zürich",
+    zip: "8001",
+    address: "Bahnhofstrasse 12",
+    type: "Apartment",
+    status: "Belegt",
+    rooms: 2.5,
+    occupiedRooms: 0,
+    tenantPriceMonthly: 2450,
+    landlordRentMonthly: 1850,
+    utilitiesMonthly: 180,
+    cleaningCostMonthly: 120,
+    availableFrom: "2026-04-01",
+    landlordLeaseStartDate: "2026-04-01",
+  },
+  {
+    id: 2,
+    unitId: "FAH-U-0002",
+    place: "Basel",
+    zip: "4058",
+    address: "Clarastrasse 8",
+    type: "Co-Living",
+    status: "Teilbelegt",
+    rooms: 3,
+    occupiedRooms: 1,
+    tenantPriceMonthly: 3400,
+    landlordRentMonthly: 2400,
+    utilitiesMonthly: 250,
+    cleaningCostMonthly: 180,
+    availableFrom: "2026-03-15",
+    landlordLeaseStartDate: "2026-04-01",
+  },
+  {
+    id: 3,
+    unitId: "FAH-U-0003",
+    place: "Bern",
+    zip: "3011",
+    address: "Marktgasse 21",
+    type: "Apartment",
+    status: "Reserviert",
+    rooms: 3.5,
+    occupiedRooms: 0,
+    tenantPriceMonthly: 2200,
+    landlordRentMonthly: 1700,
+    utilitiesMonthly: 160,
+    cleaningCostMonthly: 100,
+    availableFrom: "2026-04-15",
+    landlordLeaseStartDate: "2026-04-01",
+  },
+];
+
+const emptyForm = {
+  place: "",
+  zip: "",
+  address: "",
+  type: "Apartment",
+  rooms: "",
+  occupiedRooms: 0,
+  status: "Frei",
+  tenantPriceMonthly: "",
+  landlordRentMonthly: "",
+  utilitiesMonthly: "",
+  cleaningCostMonthly: "",
+  availableFrom: "",
+  landlordLeaseStartDate: "",
+};
+
+function roundCurrency(value) {
+  return Math.round(Number(value || 0));
+}
+
+function formatCurrency(value) {
+  return `CHF ${roundCurrency(value).toLocaleString("de-CH")}`;
+}
+
+function getTodayDateString() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function hasLeaseStarted(unit) {
+  if (!unit.landlordLeaseStartDate) return true;
+  return unit.landlordLeaseStartDate <= getTodayDateString();
+}
+
+function getRunningMonthlyCosts(unit) {
+  if (!hasLeaseStarted(unit)) return 0;
+
+  return (
+    Number(unit.landlordRentMonthly || 0) +
+    Number(unit.utilitiesMonthly || 0) +
+    Number(unit.cleaningCostMonthly || 0)
+  );
+}
+
+function calculateApartmentProfit(unit) {
+  const tenantPrice = Number(unit.tenantPriceMonthly || 0);
+  const runningCosts = getRunningMonthlyCosts(unit);
+  return tenantPrice - runningCosts;
+}
+
+function getRoomsForUnit(unitId, allRooms = []) {
+  return allRooms.filter((room) => (room.unitId || room.unit_id) === unitId);
+}
+
+function getCoLivingMetrics(unit, allRooms = []) {
+  const leaseStarted = hasLeaseStarted(unit);
+  const rooms = getRoomsForUnit(unit.unitId || unit.id, allRooms);
+
+  if (rooms.length === 0) {
+    const occupied = Number(unit.occupiedRooms || 0);
+    const total = Number(unit.rooms || 0);
+    const fullRevenue = Number(unit.tenantPriceMonthly || 0);
+
+    const currentRevenue =
+      total > 0 && leaseStarted ? (fullRevenue / total) * occupied : 0;
+
+    return {
+      occupiedCount: occupied,
+      reservedCount: 0,
+      freeCount: Math.max(total - occupied, 0),
+      totalRooms: total,
+      fullRevenue,
+      currentRevenue,
+      vacancyLoss: leaseStarted ? fullRevenue - currentRevenue : 0,
+      currentProfit: currentRevenue - getRunningMonthlyCosts(unit),
+      displayStatus:
+        occupied === 0
+          ? "Frei"
+          : occupied === total
+          ? "Belegt"
+          : "Teilbelegt",
+    };
+  }
+
+  const occupiedRooms = rooms.filter((room) => room.status === "Belegt");
+  const reservedRooms = rooms.filter((room) => room.status === "Reserviert");
+  const freeRooms = rooms.filter((room) => room.status === "Frei");
+
+  const fullRevenue = rooms.reduce(
+    (sum, room) => sum + Number(room.priceMonthly || 0),
+    0
+  );
+
+  const currentRevenue = leaseStarted
+    ? occupiedRooms.reduce(
+        (sum, room) => sum + Number(room.priceMonthly || 0),
+        0
+      )
+    : 0;
+
+  let displayStatus = "Frei";
+  if (occupiedRooms.length > 0 && occupiedRooms.length === rooms.length) {
+    displayStatus = "Belegt";
+  } else if (occupiedRooms.length > 0 || reservedRooms.length > 0) {
+    displayStatus = "Teilbelegt";
+  }
+
+  return {
+    occupiedCount: occupiedRooms.length,
+    reservedCount: reservedRooms.length,
+    freeCount: freeRooms.length,
+    totalRooms: rooms.length,
+    fullRevenue,
+    currentRevenue,
+    vacancyLoss: leaseStarted ? fullRevenue - currentRevenue : 0,
+    currentProfit: currentRevenue - getRunningMonthlyCosts(unit),
+    displayStatus,
+  };
+}
+
+function SectionCard({ title, subtitle, children }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div className="mb-5">
+        <h3 className="text-2xl font-semibold text-slate-800">{title}</h3>
+        {subtitle ? <p className="text-slate-500 mt-1">{subtitle}</p> : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ApartmentTable({ items, onEdit, onDelete }) {
+  return (
+    <SectionCard
+      title="Business Apartments / klassische Apartments"
+      subtitle="Einzelne vermietbare Einheiten mit einem Vertrag pro Apartment."
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-500 text-sm">
+              <th className="py-3 pr-4">Unit ID</th>
+              <th className="py-3 pr-4">Ort</th>
+              <th className="py-3 pr-4">PLZ</th>
+              <th className="py-3 pr-4">Adresse</th>
+              <th className="py-3 pr-4">Typ</th>
+              <th className="py-3 pr-4">Status</th>
+              <th className="py-3 pr-4">Zimmer</th>
+              <th className="py-3 pr-4">Mieterpreis</th>
+              <th className="py-3 pr-4">Mietkosten</th>
+              <th className="py-3 pr-4">Gewinn aktuell</th>
+              <th className="py-3 pr-4">Verfügbar ab</th>
+              <th className="py-3 pr-4">Mietstart Vermieter</th>
+              <th className="py-3 pr-4">Aktionen</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {items.map((unit) => (
+              <tr
+                key={unit.id}
+                className="border-b border-slate-100 text-slate-700"
+              >
+                <td className="py-4 pr-4 font-medium">
+                  <Link
+                    to={`/admin/units/${unit.unitId}`}
+                    className="text-orange-600 hover:text-orange-700 hover:underline"
+                  >
+                    {unit.unitId}
+                  </Link>
+                </td>
+                <td className="py-4 pr-4">{unit.place}</td>
+                <td className="py-4 pr-4">{unit.zip}</td>
+                <td className="py-4 pr-4">{unit.address}</td>
+                <td className="py-4 pr-4">{unit.type}</td>
+                <td className="py-4 pr-4">{unit.status}</td>
+                <td className="py-4 pr-4">{unit.rooms}</td>
+                <td className="py-4 pr-4">
+                  {formatCurrency(unit.tenantPriceMonthly)}
+                </td>
+                <td className="py-4 pr-4">
+                  {formatCurrency(unit.landlordRentMonthly)}
+                </td>
+                <td className="py-4 pr-4 font-medium">
+                  {formatCurrency(calculateApartmentProfit(unit))}
+                </td>
+                <td className="py-4 pr-4">{unit.availableFrom}</td>
+                <td className="py-4 pr-4">
+                  {unit.landlordLeaseStartDate || "-"}
+                </td>
+                <td className="py-4 pr-4">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onEdit(unit)}
+                      className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50"
+                    >
+                      Bearbeiten
+                    </button>
+                    <button
+                      onClick={() => onDelete(unit.id)}
+                      className="px-3 py-2 rounded-lg border border-red-300 text-red-600 text-sm hover:bg-red-50"
+                    >
+                      Löschen
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+
+            {items.length === 0 && (
+              <tr>
+                <td colSpan="13" className="py-8 text-center text-slate-500">
+                  Keine Apartments gefunden.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </SectionCard>
+  );
+}
+
+function CoLivingTable({ items, onEdit, onDelete }) {
+  return (
+    <SectionCard
+      title="Co-Living Units"
+      subtitle="Mehrzimmer-Einheiten mit Room-Logik, Belegung und Umsatzberechnung."
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-500 text-sm">
+              <th className="py-3 pr-4">Unit ID</th>
+              <th className="py-3 pr-4">Ort</th>
+              <th className="py-3 pr-4">PLZ</th>
+              <th className="py-3 pr-4">Adresse</th>
+              <th className="py-3 pr-4">Status</th>
+              <th className="py-3 pr-4">Belegt</th>
+              <th className="py-3 pr-4">Reserviert</th>
+              <th className="py-3 pr-4">Frei</th>
+              <th className="py-3 pr-4">Vollbelegung</th>
+              <th className="py-3 pr-4">Aktuell</th>
+              <th className="py-3 pr-4">Leerstand</th>
+              <th className="py-3 pr-4">Gewinn aktuell</th>
+              <th className="py-3 pr-4">Mietstart Vermieter</th>
+              <th className="py-3 pr-4">Aktionen</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {items.map((unit) => {
+              const metrics = getCoLivingMetrics(unit, rooms);
+
+              return (
+                <tr
+                  key={unit.id}
+                  className="border-b border-slate-100 text-slate-700"
+                >
+                  <td className="py-4 pr-4 font-medium">
+                    <Link
+                      to={`/admin/units/${unit.unitId}`}
+                      className="text-orange-600 hover:text-orange-700 hover:underline"
+                    >
+                      {unit.unitId}
+                    </Link>
+                  </td>
+                  <td className="py-4 pr-4">{unit.place}</td>
+                  <td className="py-4 pr-4">{unit.zip}</td>
+                  <td className="py-4 pr-4">{unit.address}</td>
+                  <td className="py-4 pr-4">{metrics.displayStatus}</td>
+                  <td className="py-4 pr-4">{metrics.occupiedCount}</td>
+                  <td className="py-4 pr-4">{metrics.reservedCount}</td>
+                  <td className="py-4 pr-4">{metrics.freeCount}</td>
+                  <td className="py-4 pr-4">
+                    {formatCurrency(metrics.fullRevenue)}
+                  </td>
+                  <td className="py-4 pr-4">
+                    {formatCurrency(metrics.currentRevenue)}
+                  </td>
+                  <td className="py-4 pr-4">
+                    {formatCurrency(metrics.vacancyLoss)}
+                  </td>
+                  <td className="py-4 pr-4 font-medium">
+                    {formatCurrency(metrics.currentProfit)}
+                  </td>
+                  <td className="py-4 pr-4">
+                    {unit.landlordLeaseStartDate || "-"}
+                  </td>
+                  <td className="py-4 pr-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => onEdit(unit)}
+                        className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50"
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
+                        onClick={() => onDelete(unit.id)}
+                        className="px-3 py-2 rounded-lg border border-red-300 text-red-600 text-sm hover:bg-red-50"
+                      >
+                        Löschen
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {items.length === 0 && (
+              <tr>
+                <td colSpan="14" className="py-8 text-center text-slate-500">
+                  Keine Co-Living Einheiten gefunden.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </SectionCard>
+  );
+}
+
+function StatCard({ label, value, hint }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="text-2xl font-bold text-slate-800 mt-2">{value}</p>
+      {hint ? <p className="text-xs text-slate-400 mt-2">{hint}</p> : null}
+    </div>
+  );
+}
+
+function AdminApartmentsPage() {
+  const [units, setUnits] = useState([]);
+  const [rooms, setRooms] = useState([]);
+
+  useEffect(() => {
+    fetchAdminUnits()
+      .then((data) => setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []))
+      .catch(() => setUnits([]));
+    fetchAdminRooms()
+      .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
+      .catch(() => setRooms([]));
+  }, []);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState(emptyForm);
+
+  const nextUnitId = useMemo(() => {
+    const maxNumber = units.reduce((max, item) => {
+      const uid = item.unitId || item.id || "";
+      const parts = String(uid).split("-");
+      const number = parseInt(parts[parts.length - 1] || "0", 10);
+      return !isNaN(number) && number > max ? number : max;
+    }, 0);
+    return `FAH-U-${String(maxNumber + 1).padStart(4, "0")}`;
+  }, [units]);
+
+  const filteredUnits = useMemo(() => {
+    const search = searchTerm.toLowerCase().trim();
+    if (!search) return units;
+    return units.filter((unit) => {
+      const a = String(unit.unitId || unit.id || "").toLowerCase();
+      const b = String(unit.place || unit.city || "").toLowerCase();
+      const c = String(unit.zip || "").toLowerCase();
+      const d = String(unit.address || "").toLowerCase();
+      const e = String(unit.type || "").toLowerCase();
+      const f = String(unit.status || "").toLowerCase();
+      return a.includes(search) || b.includes(search) || c.includes(search) || d.includes(search) || e.includes(search) || f.includes(search);
+    });
+  }, [units, searchTerm]);
+
+  const apartmentUnits = filteredUnits.filter((item) => item.type === "Apartment");
+  const coLivingUnits = filteredUnits.filter((item) => item.type === "Co-Living");
+
+  const summary = useMemo(() => {
+    const totalUnits = filteredUnits.length;
+    const totalApartments = apartmentUnits.length;
+    const totalCoLivingUnits = coLivingUnits.length;
+
+    const currentRevenue = filteredUnits.reduce((sum, unit) => {
+      if (unit.type === "Apartment") {
+        return sum + Number(unit.tenantPriceMonthly || 0);
+      }
+
+      const metrics = getCoLivingMetrics(unit, rooms);
+      return sum + Number(metrics.currentRevenue || 0);
+    }, 0);
+
+    const runningCosts = filteredUnits.reduce(
+      (sum, unit) => sum + getRunningMonthlyCosts(unit),
+      0
+    );
+
+    return {
+      totalUnits,
+      totalApartments,
+      totalCoLivingUnits,
+      currentRevenue,
+      runningCosts,
+      currentProfit: currentRevenue - runningCosts,
+    };
+  }, [filteredUnits, apartmentUnits.length, coLivingUnits.length]);
+
+  function handleOpenCreateModal() {
+    setEditingId(null);
+    setFormData(emptyForm);
+    setIsModalOpen(true);
+  }
+
+  function handleOpenEditModal(unit) {
+    setEditingId(unit.id);
+    setFormData({
+      place: unit.place,
+      zip: unit.zip,
+      address: unit.address,
+      type: unit.type,
+      rooms: unit.rooms,
+      occupiedRooms: unit.occupiedRooms || 0,
+      status: unit.status,
+      tenantPriceMonthly: unit.tenantPriceMonthly,
+      landlordRentMonthly: unit.landlordRentMonthly,
+      utilitiesMonthly: unit.utilitiesMonthly,
+      cleaningCostMonthly: unit.cleaningCostMonthly,
+      availableFrom: unit.availableFrom,
+      landlordLeaseStartDate: unit.landlordLeaseStartDate || "",
+    });
+    setIsModalOpen(true);
+  }
+
+  function handleCloseModal() {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData(emptyForm);
+  }
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    let nextValue = value;
+
+    if (name === "occupiedRooms") {
+      const totalRooms = Number(formData.rooms || 0);
+      const occupied = Number(value || 0);
+
+      if (occupied > totalRooms && totalRooms > 0) {
+        nextValue = totalRooms;
+      }
+    }
+
+    if (name === "type" && value === "Apartment") {
+      setFormData((prev) => ({
+        ...prev,
+        type: value,
+        occupiedRooms: 0,
+      }));
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: nextValue,
+    }));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    const totalRooms = Number(formData.rooms || 0);
+    let occupiedRooms = Number(formData.occupiedRooms || 0);
+
+    if (formData.type !== "Co-Living") {
+      occupiedRooms = 0;
+    }
+
+    if (occupiedRooms > totalRooms) {
+      occupiedRooms = totalRooms;
+    }
+
+    const payload = {
+      place: formData.place,
+      zip: formData.zip,
+      address: formData.address,
+      type: formData.type,
+      rooms: Number(formData.rooms || 0),
+      occupiedRooms,
+      status: formData.status,
+      tenantPriceMonthly: Number(formData.tenantPriceMonthly || 0),
+      landlordRentMonthly: Number(formData.landlordRentMonthly || 0),
+      utilitiesMonthly: Number(formData.utilitiesMonthly || 0),
+      cleaningCostMonthly: Number(formData.cleaningCostMonthly || 0),
+      availableFrom: formData.availableFrom,
+      landlordLeaseStartDate: formData.landlordLeaseStartDate,
+    };
+
+    if (editingId) {
+      setUnits((prev) =>
+        prev.map((item) =>
+          item.id === editingId
+            ? {
+                ...item,
+                ...payload,
+              }
+            : item
+        )
+      );
+    } else {
+      const newUnit = {
+        id: Date.now(),
+        unitId: nextUnitId,
+        ...payload,
+      };
+
+      setUnits((prev) => [newUnit, ...prev]);
+    }
+
+    handleCloseModal();
+  }
+
+  function handleDelete(id) {
+    const confirmed = window.confirm(
+      "Möchtest du diese Unit wirklich löschen?"
+    );
+
+    if (!confirmed) return;
+
+    setUnits((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  const formLeaseStarted =
+    !formData.landlordLeaseStartDate ||
+    formData.landlordLeaseStartDate <= getTodayDateString();
+
+  const formRunningMonthlyCosts = formLeaseStarted
+    ? Number(formData.landlordRentMonthly || 0) +
+      Number(formData.utilitiesMonthly || 0) +
+      Number(formData.cleaningCostMonthly || 0)
+    : 0;
+
+  const currentApartmentProfit =
+    Number(formData.tenantPriceMonthly || 0) - formRunningMonthlyCosts;
+
+  const currentFreeRooms =
+    formData.type === "Co-Living"
+      ? Math.max(
+          Number(formData.rooms || 0) - Number(formData.occupiedRooms || 0),
+          0
+        )
+      : "-";
+
+  const currentCoLivingRevenue =
+    formData.type === "Co-Living" &&
+    Number(formData.rooms || 0) > 0 &&
+    formLeaseStarted
+      ? (Number(formData.tenantPriceMonthly || 0) / Number(formData.rooms || 0)) *
+        Number(formData.occupiedRooms || 0)
+      : 0;
+
+  const currentCoLivingVacancy =
+    formData.type === "Co-Living" && formLeaseStarted
+      ? Number(formData.tenantPriceMonthly || 0) - currentCoLivingRevenue
+      : 0;
+
+  const currentCoLivingProfit =
+    currentCoLivingRevenue - formRunningMonthlyCosts;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-800">
+            Apartments / Units
+          </h2>
+          <p className="text-slate-500 mt-1">
+            Verwalte hier alle vermietbaren Einheiten, also Apartments und
+            Co-Living Units.
+          </p>
+        </div>
+
+        <button
+          onClick={handleOpenCreateModal}
+          className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-lg font-medium transition"
+        >
+          + Unit hinzufügen
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+        <StatCard
+          label="Units gesamt"
+          value={summary.totalUnits}
+          hint="Alle gefilterten Einheiten"
+        />
+        <StatCard
+          label="Apartments"
+          value={summary.totalApartments}
+          hint="Klassische Einzelwohnungen"
+        />
+        <StatCard
+          label="Co-Living Units"
+          value={summary.totalCoLivingUnits}
+          hint="Mehrzimmer-Einheiten"
+        />
+        <StatCard
+          label="Aktueller Umsatz"
+          value={formatCurrency(summary.currentRevenue)}
+          hint="Auf Basis der aktuellen Daten"
+        />
+        <StatCard
+          label="Gewinn aktuell"
+          value={formatCurrency(summary.currentProfit)}
+          hint="Umsatz minus laufende Kosten"
+        />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Suche nach Unit ID, Ort, PLZ, Adresse oder Typ..."
+          className="w-full md:w-96 border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+        />
+      </div>
+
+      <div className="space-y-6">
+        <ApartmentTable
+          items={apartmentUnits}
+          onEdit={handleOpenEditModal}
+          onDelete={handleDelete}
+        />
+
+        <CoLivingTable
+          items={coLivingUnits}
+          onEdit={handleOpenEditModal}
+          onDelete={handleDelete}
+        />
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl border border-slate-200 p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-800">
+                  {editingId ? "Unit bearbeiten" : "Neue Unit hinzufügen"}
+                </h3>
+                <p className="text-slate-500 mt-1">
+                  {editingId
+                    ? "Bearbeite hier die vorhandene Unit."
+                    : "Die Unit ID wird automatisch vergeben."}
+                </p>
+              </div>
+
+              <button
+                onClick={handleCloseModal}
+                className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-slate-500">
+                {editingId ? "Unit ID" : "Automatische Unit ID"}
+              </p>
+              <p className="text-xl font-bold text-slate-800 mt-1">
+                {editingId
+                  ? units.find((item) => item.id === editingId)?.unitId
+                  : nextUnitId}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Ort
+                  </label>
+                  <input
+                    type="text"
+                    name="place"
+                    value={formData.place}
+                    onChange={handleChange}
+                    required
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    PLZ
+                  </label>
+                  <input
+                    type="text"
+                    name="zip"
+                    value={formData.zip}
+                    onChange={handleChange}
+                    required
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Adresse
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    required
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Typ
+                  </label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option>Apartment</option>
+                    <option>Co-Living</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Zimmer gesamt
+                  </label>
+                  <input
+                    type="number"
+                    name="rooms"
+                    value={formData.rooms}
+                    onChange={handleChange}
+                    required
+                    placeholder="z. B. 3"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                {formData.type === "Co-Living" && (
+                  <div>
+                    <label className="block text-sm text-slate-600 mb-2">
+                      Zimmer belegt (Übergang)
+                    </label>
+                    <input
+                      type="number"
+                      name="occupiedRooms"
+                      value={formData.occupiedRooms}
+                      onChange={handleChange}
+                      min="0"
+                      max={formData.rooms || 0}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option>Frei</option>
+                    <option>Belegt</option>
+                    <option>Reserviert</option>
+                    <option>Teilbelegt</option>
+                    <option>In Vorbereitung</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Verfügbar ab
+                  </label>
+                  <input
+                    type="date"
+                    name="availableFrom"
+                    value={formData.availableFrom}
+                    onChange={handleChange}
+                    required
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Mietbeginn an Vermieter
+                  </label>
+                  <input
+                    type="date"
+                    name="landlordLeaseStartDate"
+                    value={formData.landlordLeaseStartDate}
+                    onChange={handleChange}
+                    required
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    {formData.type === "Co-Living"
+                      ? "Vollbelegung Umsatz / Monat"
+                      : "Mieterpreis pro Monat"}
+                  </label>
+                  <input
+                    type="number"
+                    name="tenantPriceMonthly"
+                    value={formData.tenantPriceMonthly}
+                    onChange={handleChange}
+                    required
+                    placeholder={
+                      formData.type === "Co-Living" ? "z. B. 3400" : "z. B. 2450"
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Mietkosten an Vermieter
+                  </label>
+                  <input
+                    type="number"
+                    name="landlordRentMonthly"
+                    value={formData.landlordRentMonthly}
+                    onChange={handleChange}
+                    required
+                    placeholder="z. B. 1850"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Nebenkosten pro Monat
+                  </label>
+                  <input
+                    type="number"
+                    name="utilitiesMonthly"
+                    value={formData.utilitiesMonthly}
+                    onChange={handleChange}
+                    required
+                    placeholder="z. B. 180"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Reinigungskosten pro Monat
+                  </label>
+                  <input
+                    type="number"
+                    name="cleaningCostMonthly"
+                    value={formData.cleaningCostMonthly}
+                    onChange={handleChange}
+                    required
+                    placeholder="z. B. 120"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {formData.type === "Apartment" ? (
+                  <>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-sm text-slate-500">Gewinn aktuell</p>
+                      <p className="text-2xl font-bold text-slate-800 mt-1">
+                        {formatCurrency(currentApartmentProfit)}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-sm text-slate-500">Zimmer</p>
+                      <p className="text-2xl font-bold text-slate-800 mt-1">
+                        {formData.rooms || 0}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-sm text-slate-500">Aktueller Monatsumsatz</p>
+                      <p className="text-2xl font-bold text-slate-800 mt-1">
+                        {formatCurrency(currentCoLivingRevenue)}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-sm text-slate-500">Leerstandsverlust</p>
+                      <p className="text-2xl font-bold text-slate-800 mt-1">
+                        {formatCurrency(currentCoLivingVacancy)}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-sm text-slate-500">Gewinn aktuell</p>
+                      <p className="text-2xl font-bold text-slate-800 mt-1">
+                        {formatCurrency(currentCoLivingProfit)}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-sm text-slate-500">Freie Zimmer</p>
+                      <p className="text-2xl font-bold text-slate-800 mt-1">
+                        {currentFreeRooms}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {!formLeaseStarted && (
+                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-sm text-amber-800">
+                    Hinweis: Der Mietbeginn an den Vermieter liegt in der Zukunft.
+                    Deshalb werden die aktuellen KPI noch ohne laufende Monatskosten gerechnet.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="px-5 py-3 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Abbrechen
+                </button>
+
+                <button
+                  type="submit"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-lg font-medium transition"
+                >
+                  {editingId ? "Änderungen speichern" : "Unit speichern"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AdminApartmentsPage;

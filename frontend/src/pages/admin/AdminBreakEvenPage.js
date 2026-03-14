@@ -1,0 +1,145 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { fetchAdminUnits, normalizeUnit } from "../../api/adminData";
+
+function formatCurrency(value) {
+  const amount = Number(value || 0);
+  return `CHF ${amount.toLocaleString("de-CH")}`;
+}
+
+function AdminBreakEvenPage() {
+  const [units, setUnits] = useState([]);
+
+  useEffect(() => {
+    fetchAdminUnits()
+      .then((data) => setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []))
+      .catch(() => setUnits([]));
+  }, []);
+
+  const rows = useMemo(() => {
+
+    return units.map(unit => {
+
+      const revenue = Number(unit.tenantPriceMonthly || 0);
+
+      const costs =
+        Number(unit.landlordRentMonthly || 0) +
+        Number(unit.utilitiesMonthly || 0) +
+        Number(unit.cleaningCostMonthly || 0);
+
+      const breakEvenOccupancy = costs / revenue;
+
+      return {
+        id: unit.unitId,
+        city: unit.place,
+        revenue,
+        costs,
+        breakEvenOccupancy
+      };
+
+    });
+
+  }, [units]);
+
+  return (
+    <div style={{display:"grid",gap:"24px"}}>
+
+      <div>
+        <div style={{
+          fontSize:"12px",
+          color:"#f97316",
+          fontWeight:700,
+          marginBottom:"8px"
+        }}>
+          FeelAtHomeNow Admin
+        </div>
+
+        <h2 style={{
+          fontSize:"36px",
+          fontWeight:800,
+          margin:0
+        }}>
+          Break-Even Analyse
+        </h2>
+
+        <p style={{
+          color:"#64748B",
+          marginTop:"10px"
+        }}>
+          Zeigt ab welcher Belegung eine Unit profitabel wird.
+        </p>
+      </div>
+
+      <div style={{
+        background:"#fff",
+        borderRadius:"16px",
+        padding:"20px",
+        border:"1px solid #E5E7EB"
+      }}>
+
+        <h3>Break-Even pro Unit</h3>
+
+        <table style={{
+          width:"100%",
+          marginTop:"16px",
+          borderCollapse:"collapse"
+        }}>
+
+          <thead>
+            <tr style={{borderBottom:"1px solid #E5E7EB"}}>
+              <th style={{textAlign:"left",padding:"10px"}}>Unit</th>
+              <th style={{textAlign:"left",padding:"10px"}}>Ort</th>
+              <th style={{textAlign:"left",padding:"10px"}}>Umsatz</th>
+              <th style={{textAlign:"left",padding:"10px"}}>Kosten</th>
+              <th style={{textAlign:"left",padding:"10px"}}>Break-Even</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            {rows.map(row => {
+
+              const percent = (row.breakEvenOccupancy * 100).toFixed(1);
+
+              return (
+                <tr key={row.id} style={{borderBottom:"1px solid #F1F5F9"}}>
+
+                  <td style={{padding:"10px",fontWeight:700}}>
+                    {row.id}
+                  </td>
+
+                  <td style={{padding:"10px"}}>
+                    {row.city}
+                  </td>
+
+                  <td style={{padding:"10px"}}>
+                    {formatCurrency(row.revenue)}
+                  </td>
+
+                  <td style={{padding:"10px"}}>
+                    {formatCurrency(row.costs)}
+                  </td>
+
+                  <td style={{
+                    padding:"10px",
+                    fontWeight:700,
+                    color: percent > 90 ? "#DC2626" : "#16A34A"
+                  }}>
+                    {percent} %
+                  </td>
+
+                </tr>
+              );
+
+            })}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+  );
+}
+
+export default AdminBreakEvenPage;
