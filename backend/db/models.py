@@ -72,6 +72,7 @@ class Unit(SQLModel, table=True):
     rooms: int
     type: Optional[str] = Field(default=None, max_length=50)
     city_id: Optional[str] = Field(default=None, foreign_key="cities.id", index=True)
+    property_id: Optional[str] = Field(default=None, foreign_key="properties.id", index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

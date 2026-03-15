@@ -5,7 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import User, Tenant
+from db.models import User, Tenant, Landlord
 from auth.security import decode_access_token
 
 
@@ -96,4 +96,23 @@ def get_current_tenant(
             detail="No tenant record linked to this account. Please contact support.",
         )
     return user, tenant
+
+
+def get_current_landlord(
+    user: User = Depends(require_role("landlord")),
+    session=Depends(get_db_session),
+) -> Tuple[User, Landlord]:
+    """
+    Require role=landlord and resolve the Landlord record by user_id.
+    Returns 401 if unauthenticated (from get_current_user), 403 if wrong role or no landlord record.
+    """
+    landlord = session.exec(
+        select(Landlord).where(Landlord.user_id == str(user.id))
+    ).first()
+    if not landlord:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No landlord record linked to this account. Please contact support.",
+        )
+    return user, landlord
 

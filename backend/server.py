@@ -34,6 +34,7 @@ from app.api.v1.routes_admin_landlords import router as admin_landlords_router
 from app.api.v1.routes_admin_properties import router as admin_properties_router
 from app.api.v1.routes_invoices import router as invoices_router
 from app.api.v1.routes_tenant import router as tenant_router
+from app.api.v1.routes_landlord import router as landlord_router
 
 
 ROOT_DIR = Path(__file__).parent
@@ -229,6 +230,7 @@ app.include_router(admin_dashboard_router)
 app.include_router(admin_landlords_router)
 app.include_router(admin_properties_router)
 app.include_router(tenant_router)
+app.include_router(landlord_router)
 app.include_router(api_router)
 
 # CORS: explicit origins (required when allow_credentials=True; "*" is invalid with credentials)
