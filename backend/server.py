@@ -51,9 +51,12 @@ _ENV = os.environ.get("ENVIRONMENT", "development")
 _sentry_dsn = os.environ.get("SENTRY_DSN", "").strip()
 if _sentry_dsn:
     import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
     sentry_sdk.init(
         dsn=_sentry_dsn,
+        integrations=[FastApiIntegration()],
         environment=os.environ.get("ENVIRONMENT", "development"),
+        release=os.environ.get("RELEASE_VERSION"),
         traces_sample_rate=0.1,
     )
 
@@ -109,6 +112,11 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
+
+
+@app.get("/sentry-test")
+def sentry_test():
+    raise Exception("Sentry backend test")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
