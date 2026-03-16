@@ -12,7 +12,8 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import Tenancy, TenancyStatus, Tenant, Room, Unit
+from db.models import Tenancy, TenancyStatus, Tenant, Room, Unit, User
+from db.audit import create_audit_log, model_snapshot
 from auth.dependencies import require_roles
 
 
@@ -129,7 +130,7 @@ def admin_list_tenancies_for_room(
 @router.post("/tenancies", response_model=dict)
 def admin_create_tenancy(
     body: TenancyCreate,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a tenancy. Validates tenant/room/unit and prevents overlapping tenancies."""
     session = get_session()
@@ -149,6 +150,10 @@ def admin_create_tenancy(
             status=status,
         )
         session.add(tenancy)
+        create_audit_log(
+            session, str(current_user.id), "create", "tenancy", str(tenancy.id),
+            old_values=None, new_values=model_snapshot(tenancy),
+        )
         session.commit()
         session.refresh(tenancy)
         return _tenancy_to_dict(tenancy)
@@ -160,7 +165,7 @@ def admin_create_tenancy(
 def admin_patch_tenancy(
     tenancy_id: str,
     body: TenancyPatch,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Update a tenancy (partial). Checks overlap when dates change."""
     session = get_session()
@@ -168,6 +173,7 @@ def admin_patch_tenancy(
         tenancy = session.get(Tenancy, tenancy_id)
         if not tenancy:
             raise HTTPException(status_code=404, detail="Tenancy not found")
+        old_snapshot = model_snapshot(tenancy)
         data = body.model_dump(exclude_unset=True)
         if "status" in data and data["status"] not in ("active", "ended", "reserved"):
             raise HTTPException(status_code=400, detail="status must be active, ended, or reserved")
@@ -182,6 +188,10 @@ def admin_patch_tenancy(
                 else:
                     setattr(tenancy, k, v)
         session.add(tenancy)
+        create_audit_log(
+            session, str(current_user.id), "update", "tenancy", str(tenancy_id),
+            old_values=old_snapshot, new_values=model_snapshot(tenancy),
+        )
         session.commit()
         session.refresh(tenancy)
         return _tenancy_to_dict(tenancy)
@@ -192,7 +202,7 @@ def admin_patch_tenancy(
 @router.delete("/tenancies/{tenancy_id}")
 def admin_delete_tenancy(
     tenancy_id: str,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a tenancy."""
     session = get_session()
@@ -200,7 +210,12 @@ def admin_delete_tenancy(
         tenancy = session.get(Tenancy, tenancy_id)
         if not tenancy:
             raise HTTPException(status_code=404, detail="Tenancy not found")
+        old_snapshot = model_snapshot(tenancy)
         session.delete(tenancy)
+        create_audit_log(
+            session, str(current_user.id), "delete", "tenancy", str(tenancy_id),
+            old_values=old_snapshot, new_values=None,
+        )
         session.commit()
         return {"status": "ok", "message": "Tenancy deleted"}
     finally:

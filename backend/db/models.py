@@ -1,7 +1,9 @@
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, date
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 import uuid
 
 
@@ -312,3 +314,28 @@ class RefreshToken(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     revoked_at: datetime | None = None
     replaced_by_token_id: str | None = Field(default=None, foreign_key="refresh_tokens.id", index=True)
+
+
+# ---------------------------------------------------------------------------
+# Audit log (V1: write-action trail)
+# ---------------------------------------------------------------------------
+
+class AuditLog(SQLModel, table=True):
+    """Immutable log of create/update/delete actions on key entities."""
+
+    __tablename__ = "audit_logs"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    actor_user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    action: str = Field(max_length=32, index=True)  # create | update | delete
+    entity_type: str = Field(max_length=64, index=True)  # unit | tenant | tenancy | ...
+    entity_id: str = Field(max_length=64, index=True)
+    old_values: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+    )
+    new_values: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)

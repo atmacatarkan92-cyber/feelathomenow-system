@@ -1,0 +1,69 @@
+"""
+V1 audit logging: reusable helper to record create/update/delete actions.
+Only backend; no frontend UI. Call after successful write within the same transaction.
+"""
+from datetime import date, datetime
+from typing import Any, Optional
+
+from sqlmodel import Session
+
+from db.models import AuditLog
+
+
+def _serialize_value(v: Any) -> Any:
+    """Convert a single value to a JSON-serializable form."""
+    if v is None:
+        return None
+    if isinstance(v, (str, int, float, bool)):
+        return v
+    if isinstance(v, datetime):
+        return v.isoformat()
+    if isinstance(v, date):
+        return v.isoformat()
+    if hasattr(v, "value"):  # Enum
+        return v.value
+    return str(v)
+
+
+def model_snapshot(obj: Any) -> Optional[dict]:
+    """
+    Build a JSON-serializable snapshot of a SQLModel instance (table columns only).
+    Returns None if obj is None. Used for old_values/new_values in audit logs.
+    """
+    if obj is None:
+        return None
+    out: dict = {}
+    for key in obj.__class__.model_fields:
+        try:
+            v = getattr(obj, key, None)
+            out[key] = _serialize_value(v)
+        except Exception:
+            continue
+    return out
+
+
+def create_audit_log(
+    session: Session,
+    actor_user_id: Optional[str],
+    action: str,
+    entity_type: str,
+    entity_id: str,
+    old_values: Optional[dict] = None,
+    new_values: Optional[dict] = None,
+) -> None:
+    """
+    Append one audit log row. Call after a successful create/update/delete within
+    the same transaction so it commits with the write.
+    - create: old_values=None, new_values=snapshot of created entity
+    - update: old_values=before snapshot, new_values=after snapshot
+    - delete: old_values=snapshot of deleted entity, new_values=None
+    """
+    entry = AuditLog(
+        actor_user_id=actor_user_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        old_values=old_values,
+        new_values=new_values,
+    )
+    session.add(entry)

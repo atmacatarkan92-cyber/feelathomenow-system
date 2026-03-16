@@ -11,7 +11,8 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import Unit, Room, Property
+from db.models import Unit, Room, Property, User
+from db.audit import create_audit_log, model_snapshot
 from auth.dependencies import require_roles
 
 
@@ -125,7 +126,7 @@ def admin_get_unit(
 @router.post("/units", response_model=dict)
 def admin_create_unit(
     body: UnitCreate,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a new unit."""
     session = get_session()
@@ -141,6 +142,10 @@ def admin_create_unit(
             property_id=body.property_id,
         )
         session.add(unit)
+        create_audit_log(
+            session, str(current_user.id), "create", "unit", str(unit.id),
+            old_values=None, new_values=model_snapshot(unit),
+        )
         session.commit()
         session.refresh(unit)
         return _unit_to_dict(unit)
@@ -152,7 +157,7 @@ def admin_create_unit(
 def admin_patch_unit(
     unit_id: str,
     body: UnitPatch,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Update a unit (partial)."""
     session = get_session()
@@ -160,6 +165,7 @@ def admin_patch_unit(
         unit = session.get(Unit, unit_id)
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
+        old_snapshot = model_snapshot(unit)
         data = body.model_dump(exclude_unset=True)
         if "name" in data and "title" not in data:
             data["title"] = data.pop("name")
@@ -171,6 +177,10 @@ def admin_patch_unit(
         if "property_id" in data and data["property_id"] == "":
             unit.property_id = None
         session.add(unit)
+        create_audit_log(
+            session, str(current_user.id), "update", "unit", str(unit_id),
+            old_values=old_snapshot, new_values=model_snapshot(unit),
+        )
         session.commit()
         session.refresh(unit)
         property_title = None
@@ -186,7 +196,7 @@ def admin_patch_unit(
 @router.delete("/units/{unit_id}")
 def admin_delete_unit(
     unit_id: str,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a unit (caller must ensure no dependent listings/rooms)."""
     session = get_session()
@@ -194,7 +204,12 @@ def admin_delete_unit(
         unit = session.get(Unit, unit_id)
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
+        old_snapshot = model_snapshot(unit)
         session.delete(unit)
+        create_audit_log(
+            session, str(current_user.id), "delete", "unit", str(unit_id),
+            old_values=old_snapshot, new_values=None,
+        )
         session.commit()
         return {"status": "ok", "message": "Unit deleted"}
     finally:

@@ -10,7 +10,8 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import Tenant
+from db.models import Tenant, User
+from db.audit import create_audit_log, model_snapshot
 from auth.dependencies import require_roles
 
 
@@ -64,7 +65,7 @@ def admin_list_tenants(
 @router.post("/tenants", response_model=dict)
 def admin_create_tenant(
     body: TenantCreate,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a new tenant."""
     session = get_session()
@@ -78,6 +79,10 @@ def admin_create_tenant(
             company=body.company,
         )
         session.add(tenant)
+        create_audit_log(
+            session, str(current_user.id), "create", "tenant", str(tenant.id),
+            old_values=None, new_values=model_snapshot(tenant),
+        )
         session.commit()
         session.refresh(tenant)
         return _tenant_to_dict(tenant)
@@ -89,7 +94,7 @@ def admin_create_tenant(
 def admin_patch_tenant(
     tenant_id: str,
     body: TenantPatch,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Update a tenant (partial)."""
     session = get_session()
@@ -97,6 +102,7 @@ def admin_patch_tenant(
         tenant = session.get(Tenant, tenant_id)
         if not tenant:
             raise HTTPException(status_code=404, detail="Tenant not found")
+        old_snapshot = model_snapshot(tenant)
         data = body.model_dump(exclude_unset=True)
         if "full_name" in data and "name" not in data:
             data["name"] = data.pop("full_name")
@@ -106,6 +112,10 @@ def admin_patch_tenant(
             if hasattr(tenant, k):
                 setattr(tenant, k, v)
         session.add(tenant)
+        create_audit_log(
+            session, str(current_user.id), "update", "tenant", str(tenant_id),
+            old_values=old_snapshot, new_values=model_snapshot(tenant),
+        )
         session.commit()
         session.refresh(tenant)
         return _tenant_to_dict(tenant)
@@ -116,7 +126,7 @@ def admin_patch_tenant(
 @router.delete("/tenants/{tenant_id}")
 def admin_delete_tenant(
     tenant_id: str,
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a tenant."""
     session = get_session()
@@ -124,7 +134,12 @@ def admin_delete_tenant(
         tenant = session.get(Tenant, tenant_id)
         if not tenant:
             raise HTTPException(status_code=404, detail="Tenant not found")
+        old_snapshot = model_snapshot(tenant)
         session.delete(tenant)
+        create_audit_log(
+            session, str(current_user.id), "delete", "tenant", str(tenant_id),
+            old_values=old_snapshot, new_values=None,
+        )
         session.commit()
         return {"status": "ok", "message": "Tenant deleted"}
     finally:
