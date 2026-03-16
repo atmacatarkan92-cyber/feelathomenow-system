@@ -12,6 +12,7 @@ const AuthContext = createContext(null);
 
 const ALLOWED_ADMIN_ROLES = ["admin", "manager"];
 const TENANT_ROLE = "tenant";
+const LANDLORD_ROLE = "landlord";
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
@@ -20,6 +21,7 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!(token && user && ALLOWED_ADMIN_ROLES.includes(user.role));
   const isTenantAuthenticated = !!(token && user && user.role === TENANT_ROLE);
+  const isLandlordAuthenticated = !!(token && user && user.role === LANDLORD_ROLE);
 
   const loadSession = useCallback(async () => {
     setToken(null);
@@ -80,6 +82,7 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated,
     isTenantAuthenticated,
+    isLandlordAuthenticated,
     loading,
     login,
     logout,

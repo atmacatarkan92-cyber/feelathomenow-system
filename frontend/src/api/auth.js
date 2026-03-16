@@ -9,21 +9,21 @@ import { setAccessToken, clearAccessToken } from "../authStore";
 const CREDENTIALS = "include";
 
 export async function login(email, password) {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: email.trim(), password }),
     credentials: CREDENTIALS,
   });
-  const text = await res.text();
+  const text = await response.text();
   const data = text ? JSON.parse(text) : {};
-  if (!res.ok) {
+  if (!response.ok) {
     const message =
       data.detail != null
         ? typeof data.detail === "string"
           ? data.detail
           : JSON.stringify(data.detail)
-        : `Fehler ${res.status}`;
+        : `Fehler ${response.status}`;
     throw new Error(message);
   }
   if (data.access_token) {
@@ -38,13 +38,13 @@ export async function login(email, password) {
  * On success, sets new access token in authStore and returns it.
  */
 export async function refresh() {
-  const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
     method: "POST",
     credentials: CREDENTIALS,
   });
-  const text = await res.text();
+  const text = await response.text();
   const data = text ? JSON.parse(text) : {};
-  if (!res.ok) {
+  if (!response.ok) {
     clearAccessToken();
     throw new Error(data.detail || "Refresh fehlgeschlagen.");
   }
@@ -69,15 +69,16 @@ export async function logout() {
 }
 
 export async function getMe() {
-  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
     headers: getApiHeaders(),
     credentials: CREDENTIALS,
   });
-  if (res.status === 401) {
+  if (response.status === 401) {
     return null;
   }
-  if (!res.ok) {
+  if (!response.ok) {
     throw new Error("Session konnte nicht geladen werden.");
   }
-  return res.json();
+  const data = await response.json();
+  return data;
 }

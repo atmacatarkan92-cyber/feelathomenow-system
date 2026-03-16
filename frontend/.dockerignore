@@ -1,0 +1,27 @@
+# Dependencies and caches
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Git and IDE
+.git
+.gitignore
+.dockerignore
+.vscode
+.idea
+
+# Build output (rebuilt in container)
+build
+dist
+
+# Tests and misc
+coverage
+*.log

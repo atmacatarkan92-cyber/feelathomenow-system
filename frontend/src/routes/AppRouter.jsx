@@ -34,6 +34,13 @@ import TenantLoginPage from "../pages/tenant/TenantLoginPage";
 import TenantOverviewPage from "../pages/tenant/TenantOverviewPage";
 import TenantTenanciesPage from "../pages/tenant/TenantTenanciesPage";
 import TenantInvoicesPage from "../pages/tenant/TenantInvoicesPage";
+import LandlordLayout from "../components/landlord/LandlordLayout";
+import LandlordLoginPage from "../pages/landlord/LandlordLoginPage";
+import LandlordOverviewPage from "../pages/landlord/LandlordOverviewPage";
+import LandlordPropertiesPage from "../pages/landlord/LandlordPropertiesPage";
+import LandlordUnitsPage from "../pages/landlord/LandlordUnitsPage";
+import LandlordTenanciesPage from "../pages/landlord/LandlordTenanciesPage";
+import LandlordInvoicesPage from "../pages/landlord/LandlordInvoicesPage";
 
 const HomePage = lazy(() => import("../pages/HomePage"));
 const ApartmentsPage = lazy(() => import("../pages/ApartmentsPage"));
@@ -55,7 +62,8 @@ export default function AppRouter() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isTenantRoute = location.pathname.startsWith("/tenant");
-  const showPublicUI = !isAdminRoute && !isTenantRoute;
+  const isLandlordRoute = location.pathname.startsWith("/landlord");
+  const showPublicUI = !isAdminRoute && !isTenantRoute && !isLandlordRoute;
 
   return (
     <div className="App">
@@ -115,6 +123,15 @@ export default function AppRouter() {
               <Route index element={<TenantOverviewPage />} />
               <Route path="tenancies" element={<TenantTenanciesPage />} />
               <Route path="invoices" element={<TenantInvoicesPage />} />
+            </Route>
+
+            <Route path="/landlord" element={<LandlordLayout />}>
+              <Route path="login" element={<LandlordLoginPage />} />
+              <Route index element={<LandlordOverviewPage />} />
+              <Route path="properties" element={<LandlordPropertiesPage />} />
+              <Route path="units" element={<LandlordUnitsPage />} />
+              <Route path="tenancies" element={<LandlordTenanciesPage />} />
+              <Route path="invoices" element={<LandlordInvoicesPage />} />
             </Route>
             </Routes>
           </Suspense>
