@@ -45,6 +45,8 @@ from app.api.v1.routes_landlord import router as landlord_router
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
+_ENV = os.environ.get("ENVIRONMENT", "development")
+
 # Optional Sentry (only if SENTRY_DSN is set)
 _sentry_dsn = os.environ.get("SENTRY_DSN", "").strip()
 if _sentry_dsn:
@@ -70,6 +72,9 @@ app = FastAPI(
     title="FeelAtHomeNow API",
     description="API for FeelAtHomeNow apartment rental platform",
     version="1.0.0",
+    docs_url="/docs" if _ENV != "production" else None,
+    redoc_url="/redoc" if _ENV != "production" else None,
+    openapi_url="/openapi.json" if _ENV != "production" else None,
 )
 
 app.state.limiter = limiter
