@@ -4,7 +4,6 @@
  * Only admin and manager roles are considered authenticated for the admin area.
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { ADMIN_TOKEN_KEY } from "../config";
 import { getMe, refresh, logout as apiLogout } from "../api/auth";
 import { getAccessToken } from "../authStore";
 
@@ -38,9 +37,6 @@ export function AuthProvider({ children }) {
     } catch {
       setToken(null);
       setUser(null);
-      if (typeof localStorage !== "undefined") {
-        localStorage.removeItem(ADMIN_TOKEN_KEY);
-      }
     } finally {
       setLoading(false);
     }
@@ -71,9 +67,6 @@ export function AuthProvider({ children }) {
     } finally {
       setToken(null);
       setUser(null);
-      if (typeof localStorage !== "undefined") {
-        localStorage.removeItem(ADMIN_TOKEN_KEY);
-      }
     }
   }, []);
 

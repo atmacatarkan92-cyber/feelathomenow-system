@@ -15,6 +15,9 @@ passlib[bcrypt]>=1.7.4
 passlib[argon2]>=1.7.4
 bcrypt>=4.0.0,<4.1
 pyjwt>=2.8.0
+# Rate limiting
+slowapi==0.1.9
+limits==3.6.0
 # Optional: error tracking (init only if SENTRY_DSN is set)
 sentry-sdk[fastapi]>=1.39.0
 # Testing

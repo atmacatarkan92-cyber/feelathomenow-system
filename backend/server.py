@@ -1,13 +1,17 @@
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Query, Depends, Header, Body
-from fastapi.responses import FileResponse, JSONResponse
-from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 import os
 import logging
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime, timezone, date
+
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Query, Depends, Header, Body
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from sqlalchemy import text
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from models import (
     Apartment,
@@ -23,6 +27,7 @@ from db.models import Inquiry
 from auth.routes import router as auth_router
 from auth.dependencies import require_roles
 from auth.security import validate_auth_config
+from app.core.rate_limit import limiter
 from app.api.v1.routes_apartments import router as apartments_router
 from app.api.v1.routes_admin_listings import router as admin_listings_router
 from app.api.v1.routes_admin_units import router as admin_units_router
@@ -67,6 +72,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 def custom_openapi():
     if app.openapi_schema is not None:
@@ -96,6 +104,35 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+
+        # Basic clickjacking / MIME sniffing / referrer / permissions protections
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
+
+        # Content Security Policy: restrict sources while allowing required integrations
+        csp = (
+            "default-src 'self'; "
+            "img-src 'self' data: https:; "
+            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' https://*.onrender.com https://*.vercel.app https://*.sentry.io https://sentry.io; "
+            "font-src 'self' data:; "
+            "frame-ancestors 'none';"
+        )
+        response.headers["Content-Security-Policy"] = csp
+
+        # Only send HSTS in production (HTTPS termination in front of the app)
+        if os.environ.get("ENVIRONMENT") == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        return response
 
 api_router = APIRouter(prefix="/api")
 
@@ -258,6 +295,8 @@ else:
     CORS_ORIGINS = _DEV_ORIGINS.copy()
     if _frontend_url and _frontend_url not in CORS_ORIGINS:
         CORS_ORIGINS.append(_frontend_url)
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

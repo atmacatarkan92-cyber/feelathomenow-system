@@ -17,6 +17,7 @@ from auth.security import (
     get_cookie_samesite,
 )
 from auth.dependencies import get_current_user, get_db_session
+from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -50,7 +51,8 @@ def _clear_refresh_cookie(response: JSONResponse) -> None:
 
 
 @router.post("/login")
-def login(data: LoginRequest, session=Depends(get_db_session)):
+@limiter.limit("5/minute")
+def login(request: Request, data: LoginRequest, session=Depends(get_db_session)):
     """Verify credentials, issue access token (body) and refresh token (HttpOnly cookie)."""
     statement = select(User, UserCredentials).join(
         UserCredentials, User.id == UserCredentials.user_id
