@@ -15,8 +15,12 @@ export async function login(email, password) {
     body: JSON.stringify({ email: email.trim(), password }),
     credentials: CREDENTIALS,
   });
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
   if (!response.ok) {
     const message =
       data.detail != null
@@ -42,8 +46,12 @@ export async function refresh() {
     method: "POST",
     credentials: CREDENTIALS,
   });
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
   if (!response.ok) {
     clearAccessToken();
     throw new Error(data.detail || "Refresh fehlgeschlagen.");
