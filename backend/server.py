@@ -114,11 +114,6 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 
-@app.get("/sentry-test")
-def sentry_test():
-    raise Exception("Sentry backend test")
-
-
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
