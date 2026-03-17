@@ -5,7 +5,7 @@ Protected by require_roles("admin", "manager").
 
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import select
@@ -72,21 +72,43 @@ class UnitPatch(BaseModel):
     property_id: Optional[str] = None
 
 
-@router.get("/units", response_model=List[dict])
+class UnitListResponse(BaseModel):
+    items: List[dict]
+    total: int
+    skip: int
+    limit: int
+
+
+@router.get("/units", response_model=UnitListResponse)
 def admin_list_units(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     _=Depends(require_roles("admin", "manager")),
 ):
-    """List all units (listings dropdown + admin pages). Returns [] if table is empty. Includes property_id and property_title."""
+    """List units (listings dropdown + admin pages) with basic pagination."""
     session = get_session()
     try:
-        statement = (
+        base_query = (
             select(Unit, Property)
             .select_from(Unit)
             .outerjoin(Property, Unit.property_id == Property.id)
             .order_by(Unit.title)
         )
-        rows = session.exec(statement).all()
-        return [_unit_to_dict(u, p.title if p else None) for u, p in rows]
+        # Total count without pagination
+        total_rows = session.exec(base_query).all()
+        total = len(total_rows)
+
+        # Apply offset/limit for items
+        paged_rows = session.exec(
+            base_query.offset(skip).limit(limit)
+        ).all()
+        items = [_unit_to_dict(u, p.title if p else None) for u, p in paged_rows]
+        return UnitListResponse(
+            items=items,
+            total=total,
+            skip=skip,
+            limit=limit,
+        )
     except (OperationalError, ProgrammingError) as e:
         session.rollback()
         msg = str(e).strip() or "database error"

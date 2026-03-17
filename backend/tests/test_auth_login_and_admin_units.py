@@ -202,5 +202,8 @@ class TestAdminUnitsAuth:
             app.dependency_overrides.pop(get_current_user, None)
 
         assert response.status_code == 200
-        assert isinstance(response.json(), list)
+        data = response.json()
+        assert isinstance(data, dict)
+        assert "items" in data and "total" in data and "skip" in data and "limit" in data
+        assert isinstance(data["items"], list)
 
