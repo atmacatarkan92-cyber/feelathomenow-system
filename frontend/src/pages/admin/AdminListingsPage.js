@@ -116,7 +116,10 @@ function AdminListingsPage() {
         }
         return res.json();
       })
-      .then((data) => setUnits(Array.isArray(data) ? data : []))
+      .then((data) => {
+        const list = data && typeof data.items !== "undefined" ? data.items : (Array.isArray(data) ? data : []);
+        setUnits(list);
+      })
       .catch((err) => {
         console.error(err);
         setUnitsError(err.message || "Fehler beim Laden der Units.");

@@ -8,6 +8,9 @@ export function fetchAdminUnits() {
   return fetch(`${API_BASE_URL}/api/admin/units`, { headers: getApiHeaders() }).then((res) => {
     if (!res.ok) throw new Error("Units konnten nicht geladen werden.");
     return res.json();
+  }).then((data) => {
+    if (data && typeof data.items !== "undefined") return data.items;
+    return Array.isArray(data) ? data : [];
   });
 }
 
