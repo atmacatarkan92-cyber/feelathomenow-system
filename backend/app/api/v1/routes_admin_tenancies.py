@@ -7,7 +7,7 @@ Validates tenant/room/unit exist, room belongs to unit, no overlapping tenancies
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import select
 
@@ -86,25 +86,37 @@ def _overlaps(session, room_id: str, move_in: date, move_out: Optional[date], ex
     return False
 
 
-@router.get("/tenancies", response_model=List[dict])
+class TenancyListResponse(BaseModel):
+    items: List[dict]
+    total: int
+    skip: int
+    limit: int
+
+
+@router.get("/tenancies", response_model=TenancyListResponse)
 def admin_list_tenancies(
     room_id: Optional[str] = None,
     unit_id: Optional[str] = None,
     status: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List tenancies, optionally filtered by room_id, unit_id, status."""
     session = get_session()
     try:
-        q = select(Tenancy).order_by(Tenancy.move_in_date.desc())
+        base_query = select(Tenancy).order_by(Tenancy.move_in_date.desc())
         if room_id:
-            q = q.where(Tenancy.room_id == room_id)
+            base_query = base_query.where(Tenancy.room_id == room_id)
         if unit_id:
-            q = q.where(Tenancy.unit_id == unit_id)
+            base_query = base_query.where(Tenancy.unit_id == unit_id)
         if status:
-            q = q.where(Tenancy.status == status)
-        tenancies = list(session.exec(q).all())
-        return [_tenancy_to_dict(t) for t in tenancies]
+            base_query = base_query.where(Tenancy.status == status)
+        total_rows = session.exec(base_query).all()
+        total = len(total_rows)
+        paged_rows = session.exec(base_query.offset(skip).limit(limit)).all()
+        items = [_tenancy_to_dict(t) for t in paged_rows]
+        return TenancyListResponse(items=items, total=total, skip=skip, limit=limit)
     finally:
         session.close()
 

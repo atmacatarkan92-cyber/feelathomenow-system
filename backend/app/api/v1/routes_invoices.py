@@ -6,7 +6,7 @@ Uses invoice_service and Invoice model. Protected by require_roles.
 import os
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from db.database import get_session
@@ -24,11 +24,21 @@ router = APIRouter(prefix="/api", tags=["invoices"])
 
 
 @router.get("/invoices")
-def get_invoices_route(_=Depends(require_roles("admin", "manager"))):
-    """List all invoices (API-shaped with effective status)."""
+def get_invoices_route(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    _=Depends(require_roles("admin", "manager")),
+):
+    """List all invoices (API-shaped with effective status) with basic pagination."""
     session = get_session()
     try:
-        return list_invoices(session)
+        items, total = list_invoices(session, skip=skip, limit=limit)
+        return {
+            "items": items,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+        }
     finally:
         session.close()
 

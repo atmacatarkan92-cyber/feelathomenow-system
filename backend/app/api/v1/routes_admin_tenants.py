@@ -5,7 +5,7 @@ Protected by require_roles("admin", "manager").
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import select
 
@@ -49,15 +49,28 @@ class TenantPatch(BaseModel):
     room_id: Optional[str] = None
 
 
-@router.get("/tenants", response_model=List[dict])
+class TenantListResponse(BaseModel):
+    items: List[dict]
+    total: int
+    skip: int
+    limit: int
+
+
+@router.get("/tenants", response_model=TenantListResponse)
 def admin_list_tenants(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List all tenants."""
     session = get_session()
     try:
-        tenants = list(session.exec(select(Tenant).order_by(Tenant.name)).all())
-        return [_tenant_to_dict(t) for t in tenants]
+        base_query = select(Tenant).order_by(Tenant.name)
+        total_rows = session.exec(base_query).all()
+        total = len(total_rows)
+        paged_rows = session.exec(base_query.offset(skip).limit(limit)).all()
+        items = [_tenant_to_dict(t) for t in paged_rows]
+        return TenantListResponse(items=items, total=total, skip=skip, limit=limit)
     finally:
         session.close()
 

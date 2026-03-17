@@ -46,11 +46,14 @@ def _invoice_to_api(inv: Invoice) -> Dict[str, Any]:
     }
 
 
-def list_invoices(session) -> List[Dict[str, Any]]:
-    """Return all invoices as API-shaped dicts, ordered by issue_date desc."""
-    stmt = select(Invoice).order_by(Invoice.issue_date.desc())
-    rows = session.exec(stmt).all()
-    return [_invoice_to_api(inv) for inv in rows]
+def list_invoices(session, skip: int = 0, limit: int = 50) -> tuple[List[Dict[str, Any]], int]:
+    """Return invoices as API-shaped dicts, ordered by issue_date desc, with basic pagination."""
+    base_stmt = select(Invoice).order_by(Invoice.issue_date.desc())
+    all_rows = session.exec(base_stmt).all()
+    total = len(all_rows)
+    paged_rows = session.exec(base_stmt.offset(skip).limit(limit)).all()
+    items = [_invoice_to_api(inv) for inv in paged_rows]
+    return items, total
 
 
 def get_invoice(session, invoice_id: int) -> Optional[Invoice]:
