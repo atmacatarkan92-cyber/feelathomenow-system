@@ -273,21 +273,6 @@ def get_inquiries(_: None = Depends(require_roles("admin", "manager"))):
 
 # ==================== App Setup ====================
 
-app.include_router(auth_router)
-app.include_router(invoices_router)
-app.include_router(apartments_router)
-app.include_router(admin_listings_router)
-app.include_router(admin_units_router)
-app.include_router(admin_rooms_router)
-app.include_router(admin_tenants_router)
-app.include_router(admin_tenancies_router)
-app.include_router(admin_dashboard_router)
-app.include_router(admin_landlords_router)
-app.include_router(admin_properties_router)
-app.include_router(tenant_router)
-app.include_router(landlord_router)
-app.include_router(api_router)
-
 # CORS: explicit origins (required when allow_credentials=True; "*" is invalid with credentials)
 _DEV_ORIGINS = [
     "http://localhost:3000",
@@ -314,6 +299,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(auth_router)
+app.include_router(invoices_router)
+app.include_router(apartments_router)
+app.include_router(admin_listings_router)
+app.include_router(admin_units_router)
+app.include_router(admin_rooms_router)
+app.include_router(admin_tenants_router)
+app.include_router(admin_tenancies_router)
+app.include_router(admin_dashboard_router)
+app.include_router(admin_landlords_router)
+app.include_router(admin_properties_router)
+app.include_router(tenant_router)
+app.include_router(landlord_router)
+app.include_router(api_router)
 
 
 @app.on_event("startup")
