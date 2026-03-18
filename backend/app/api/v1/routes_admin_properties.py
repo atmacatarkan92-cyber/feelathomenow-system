@@ -5,13 +5,14 @@ Protected by require_roles("admin", "manager").
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import select
 
 from db.database import get_session
 from db.models import Property
 from auth.dependencies import require_roles
+from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-properties"])
@@ -95,7 +96,9 @@ def admin_get_property(
 
 
 @router.post("/properties", response_model=dict)
+@limiter.limit("10/minute")
 def admin_create_property(
+    request: Request,
     body: PropertyCreate,
     _=Depends(require_roles("admin", "manager")),
 ):

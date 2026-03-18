@@ -11,6 +11,7 @@ from typing import Tuple
 from sqlmodel import select
 
 from db.models import Invoice, Tenancy, TenancyStatus
+from db.organization import get_or_create_default_organization
 
 
 def get_month_bounds(year: int, month: int) -> Tuple[date, date]:
@@ -46,6 +47,8 @@ def generate_monthly_invoices(session, year: int, month: int) -> dict:
 
     created_count = 0
     skipped_count = 0
+    org = get_or_create_default_organization(session)
+    org_id = str(org.id)
 
     for t in tenancies:
         tenancy_id = str(t.id)
@@ -66,6 +69,7 @@ def generate_monthly_invoices(session, year: int, month: int) -> dict:
         prorated_amount = round(float(t.rent_chf) * (overlapping_days / days_in_month), 2)
 
         inv = Invoice(
+            organization_id=org_id,
             tenant_id=str(t.tenant_id),
             tenancy_id=tenancy_id,
             room_id=str(t.room_id),

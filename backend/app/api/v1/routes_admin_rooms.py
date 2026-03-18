@@ -5,13 +5,14 @@ Protected by require_roles("admin", "manager").
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import select
 
 from db.database import get_session
 from db.models import Unit, Room
 from auth.dependencies import require_roles
+from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-rooms"])
@@ -65,7 +66,9 @@ def admin_list_rooms(
 
 
 @router.post("/rooms", response_model=dict)
+@limiter.limit("10/minute")
 def admin_create_room(
+    request: Request,
     body: RoomCreate,
     _=Depends(require_roles("admin", "manager")),
 ):
@@ -91,7 +94,9 @@ def admin_create_room(
 
 
 @router.patch("/rooms/{room_id}", response_model=dict)
+@limiter.limit("10/minute")
 def admin_patch_room(
+    request: Request,
     room_id: str,
     body: RoomPatch,
     _=Depends(require_roles("admin", "manager")),
@@ -119,7 +124,9 @@ def admin_patch_room(
 
 
 @router.delete("/rooms/{room_id}")
+@limiter.limit("10/minute")
 def admin_delete_room(
+    request: Request,
     room_id: str,
     _=Depends(require_roles("admin", "manager")),
 ):

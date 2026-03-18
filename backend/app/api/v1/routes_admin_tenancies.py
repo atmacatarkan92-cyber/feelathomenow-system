@@ -7,14 +7,18 @@ Validates tenant/room/unit exist, room belongs to unit, no overlapping tenancies
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy import or_
 from sqlmodel import select
 
 from db.database import get_session
 from db.models import Tenancy, TenancyStatus, Tenant, Room, Unit, User
 from db.audit import create_audit_log, model_snapshot
+from db.organization import get_or_create_default_organization
 from auth.dependencies import require_roles
+from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-tenancies"])
@@ -105,15 +109,32 @@ def admin_list_tenancies(
     """List tenancies, optionally filtered by room_id, unit_id, status."""
     session = get_session()
     try:
-        base_query = select(Tenancy).order_by(Tenancy.move_in_date.desc())
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
+        base_query = (
+            select(Tenancy)
+            .where(Tenancy.organization_id == org_id)
+            .order_by(Tenancy.move_in_date.desc())
+        )
         if room_id:
             base_query = base_query.where(Tenancy.room_id == room_id)
         if unit_id:
             base_query = base_query.where(Tenancy.unit_id == unit_id)
         if status:
             base_query = base_query.where(Tenancy.status == status)
-        total_rows = session.exec(base_query).all()
-        total = len(total_rows)
+        count_query = (
+            select(func.count())
+            .select_from(Tenancy)
+            .where(Tenancy.organization_id == org_id)
+        )
+        if room_id:
+            count_query = count_query.where(Tenancy.room_id == room_id)
+        if unit_id:
+            count_query = count_query.where(Tenancy.unit_id == unit_id)
+        if status:
+            count_query = count_query.where(Tenancy.status == status)
+        _total_rows = session.exec(count_query).all()
+        total = int(_total_rows[0]) if _total_rows else 0
         paged_rows = session.exec(base_query.offset(skip).limit(limit)).all()
         items = [_tenancy_to_dict(t) for t in paged_rows]
         return TenancyListResponse(items=items, total=total, skip=skip, limit=limit)
@@ -140,18 +161,22 @@ def admin_list_tenancies_for_room(
 
 
 @router.post("/tenancies", response_model=dict)
+@limiter.limit("10/minute")
 def admin_create_tenancy(
+    request: Request,
     body: TenancyCreate,
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a tenancy. Validates tenant/room/unit and prevents overlapping tenancies."""
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
         _validate_relations(session, body.tenant_id, body.room_id, body.unit_id)
         status = TenancyStatus(body.status) if body.status in ("active", "ended", "reserved") else TenancyStatus.active
         if _overlaps(session, body.room_id, body.move_in_date, body.move_out_date):
             raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
         tenancy = Tenancy(
+            organization_id=str(org.id),
             tenant_id=body.tenant_id,
             room_id=body.room_id,
             unit_id=body.unit_id,
@@ -174,7 +199,9 @@ def admin_create_tenancy(
 
 
 @router.patch("/tenancies/{tenancy_id}", response_model=dict)
+@limiter.limit("10/minute")
 def admin_patch_tenancy(
+    request: Request,
     tenancy_id: str,
     body: TenancyPatch,
     current_user: User = Depends(require_roles("admin", "manager")),
@@ -182,8 +209,10 @@ def admin_patch_tenancy(
     """Update a tenancy (partial). Checks overlap when dates change."""
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
         tenancy = session.get(Tenancy, tenancy_id)
-        if not tenancy:
+        if not tenancy or (getattr(tenancy, "organization_id", None) not in (None, org_id)):
             raise HTTPException(status_code=404, detail="Tenancy not found")
         old_snapshot = model_snapshot(tenancy)
         data = body.model_dump(exclude_unset=True)
@@ -212,15 +241,19 @@ def admin_patch_tenancy(
 
 
 @router.delete("/tenancies/{tenancy_id}")
+@limiter.limit("10/minute")
 def admin_delete_tenancy(
+    request: Request,
     tenancy_id: str,
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a tenancy."""
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
         tenancy = session.get(Tenancy, tenancy_id)
-        if not tenancy:
+        if not tenancy or (getattr(tenancy, "organization_id", None) not in (None, org_id)):
             raise HTTPException(status_code=404, detail="Tenancy not found")
         old_snapshot = model_snapshot(tenancy)
         session.delete(tenancy)

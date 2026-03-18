@@ -41,6 +41,7 @@ class _UnitsMockSession:
 
     def __init__(self, rows):
         self._rows = rows
+        self._org_id = "test-org-id"
 
     def exec(self, _query):
         class Result:
@@ -50,8 +51,21 @@ class _UnitsMockSession:
             def all(self):
                 return list(self._data)
 
+            def first(self):
+                return self._data[0] if self._data else None
+
         # Simulate offset/limit applied via SQLAlchemy Select on the query object.
         data = list(self._rows)
+
+        # Organization bootstrap query (get_or_create_default_organization)
+        if "FROM organization" in str(_query):
+            from db.models import Organization
+            return Result([Organization(id=self._org_id, name="Default")])
+
+        # COUNT(*) queries return a single scalar; emulate that.
+        raw_cols = getattr(_query, "_raw_columns", None)
+        if raw_cols and len(raw_cols) == 1 and "count" in str(raw_cols[0]).lower():
+            return Result([len(data)])
 
         offset_clause = getattr(_query, "_offset_clause", None)
         limit_clause = getattr(_query, "_limit_clause", None)
@@ -79,6 +93,16 @@ class _UnitsMockSession:
         return Result(data)
 
     def close(self):
+        pass
+
+    # No-ops for org helper compatibility if ever used
+    def add(self, _obj):
+        pass
+
+    def commit(self):
+        pass
+
+    def refresh(self, _obj):
         pass
 
 

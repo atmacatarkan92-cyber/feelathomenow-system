@@ -5,15 +5,19 @@ Protected by require_roles("admin", "manager").
 
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy import or_
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import select
 
 from db.database import get_session
 from db.models import Unit, Room, Property, User
 from db.audit import create_audit_log, model_snapshot
+from db.organization import get_or_create_default_organization
 from auth.dependencies import require_roles
+from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
@@ -88,15 +92,22 @@ def admin_list_units(
     """List units (listings dropdown + admin pages) with basic pagination."""
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
         base_query = (
             select(Unit, Property)
             .select_from(Unit)
             .outerjoin(Property, Unit.property_id == Property.id)
+            .where(Unit.organization_id == org_id)
             .order_by(Unit.title)
         )
-        # Total count without pagination
-        total_rows = session.exec(base_query).all()
-        total = len(total_rows)
+        _total_rows = session.exec(
+            select(func.count())
+            .select_from(Unit)
+            .outerjoin(Property, Unit.property_id == Property.id)
+            .where(Unit.organization_id == org_id)
+        ).all()
+        total = int(_total_rows[0]) if _total_rows else 0
 
         # Apply offset/limit for items
         paged_rows = session.exec(
@@ -146,15 +157,19 @@ def admin_get_unit(
 
 
 @router.post("/units", response_model=dict)
+@limiter.limit("10/minute")
 def admin_create_unit(
+    request: Request,
     body: UnitCreate,
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a new unit."""
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
         title = (body.title or body.name or "").strip() or "New Unit"
         unit = Unit(
+            organization_id=str(org.id),
             title=title,
             address=body.address or "",
             city=body.city or "",
@@ -176,7 +191,9 @@ def admin_create_unit(
 
 
 @router.patch("/units/{unit_id}", response_model=dict)
+@limiter.limit("10/minute")
 def admin_patch_unit(
+    request: Request,
     unit_id: str,
     body: UnitPatch,
     current_user: User = Depends(require_roles("admin", "manager")),
@@ -184,8 +201,10 @@ def admin_patch_unit(
     """Update a unit (partial)."""
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
         unit = session.get(Unit, unit_id)
-        if not unit:
+        if not unit or (getattr(unit, "organization_id", None) not in (None, org_id)):
             raise HTTPException(status_code=404, detail="Unit not found")
         old_snapshot = model_snapshot(unit)
         data = body.model_dump(exclude_unset=True)
@@ -216,15 +235,19 @@ def admin_patch_unit(
 
 
 @router.delete("/units/{unit_id}")
+@limiter.limit("10/minute")
 def admin_delete_unit(
+    request: Request,
     unit_id: str,
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a unit (caller must ensure no dependent listings/rooms)."""
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
         unit = session.get(Unit, unit_id)
-        if not unit:
+        if not unit or (getattr(unit, "organization_id", None) not in (None, org_id)):
             raise HTTPException(status_code=404, detail="Unit not found")
         old_snapshot = model_snapshot(unit)
         session.delete(unit)

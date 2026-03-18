@@ -6,18 +6,24 @@ Uses invoice_service and Invoice model. Protected by require_roles.
 import os
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
+from sqlalchemy import func
+from sqlalchemy import or_
+from sqlmodel import select
 
 from db.database import get_session
 from auth.dependencies import require_roles
+from app.core.rate_limit import limiter
 from app.services.invoice_service import (
-    list_invoices,
+    _invoice_to_api,
     get_invoice,
     update_invoice_status,
     mark_invoice_paid,
     mark_invoice_unpaid,
 )
+from db.models import Invoice
+from db.organization import get_or_create_default_organization
 
 
 router = APIRouter(prefix="/api", tags=["invoices"])
@@ -32,7 +38,23 @@ def get_invoices_route(
     """List all invoices (API-shaped with effective status) with basic pagination."""
     session = get_session()
     try:
-        items, total = list_invoices(session, skip=skip, limit=limit)
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
+        _total_rows = session.exec(
+            select(func.count())
+            .select_from(Invoice)
+            .where(Invoice.organization_id == org_id)
+        ).all()
+        total = int(_total_rows[0]) if _total_rows else 0
+        stmt = (
+            select(Invoice)
+            .where(Invoice.organization_id == org_id)
+            .order_by(Invoice.issue_date.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        rows = session.exec(stmt).all()
+        items = [_invoice_to_api(inv) for inv in rows]
         return {
             "items": items,
             "total": total,
@@ -61,7 +83,9 @@ def update_invoice_status_route(
 
 
 @router.patch("/admin/invoices/{invoice_id}/mark-paid")
+@limiter.limit("10/minute")
 def mark_invoice_paid_route(
+    request: Request,
     invoice_id: int,
     body: Optional[dict] = Body(default=None),
     _=Depends(require_roles("admin", "manager")),
@@ -80,7 +104,9 @@ def mark_invoice_paid_route(
 
 
 @router.patch("/admin/invoices/{invoice_id}/mark-unpaid")
+@limiter.limit("10/minute")
 def mark_invoice_unpaid_route(
+    request: Request,
     invoice_id: int,
     _=Depends(require_roles("admin", "manager")),
 ):
@@ -119,7 +145,9 @@ def download_invoice_pdf_route(
 
 
 @router.post("/admin/invoices/generate")
+@limiter.limit("10/minute")
 def generate_invoices_route(
+    request: Request,
     body: dict = Body(..., description="year and month"),
     _=Depends(require_roles("admin", "manager")),
 ):

@@ -178,6 +178,7 @@ class TestAdminUnitsAuth:
             class _UnitsMockSession:
                 def __init__(self, rows=None):
                     self._rows = rows or []
+                    self._org_id = "test-org-id"
 
                 def exec(self, _query):
                     class Result:
@@ -187,9 +188,21 @@ class TestAdminUnitsAuth:
                         def all(self):
                             return list(self._data)
 
+                    if "FROM organization" in str(_query):
+                        from db.models import Organization
+                        return Result([Organization(id=self._org_id, name="Default")])
                     return Result(self._rows)
 
                 def close(self):
+                    pass
+
+                def add(self, _obj):
+                    pass
+
+                def commit(self):
+                    pass
+
+                def refresh(self, _obj):
                     pass
 
             with patch("app.api.v1.routes_admin_units.get_session") as mock_get_session:

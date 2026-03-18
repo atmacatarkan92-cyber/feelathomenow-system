@@ -128,10 +128,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         csp = (
             "default-src 'self'; "
             "img-src 'self' data: https:; "
-            "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "connect-src 'self' https://*.onrender.com https://*.vercel.app https://*.sentry.io https://sentry.io; "
-            "font-src 'self' data:; "
+            "font-src 'self' data: https://cdn.jsdelivr.net; "
             "frame-ancestors 'none';"
         )
         response.headers["Content-Security-Policy"] = csp

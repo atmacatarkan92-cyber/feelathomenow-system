@@ -23,6 +23,18 @@ class City(SQLModel, table=True):
 
 
 # ---------------------------------------------------------------------------
+# Organization (multi-tenant V1)
+# ---------------------------------------------------------------------------
+
+class Organization(SQLModel, table=True):
+    __tablename__ = "organization"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    name: str = Field(default="")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
 # Landlords and properties (Phase D)
 # ---------------------------------------------------------------------------
 
@@ -44,6 +56,7 @@ class Landlord(SQLModel, table=True):
 class Property(SQLModel, table=True):
     __tablename__ = "properties"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
     landlord_id: Optional[str] = Field(default=None, foreign_key="landlords.id", index=True)
     title: str = Field(default="")
     street: Optional[str] = Field(default=None)
@@ -68,6 +81,7 @@ class Unit(SQLModel, table=True):
     __tablename__ = "unit"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
     title: str
     address: str
     city: str
@@ -179,10 +193,11 @@ class Tenant(SQLModel, table=True):
     __tablename__ = "tenant"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True, unique=True)
     name: str
     email: str = Field(default="")
-    room_id: Optional[str] = Field(default=None, index=True)
+    room_id: Optional[str] = Field(default=None, index=True, nullable=True)
     phone: Optional[str] = Field(default=None, max_length=50)
     company: Optional[str] = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -203,6 +218,7 @@ class Tenancy(SQLModel, table=True):
     __tablename__ = "tenancies"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
     room_id: str = Field(foreign_key="room.id", index=True)
     unit_id: str = Field(foreign_key="unit.id", index=True)
@@ -227,6 +243,7 @@ class Invoice(SQLModel, table=True):
     __tablename__ = "invoices"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    organization_id: Optional[str] = Field(default=None, foreign_key="organization.id", index=True)
     invoice_number: Optional[str] = Field(default=None, max_length=64, index=True)
     tenant_id: Optional[str] = Field(default=None, index=True)
     tenancy_id: Optional[str] = Field(default=None, index=True)
