@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { API_BASE_URL, getApiHeaders } from "../../config";
+import { fetchAdminInvoices } from "../../api/adminData";
 
 function formatCurrency(value, currency = "CHF") {
   const amount = Number(value || 0);
@@ -121,15 +122,12 @@ function AdminInvoicesPage() {
   const [generateMessage, setGenerateMessage] = useState(null);
 
   const loadInvoices = () => {
-    return fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() })
-      .then((res) => {
-        if (!res.ok) throw new Error("Fehler beim Laden der Rechnungen");
-        return res.json();
-      })
-      .then((data) => setInvoices(Array.isArray(data) ? data : []))
+    setError("");
+    return fetchAdminInvoices()
+      .then(setInvoices)
       .catch((err) => {
         console.error(err);
-        setError("Rechnungen konnten nicht geladen werden.");
+        setError(err?.message ?? "Rechnungen konnten nicht geladen werden.");
       });
   };
 

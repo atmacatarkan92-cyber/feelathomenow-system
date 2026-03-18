@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { API_BASE_URL, getApiHeaders } from "../../config";
+import { fetchAdminInvoices } from "../../api/adminData";
 
 function formatCurrency(value, currency = "CHF") {
   const amount = Number(value || 0);
@@ -59,22 +59,13 @@ function AdminRevenuePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Fehler beim Laden");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setInvoices(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
+    fetchAdminInvoices()
+      .then(setInvoices)
       .catch((err) => {
         console.error(err);
-        setError("Einnahmen konnten nicht geladen werden");
-        setLoading(false);
-      });
+        setError(err?.message ?? "Einnahmen konnten nicht geladen werden");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const stats = useMemo(() => {

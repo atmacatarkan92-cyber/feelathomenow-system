@@ -189,23 +189,29 @@ function AdminTenantsPage() {
   const [tenants, setTenants] = useState([]);
   const [tenancies, setTenancies] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
-    fetchAdminUnits()
-      .then((data) => setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []))
-      .catch(() => setUnits([]));
-    fetchAdminRooms()
-      .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
-      .catch(() => setRooms([]));
-    fetchAdminTenants()
-      .then((data) => setTenants(Array.isArray(data) ? data : []))
-      .catch(() => setTenants([]));
-    fetchAdminTenancies()
-      .then((data) => setTenancies(Array.isArray(data) ? data : []))
-      .catch(() => setTenancies([]));
-    fetchAdminInvoices()
-      .then((data) => setInvoices(Array.isArray(data) ? data : []))
-      .catch(() => setInvoices([]));
+    setLoadError(null);
+    Promise.all([
+      fetchAdminUnits(),
+      fetchAdminRooms(),
+      fetchAdminTenants(),
+      fetchAdminTenancies(),
+      fetchAdminInvoices(),
+    ])
+      .then(([unitsData, roomsData, tenantsData, tenanciesData, invoicesData]) => {
+        setUnits(unitsData.map(normalizeUnit));
+        setRooms(roomsData.map(normalizeRoom));
+        setTenants(tenantsData);
+        setTenancies(tenanciesData);
+        setInvoices(invoicesData);
+      })
+      .catch((e) => {
+        setLoadError(e?.message ?? "Fehler beim Laden.");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const rows = useMemo(() => {
@@ -257,6 +263,30 @@ function AdminTenantsPage() {
       totalOpenAmount,
     };
   }, [rows]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "24px", color: "#64748B" }}>
+        Lade Mieter, Zimmer, Mietverhältnisse und Rechnungen …
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div
+        style={{
+          padding: "24px",
+          background: "#FEF2F2",
+          border: "1px solid #FECACA",
+          borderRadius: "12px",
+          color: "#B91C1C",
+        }}
+      >
+        <strong>Fehler beim Laden:</strong> {loadError}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "grid", gap: "24px" }}>

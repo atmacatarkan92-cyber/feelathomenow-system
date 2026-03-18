@@ -1,17 +1,35 @@
 /**
  * Admin API: units, rooms, tenants from PostgreSQL.
  * Use getApiHeaders() so requests are authenticated.
+ *
+ * Paginated endpoints return { items, total, skip, limit }. This layer normalizes
+ * to a plain array of items so consumers never guess response shape. Invalid
+ * shapes throw instead of returning [] to avoid fake-stability masking.
  */
 import { API_BASE_URL, getApiHeaders } from "../config";
 
+/**
+ * Normalize paginated API response to items array. Throws if shape is invalid.
+ * @param {unknown} data - Raw JSON response
+ * @param {string} endpointLabel - For error message
+ * @returns {unknown[]} items array
+ */
+function expectPaginatedItems(data, endpointLabel) {
+  if (data != null && typeof data === "object" && Array.isArray(data.items)) {
+    return data.items;
+  }
+  throw new Error(
+    `Ungültige Antwort von ${endpointLabel}: erwartet paginierte Antwort mit "items".`
+  );
+}
+
 export function fetchAdminUnits() {
-  return fetch(`${API_BASE_URL}/api/admin/units`, { headers: getApiHeaders() }).then((res) => {
-    if (!res.ok) throw new Error("Units konnten nicht geladen werden.");
-    return res.json();
-  }).then((data) => {
-    if (data && typeof data.items !== "undefined") return data.items;
-    return Array.isArray(data) ? data : [];
-  });
+  return fetch(`${API_BASE_URL}/api/admin/units`, { headers: getApiHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error("Units konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => expectPaginatedItems(data, "GET /api/admin/units"));
 }
 
 export function fetchAdminUnit(id) {
@@ -62,10 +80,12 @@ export function fetchAdminRooms(unitId = null) {
 }
 
 export function fetchAdminTenants() {
-  return fetch(`${API_BASE_URL}/api/admin/tenants`, { headers: getApiHeaders() }).then((res) => {
-    if (!res.ok) throw new Error("Tenants konnten nicht geladen werden.");
-    return res.json();
-  });
+  return fetch(`${API_BASE_URL}/api/admin/tenants`, { headers: getApiHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error("Tenants konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => expectPaginatedItems(data, "GET /api/admin/tenants"));
 }
 
 /**
@@ -78,20 +98,24 @@ export function fetchAdminTenancies(params = {}) {
   if (params.status) sp.set("status", params.status);
   const qs = sp.toString();
   const url = `${API_BASE_URL}/api/admin/tenancies${qs ? `?${qs}` : ""}`;
-  return fetch(url, { headers: getApiHeaders() }).then((res) => {
-    if (!res.ok) throw new Error("Tenancies konnten nicht geladen werden.");
-    return res.json();
-  });
+  return fetch(url, { headers: getApiHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error("Tenancies konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => expectPaginatedItems(data, "GET /api/admin/tenancies"));
 }
 
 /**
- * Fetch all invoices (same as GET /api/invoices). Used by AdminTenantsPage for per-tenant invoice context.
+ * Fetch all invoices (same as GET /api/invoices). Returns items array. Used by admin pages for list/summary.
  */
 export function fetchAdminInvoices() {
-  return fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() }).then((res) => {
-    if (!res.ok) throw new Error("Rechnungen konnten nicht geladen werden.");
-    return res.json();
-  });
+  return fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error("Rechnungen konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => expectPaginatedItems(data, "GET /api/invoices"));
 }
 
 /**

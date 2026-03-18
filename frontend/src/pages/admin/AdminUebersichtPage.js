@@ -10,7 +10,6 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { API_BASE_URL, getApiHeaders } from "../../config";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -19,6 +18,7 @@ import {
   fetchAdminProfit,
   fetchAdminOccupancy,
   fetchAdminDashboardKpis,
+  fetchAdminInvoices,
 } from "../../api/adminData";
 
 function roundCurrency(value) {
@@ -269,6 +269,7 @@ function StatusBadge({ status }) {
 export default function AdminUebersichtPage() {
   const [invoices, setInvoices] = useState([]);
   const [invoiceLoading, setInvoiceLoading] = useState(true);
+  const [invoiceError, setInvoiceError] = useState("");
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [profitApi, setProfitApi] = useState({ summary: null, units: [], year: null, month: null });
@@ -319,19 +320,14 @@ export default function AdminUebersichtPage() {
   }, [kpisPeriod.year, kpisPeriod.month]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() })
-      .then((res) => {
-        if (!res.ok) throw new Error("Fehler beim Laden der Rechnungen");
-        return res.json();
+    setInvoiceError("");
+    fetchAdminInvoices()
+      .then(setInvoices)
+      .catch((e) => {
+        console.error(e);
+        setInvoiceError(e?.message ?? "Rechnungen konnten nicht geladen werden.");
       })
-      .then((data) => {
-        setInvoices(Array.isArray(data) ? data : []);
-        setInvoiceLoading(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setInvoiceLoading(false);
-      });
+      .finally(() => setInvoiceLoading(false));
   }, []);
 
   const operationsStats = useMemo(() => {
@@ -1057,6 +1053,8 @@ export default function AdminUebersichtPage() {
         </div>
         {invoiceLoading ? (
           <p style={{ color: "#64748B" }}>Rechnungen werden geladen...</p>
+        ) : invoiceError ? (
+          <p style={{ color: "#B91C1C" }}>{invoiceError}</p>
         ) : latestInvoices.length === 0 ? (
           <p style={{ color: "#64748B" }}>Noch keine Rechnungen vorhanden.</p>
         ) : (
