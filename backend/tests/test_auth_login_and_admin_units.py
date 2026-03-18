@@ -143,6 +143,14 @@ class TestAuthLogin:
         assert response.status_code == 401
         assert response.json().get("detail") == "Invalid credentials"
 
+    def test_login_rejects_whitespace_only_password(self, client: TestClient, override_auth_db, admin_user: User):
+        response = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "   "},
+        )
+        # Input validation should fail before authentication logic.
+        assert response.status_code == 422
+
 
 # ---------- Admin units tests ----------
 

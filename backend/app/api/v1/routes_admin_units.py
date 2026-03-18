@@ -6,7 +6,7 @@ Protected by require_roles("admin", "manager").
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -61,7 +61,7 @@ class UnitCreate(BaseModel):
     city: str = ""
     city_id: Optional[str] = None
     type: Optional[str] = None
-    rooms: int = 0
+    rooms: int = Field(default=0, ge=0)
     property_id: Optional[str] = None
 
 
@@ -72,7 +72,7 @@ class UnitPatch(BaseModel):
     city: Optional[str] = None
     city_id: Optional[str] = None
     type: Optional[str] = None
-    rooms: Optional[int] = None
+    rooms: Optional[int] = Field(default=None, ge=0)
     property_id: Optional[str] = None
 
 

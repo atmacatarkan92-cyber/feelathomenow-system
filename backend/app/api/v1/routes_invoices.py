@@ -4,10 +4,11 @@ Uses invoice_service and Invoice model. Protected by require_roles.
 """
 
 import os
-from typing import Optional
+from typing import Optional, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlmodel import select
@@ -27,6 +28,17 @@ from db.organization import get_or_create_default_organization
 
 
 router = APIRouter(prefix="/api", tags=["invoices"])
+
+
+class InvoiceGenerateBody(BaseModel):
+    year: int = Field(..., ge=1900, le=2100)
+    month: int = Field(..., ge=1, le=12)
+
+
+class MarkInvoicePaidBody(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    payment_method: Optional[str] = None
+    payment_reference: Optional[str] = None
 
 
 @router.get("/invoices")
@@ -68,7 +80,7 @@ def get_invoices_route(
 @router.put("/invoices/{invoice_id}/status")
 def update_invoice_status_route(
     invoice_id: int,
-    status: str,
+    status: Literal["unpaid", "paid", "open", "overdue", "cancelled"],
     _=Depends(require_roles("admin", "manager")),
 ):
     """Update invoice status (e.g. open, overdue, cancelled)."""
@@ -87,14 +99,14 @@ def update_invoice_status_route(
 def mark_invoice_paid_route(
     request: Request,
     invoice_id: int,
-    body: Optional[dict] = Body(default=None),
+    body: Optional[MarkInvoicePaidBody] = Body(default=None),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Set status=paid, paid_at=now; optional payment_method and payment_reference."""
     session = get_session()
     try:
-        payment_method = body.get("payment_method") if body else None
-        payment_reference = body.get("payment_reference") if body else None
+        payment_method = body.payment_method if body else None
+        payment_reference = body.payment_reference if body else None
         result = mark_invoice_paid(session, invoice_id, payment_method, payment_reference)
         if result is None:
             raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
@@ -148,25 +160,14 @@ def download_invoice_pdf_route(
 @limiter.limit("10/minute")
 def generate_invoices_route(
     request: Request,
-    body: dict = Body(..., description="year and month"),
+    body: InvoiceGenerateBody = Body(..., description="year and month"),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Generate monthly invoices from active tenancies; prorate; skip duplicates."""
-    year = body.get("year")
-    month = body.get("month")
-    if year is None or month is None:
-        raise HTTPException(status_code=400, detail="year and month are required")
-    try:
-        year = int(year)
-        month = int(month)
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="year and month must be integers")
-    if not (1 <= month <= 12):
-        raise HTTPException(status_code=400, detail="month must be 1-12")
     session = get_session()
     try:
         from app.services.invoice_generation_service import generate_monthly_invoices
-        result = generate_monthly_invoices(session, year, month)
+        result = generate_monthly_invoices(session, body.year, body.month)
         return result
     except Exception as e:
         session.rollback()

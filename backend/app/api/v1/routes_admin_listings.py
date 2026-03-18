@@ -7,7 +7,8 @@ Validates unit, city, and optional room exist before create/update to avoid FK e
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 from sqlmodel import Session
 
 from db.database import get_session
@@ -54,7 +55,7 @@ def _validate_listing_relations(
 class ListingImageInput(BaseModel):
     url: str = ""
     is_main: bool = False
-    position: int = 0
+    position: int = Field(default=0, ge=0)
 
 
 class ListingImageResponse(BaseModel):
@@ -84,14 +85,14 @@ class ListingCreate(BaseModel):
     description_de: str = ""
     description_en: str = ""
     room_id: Optional[str] = None
-    price_chf_month: int = 0
-    bedrooms: int = 0
-    bathrooms: int = 0
-    size_sqm: int = 0
+    price_chf_month: int = Field(default=0, ge=0)
+    bedrooms: int = Field(default=0, ge=0)
+    bathrooms: int = Field(default=0, ge=0)
+    size_sqm: int = Field(default=0, ge=0)
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     is_published: bool = False
-    sort_order: int = 0
+    sort_order: int = Field(default=0, ge=0)
     images: List[ListingImageInput] = []
     amenities: List[ListingAmenityInput] = []
 
@@ -99,7 +100,7 @@ class ListingCreate(BaseModel):
 class ListingStatusUpdate(BaseModel):
     """Optional fields for PATCH /listings/{id}/status."""
     is_published: Optional[bool] = None
-    availability_status: Optional[str] = None  # available | occupied | unavailable
+    availability_status: Optional[Literal["available", "occupied", "unavailable"]] = None
 
 
 class ListingUpdate(BaseModel):
@@ -111,14 +112,14 @@ class ListingUpdate(BaseModel):
     description_de: Optional[str] = None
     description_en: Optional[str] = None
     room_id: Optional[str] = None
-    price_chf_month: Optional[int] = None
-    bedrooms: Optional[int] = None
-    bathrooms: Optional[int] = None
-    size_sqm: Optional[int] = None
+    price_chf_month: Optional[int] = Field(default=None, ge=0)
+    bedrooms: Optional[int] = Field(default=None, ge=0)
+    bathrooms: Optional[int] = Field(default=None, ge=0)
+    size_sqm: Optional[int] = Field(default=None, ge=0)
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     is_published: Optional[bool] = None
-    sort_order: Optional[int] = None
+    sort_order: Optional[int] = Field(default=None, ge=0)
     images: Optional[List[ListingImageInput]] = None
     amenities: Optional[List[ListingAmenityInput]] = None
 

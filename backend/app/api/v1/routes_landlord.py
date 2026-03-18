@@ -7,7 +7,7 @@ Read for properties, units, tenancies, invoices; create for units only (Phase 1)
 from typing import List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from sqlmodel import select
 
 from db.database import get_session
@@ -22,9 +22,15 @@ class LandlordUnitCreate(BaseModel):
     title: str = ""
     address: str = ""
     city: str = ""
-    rooms: int = 0
+    rooms: int = Field(default=0, ge=0)
     type: Optional[str] = None
     city_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _validate_property_id(self):
+        if not self.property_id or not self.property_id.strip():
+            raise ValueError("property_id must not be empty")
+        return self
 
 
 router = APIRouter(prefix="/api/landlord", tags=["landlord-portal"])

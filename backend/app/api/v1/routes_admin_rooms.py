@@ -6,7 +6,7 @@ Protected by require_roles("admin", "manager").
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from sqlmodel import select
 
 from db.database import get_session
@@ -35,17 +35,33 @@ def _room_to_dict(r: Room) -> dict:
 class RoomCreate(BaseModel):
     unit_id: str
     name: str
-    price: int = 0
-    floor: Optional[int] = None
+    price: int = Field(default=0, ge=0)
+    floor: Optional[int] = Field(default=None, ge=0)
     is_active: bool = True
+
+    @model_validator(mode="after")
+    def _no_whitespace_only(self):
+        if not self.unit_id or not self.unit_id.strip():
+            raise ValueError("unit_id must not be empty")
+        if not self.name or not self.name.strip():
+            raise ValueError("name must not be empty")
+        return self
 
 
 class RoomPatch(BaseModel):
     name: Optional[str] = None
     unit_id: Optional[str] = None
-    price: Optional[int] = None
-    floor: Optional[int] = None
+    price: Optional[int] = Field(default=None, ge=0)
+    floor: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def _no_whitespace_only(self):
+        if self.unit_id is not None and not self.unit_id.strip():
+            raise ValueError("unit_id must not be empty")
+        if self.name is not None and not self.name.strip():
+            raise ValueError("name must not be empty")
+        return self
 
 
 @router.get("/rooms", response_model=List[dict])

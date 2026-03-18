@@ -6,7 +6,7 @@ Protected by require_roles("admin", "manager").
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlmodel import select
 
 from db.database import get_session
@@ -38,7 +38,7 @@ class LandlordCreate(BaseModel):
     user_id: Optional[str] = None
     company_name: Optional[str] = None
     contact_name: str = ""
-    email: str = ""
+    email: EmailStr
     phone: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = "active"
@@ -48,7 +48,7 @@ class LandlordUpdate(BaseModel):
     user_id: Optional[str] = None
     company_name: Optional[str] = None
     contact_name: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None

@@ -8,7 +8,7 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlmodel import select
@@ -45,17 +45,36 @@ class TenancyCreate(BaseModel):
     unit_id: str
     move_in_date: date
     move_out_date: Optional[date] = None
-    rent_chf: float = 0
-    deposit_chf: Optional[float] = None
-    status: str = "active"
+    rent_chf: float = Field(default=0, ge=0)
+    deposit_chf: Optional[float] = Field(default=None, ge=0)
+    status: TenancyStatus = TenancyStatus.active
+
+    @model_validator(mode="after")
+    def _validate_dates(self):
+        if not self.tenant_id or not self.tenant_id.strip():
+            raise ValueError("tenant_id must not be empty")
+        if not self.room_id or not self.room_id.strip():
+            raise ValueError("room_id must not be empty")
+        if not self.unit_id or not self.unit_id.strip():
+            raise ValueError("unit_id must not be empty")
+        if self.move_out_date is not None and self.move_out_date < self.move_in_date:
+            raise ValueError("move_out_date must be on/after move_in_date")
+        return self
 
 
 class TenancyPatch(BaseModel):
     move_in_date: Optional[date] = None
     move_out_date: Optional[date] = None
-    rent_chf: Optional[float] = None
-    deposit_chf: Optional[float] = None
-    status: Optional[str] = None
+    rent_chf: Optional[float] = Field(default=None, ge=0)
+    deposit_chf: Optional[float] = Field(default=None, ge=0)
+    status: Optional[TenancyStatus] = None
+
+    @model_validator(mode="after")
+    def _validate_dates_if_both_present(self):
+        if self.move_in_date is not None and self.move_out_date is not None:
+            if self.move_out_date < self.move_in_date:
+                raise ValueError("move_out_date must be on/after move_in_date")
+        return self
 
 
 def _validate_relations(session, tenant_id: str, room_id: str, unit_id: str) -> Room:
@@ -172,7 +191,7 @@ def admin_create_tenancy(
     try:
         org = get_or_create_default_organization(session)
         _validate_relations(session, body.tenant_id, body.room_id, body.unit_id)
-        status = TenancyStatus(body.status) if body.status in ("active", "ended", "reserved") else TenancyStatus.active
+        status = body.status
         if _overlaps(session, body.room_id, body.move_in_date, body.move_out_date):
             raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
         tenancy = Tenancy(
@@ -216,18 +235,17 @@ def admin_patch_tenancy(
             raise HTTPException(status_code=404, detail="Tenancy not found")
         old_snapshot = model_snapshot(tenancy)
         data = body.model_dump(exclude_unset=True)
-        if "status" in data and data["status"] not in ("active", "ended", "reserved"):
-            raise HTTPException(status_code=400, detail="status must be active, ended, or reserved")
         move_in = data.get("move_in_date") or tenancy.move_in_date
         move_out = data.get("move_out_date") if "move_out_date" in data else tenancy.move_out_date
+
+        if move_out is not None and move_out < move_in:
+            raise HTTPException(status_code=400, detail="move_out_date must be on/after move_in_date")
+
         if _overlaps(session, tenancy.room_id, move_in, move_out, exclude_tenancy_id=tenancy_id):
             raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
         for k, v in data.items():
             if hasattr(tenancy, k):
-                if k == "status":
-                    setattr(tenancy, k, TenancyStatus(v))
-                else:
-                    setattr(tenancy, k, v)
+                setattr(tenancy, k, v)
         session.add(tenancy)
         create_audit_log(
             session, str(current_user.id), "update", "tenancy", str(tenancy_id),

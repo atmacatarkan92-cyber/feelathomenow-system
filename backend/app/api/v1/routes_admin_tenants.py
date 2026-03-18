@@ -6,7 +6,7 @@ Protected by require_roles("admin", "manager").
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlmodel import select
@@ -38,19 +38,39 @@ def _tenant_to_dict(t: Tenant) -> dict:
 class TenantCreate(BaseModel):
     full_name: Optional[str] = None
     name: Optional[str] = None
-    email: str = ""
+    email: EmailStr
     phone: Optional[str] = None
     company: Optional[str] = None
     room_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _no_whitespace_only_strings(self):
+        if self.full_name is not None and not self.full_name.strip():
+            raise ValueError("full_name must not be empty")
+        if self.name is not None and not self.name.strip():
+            raise ValueError("name must not be empty")
+        if self.room_id is not None and not self.room_id.strip():
+            raise ValueError("room_id must not be empty")
+        return self
 
 
 class TenantPatch(BaseModel):
     full_name: Optional[str] = None
     name: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
     company: Optional[str] = None
     room_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _no_whitespace_only_strings(self):
+        if self.full_name is not None and not self.full_name.strip():
+            raise ValueError("full_name must not be empty")
+        if self.name is not None and not self.name.strip():
+            raise ValueError("name must not be empty")
+        if self.room_id is not None and not self.room_id.strip():
+            raise ValueError("room_id must not be empty")
+        return self
 
 
 class TenantListResponse(BaseModel):
