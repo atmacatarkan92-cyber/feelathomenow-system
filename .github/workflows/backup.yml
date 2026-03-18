@@ -1,0 +1,157 @@
+# FeelAtHomeNow - Daily PostgreSQL backup to S3/R2
+# Runs at 03:00 UTC daily; can be triggered manually.
+# Secrets: DATABASE_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, S3_ENDPOINT
+
+name: Database Backup
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+  AWS_REGION: auto
+  RETENTION_COUNT: 14
+
+jobs:
+  backup:
+    name: Backup PostgreSQL to S3/R2
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Install PostgreSQL client and AWS CLI
+        run: |
+          set -Eeuo pipefail
+          echo "==> Installing dependencies..."
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+          curl -sSf "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+          unzip -q -o /tmp/awscliv2.zip -d /tmp
+          sudo /tmp/aws/install
+          aws --version
+          pg_dump --version
+
+      - name: Set backup paths and timestamp
+        id: paths
+        run: |
+          set -Eeuo pipefail
+          TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M")
+          echo "backup_file=backup_${TIMESTAMP}.dump" >> "$GITHUB_OUTPUT"
+          YYYY=$(date -u +"%Y")
+          MM=$(date -u +"%m")
+          DD=$(date -u +"%d")
+          echo "s3_prefix=backups/${YYYY}/${MM}/${DD}" >> "$GITHUB_OUTPUT"
+
+      - name: Create PostgreSQL backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "==> Backup started at $(date -u -Iseconds)"
+          set -Eeuo pipefail
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "::error::DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          # pg_dump expects postgresql:// or postgres:// (not postgresql+psycopg2://)
+          RAW="${DATABASE_URL}"
+          URL="$RAW"
+          # Normalize only the prefix (avoid global replacement that can affect other parts)
+          if [[ "$RAW" == postgresql+psycopg2://* ]]; then
+            URL="postgresql://${RAW#postgresql+psycopg2://}"
+          elif [[ "$RAW" == postgres://* ]]; then
+            URL="postgresql://${RAW#postgres://}"
+          fi
+          FILE="${{ steps.paths.outputs.backup_file }}"
+          if [ -z "$FILE" ]; then
+            echo "::error::Computed backup filename is empty"
+            exit 1
+          fi
+          pg_dump -v -Fc -f "$FILE" "$URL"
+          LS=$(ls -la "$FILE")
+          echo "==> Backup completed: $LS"
+          echo "backup_file=$FILE" >> $GITHUB_ENV
+
+      - name: Upload backup to S3/R2
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+        run: |
+          set -Eeuo pipefail
+          PREFIX="${{ steps.paths.outputs.s3_prefix }}"
+          FILE="${{ env.backup_file }}"
+          if [ -z "$S3_BUCKET" ]; then
+            echo "::error::S3_BUCKET secret is missing"
+            exit 1
+          fi
+          ENDPOINT_URL="${S3_ENDPOINT:-}"
+          echo "==> Uploading s3://${S3_BUCKET}/${PREFIX}/${FILE}"
+          if [ -n "$ENDPOINT_URL" ]; then
+            aws s3 cp "$FILE" "s3://${S3_BUCKET}/${PREFIX}/${FILE}" --endpoint-url "$ENDPOINT_URL"
+          else
+            aws s3 cp "$FILE" "s3://${S3_BUCKET}/${PREFIX}/${FILE}"
+          fi
+          echo "==> Upload success"
+
+      - name: Apply retention (keep last ${{ env.RETENTION_COUNT }} backups)
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+        run: |
+          set -Eeuo pipefail
+          KEEP="${{ env.RETENTION_COUNT }}"
+          ENDPOINT_URL="${S3_ENDPOINT:-}"
+          if ! [[ "$KEEP" =~ ^[0-9]+$ ]]; then
+            echo "::error::RETENTION_COUNT must be a positive integer (got: $KEEP)"
+            exit 1
+          fi
+          echo "==> Listing existing backups (keeping last ${KEEP})..."
+          # List only .dump objects under backups/ (extract just the object keys)
+          if [ -n "$ENDPOINT_URL" ]; then
+            OBJECT_LIST="$(aws s3 ls "s3://${S3_BUCKET}/backups/" --recursive --endpoint-url "$ENDPOINT_URL" || true)"
+          else
+            OBJECT_LIST="$(aws s3 ls "s3://${S3_BUCKET}/backups/" --recursive || true)"
+          fi
+          if [ -z "${OBJECT_LIST}" ]; then
+            echo "No previous backups found; skip retention."
+            exit 0
+          fi
+          # Extract keys under backups/ and sort by key (YYYY/MM/DD/... lexicographic order)
+          mapfile -t KEYS < <(
+            printf '%s\n' "$OBJECT_LIST" \
+              | awk 'NF >= 4 && $4 ~ /^backups\/.*\.dump$/ { print $4 }' \
+              | sort
+          )
+
+          TOTAL="${#KEYS[@]}"
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No .dump backups found; skip retention."
+            exit 0
+          fi
+          if [ "$TOTAL" -le "$KEEP" ]; then
+            echo "Total backups: ${TOTAL}, keeping all."
+            exit 0
+          fi
+
+          TO_DELETE=$((TOTAL - KEEP))
+          echo "Total: ${TOTAL}, deleting ${TO_DELETE} oldest."
+          for ((i=0; i<TO_DELETE; i++)); do
+            KEY="${KEYS[$i]}"
+            echo "  Deleting s3://${S3_BUCKET}/${KEY}"
+            if [ -n "$ENDPOINT_URL" ]; then
+              aws s3 rm "s3://${S3_BUCKET}/${KEY}" --endpoint-url "$ENDPOINT_URL"
+            else
+              aws s3 rm "s3://${S3_BUCKET}/${KEY}"
+            fi
+          done
+          echo "==> Retention done"
+
+      - name: Summary
+        if: always()
+        run: |
+          set -Eeuo pipefail
+          echo "==> Backup job finished at $(date -u -Iseconds)"
+          if [ "${{ job.status }}" != "success" ]; then
+            echo "::error::Backup or upload failed - check logs above"
+          fi
