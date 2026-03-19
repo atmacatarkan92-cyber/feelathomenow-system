@@ -22,7 +22,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_table("billing_runs")
+    # Not created by 001_initial; only present on legacy databases
+    op.execute("DROP TABLE IF EXISTS billing_runs")
 
 
 def downgrade() -> None:

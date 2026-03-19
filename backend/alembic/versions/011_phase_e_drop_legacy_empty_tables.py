@@ -23,13 +23,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Drop in order: payments (standalone), then property_managers (FK to management_companies),
-    # then expenses (FK to documents), then management_companies, then documents
-    op.drop_table("payments")
-    op.drop_table("property_managers")
-    op.drop_table("expenses")
-    op.drop_table("management_companies")
-    op.drop_table("documents")
+    # Not created by 001_initial; CASCADE matches Phase E cleanup on legacy DBs (see 009 IF EXISTS pattern)
+    op.execute("DROP TABLE IF EXISTS payments CASCADE")
+    op.execute("DROP TABLE IF EXISTS property_managers CASCADE")
+    op.execute("DROP TABLE IF EXISTS expenses CASCADE")
+    op.execute("DROP TABLE IF EXISTS management_companies CASCADE")
+    op.execute("DROP TABLE IF EXISTS documents CASCADE")
 
 
 def downgrade() -> None:

@@ -14,6 +14,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 revision: str = "005_phase_d"
@@ -23,8 +24,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Step 1: Rename existing landlords table to landlords_legacy
-    op.rename_table("landlords", "landlords_legacy")
+    # Step 1: Rename legacy landlords only if present (001_initial does not create landlords)
+    bind = op.get_bind()
+    if inspect(bind).has_table("landlords"):
+        op.rename_table("landlords", "landlords_legacy")
 
     # Step 2: Create new landlords table (IDs as VARCHAR to match users.id for FK)
     op.create_table(
@@ -94,4 +97,6 @@ def downgrade() -> None:
     op.drop_index("ix_landlords_user_id", "landlords")
     op.drop_table("landlords")
 
-    op.rename_table("landlords_legacy", "landlords")
+    bind = op.get_bind()
+    if inspect(bind).has_table("landlords_legacy"):
+        op.rename_table("landlords_legacy", "landlords")

@@ -15,7 +15,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 
 revision: str = "002_phase_a"
@@ -26,6 +26,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 ALLOWED_ROLES = ("admin", "manager", "landlord", "tenant", "support")
 CHECK_CONSTRAINT_NAME = "users_role_allowed"
+
+
+def _payments_table_exists() -> bool:
+    """Legacy `payments` existed in pre-Alembic DBs but is not created by 001_initial."""
+    return inspect(op.get_bind()).has_table("payments")
 
 
 def upgrade() -> None:
@@ -39,8 +44,9 @@ def upgrade() -> None:
         sa.Column("billing_cycle", sa.String(length=50), nullable=True, server_default="monthly"),
     )
 
-    # 3. payments: external_payment_id (VARCHAR, nullable) — alter legacy table only
-    op.add_column("payments", sa.Column("external_payment_id", sa.String(length=255), nullable=True))
+    # 3. payments: external_payment_id — only when legacy table exists (not in 001_initial)
+    if _payments_table_exists():
+        op.add_column("payments", sa.Column("external_payment_id", sa.String(length=255), nullable=True))
 
     # 4. users.role CHECK: only if all existing values are in allowed set
     conn = op.get_bind()
@@ -63,8 +69,9 @@ def downgrade() -> None:
     # 4. users.role CHECK (drop if exists; safe when constraint was skipped)
     op.execute(text(f"ALTER TABLE users DROP CONSTRAINT IF EXISTS {CHECK_CONSTRAINT_NAME}"))
 
-    # 3. payments
-    op.drop_column("payments", "external_payment_id")
+    # 3. payments (legacy table only)
+    if _payments_table_exists():
+        op.execute(text("ALTER TABLE payments DROP COLUMN IF EXISTS external_payment_id"))
 
     # 2. unit_costs
     op.drop_column("unit_costs", "billing_cycle")
