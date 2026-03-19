@@ -7,9 +7,7 @@ Create Date: Phase A consolidation
 - listings: available_from, available_to (DATE, nullable)
 - unit_costs: billing_cycle (VARCHAR, nullable, server default 'monthly')
 - payments: external_payment_id (VARCHAR, nullable)
-- users.role: CHECK constraint only if all existing values in allowed set;
-  current DB has 'platform_admin' which is not in ('admin','manager','landlord','tenant','support'),
-  so constraint is NOT added in this migration.
+- users.role CHECK: defined only in 003_users_role_check (avoids duplicate with that revision).
 """
 from typing import Sequence, Union
 
@@ -24,8 +22,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-ALLOWED_ROLES = ("admin", "manager", "landlord", "tenant", "support")
-CHECK_CONSTRAINT_NAME = "users_role_allowed"
+CHECK_CONSTRAINT_NAME = "users_role_allowed"  # dropped on downgrade if 003 added it after 002
 
 
 def _payments_table_exists() -> bool:
@@ -48,25 +45,9 @@ def upgrade() -> None:
     if _payments_table_exists():
         op.add_column("payments", sa.Column("external_payment_id", sa.String(length=255), nullable=True))
 
-    # 4. users.role CHECK: only if all existing values are in allowed set
-    conn = op.get_bind()
-    result = conn.execute(text("SELECT DISTINCT role FROM users"))
-    roles = {row[0] for row in result if row[0] is not None}
-    invalid = roles - set(ALLOWED_ROLES)
-    if invalid:
-        # Do not add constraint; report via comment (visible in migration source)
-        # Existing values e.g. platform_admin, ops_admin are not in allowed set.
-        pass
-    else:
-        op.create_check_constraint(
-            CHECK_CONSTRAINT_NAME,
-            "users",
-            "role IN ('admin', 'manager', 'landlord', 'tenant', 'support')",
-        )
-
 
 def downgrade() -> None:
-    # 4. users.role CHECK (drop if exists; safe when constraint was skipped)
+    # If 003 ran, constraint exists — drop before reverting 002 (IF EXISTS for legacy partial states)
     op.execute(text(f"ALTER TABLE users DROP CONSTRAINT IF EXISTS {CHECK_CONSTRAINT_NAME}"))
 
     # 3. payments (legacy table only)
