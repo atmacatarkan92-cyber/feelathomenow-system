@@ -39,6 +39,7 @@ def landlord_user_and_landlord():
     landlord_id = "test-landlord-id"
     user = User(
         id=user_id,
+        organization_id="test-org-mock-id",
         email="landlord-test@test.example",
         full_name="Test Landlord",
         role=UserRole.landlord,
@@ -62,6 +63,7 @@ def mock_properties_for_landlord(landlord_user_and_landlord):
     return [
         Property(
             id="prop-1",
+            organization_id="test-org-mock-id",
             landlord_id=landlord.id,
             title="Test Property",
             city="Zurich",

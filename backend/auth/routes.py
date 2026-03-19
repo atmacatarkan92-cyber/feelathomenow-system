@@ -69,15 +69,17 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
         User.email == data.email,
         User.is_active == True,  # noqa: E712
     )
-    result = session.exec(statement).first()
+    if data.organization_id:
+        statement = statement.where(User.organization_id == data.organization_id)
 
-    if not result:
+    matches = session.exec(statement).all()
+    if len(matches) != 1:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
 
-    user, credentials = result
+    user, credentials = matches[0]
 
     if not verify_password(data.password, credentials.password_hash):
         raise HTTPException(
@@ -273,5 +275,6 @@ def read_me(current_user: User = Depends(get_current_user)) -> UserMe:
         role=role_str,
         is_active=current_user.is_active,
         last_login_at=current_user.last_login_at,
+        organization_id=str(current_user.organization_id),
     )
 

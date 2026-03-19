@@ -16,7 +16,7 @@ from sqlmodel import SQLModel, Session, create_engine
 
 from auth.dependencies import get_current_user, get_db_session
 from auth.security import hash_password
-from db.models import RefreshToken, User, UserCredentials, UserRole
+from db.models import Organization, RefreshToken, User, UserCredentials, UserRole
 
 
 # ---------- Test database setup for /auth/login ----------
@@ -55,11 +55,17 @@ def admin_user(auth_db_session: Session) -> User:
     auth_db_session.exec(RefreshToken.__table__.delete())
     auth_db_session.exec(UserCredentials.__table__.delete())
     auth_db_session.exec(User.__table__.delete())
+    auth_db_session.exec(Organization.__table__.delete())
+
+    org = Organization(name="Auth Test Org")
+    auth_db_session.add(org)
+    auth_db_session.flush()
 
     email = "admin@test.example"
     password = "test-password"
 
     user = User(
+        organization_id=str(org.id),
         email=email,
         full_name="Test Admin",
         role=UserRole.admin,
@@ -289,6 +295,7 @@ class TestAdminUnitsAuth:
 
         admin_user = User(
             id="admin-user-id",
+            organization_id="test-org-mock-id",
             email="admin-units@test.example",
             full_name="Admin Units",
             role=UserRole.admin,

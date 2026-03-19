@@ -22,6 +22,7 @@ from sqlmodel import select
 
 from db.database import get_session
 from db.models import User, UserCredentials, UserRole, Landlord
+from db.organization import get_or_create_default_organization
 from auth.security import hash_password
 
 TEST_EMAIL = "landlord-test@feelathomenow-test.com"
@@ -38,7 +39,14 @@ def main() -> None:
 
     session = get_session()
     try:
-        existing_user = session.exec(select(User).where(User.email == TEST_EMAIL)).first()
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
+        existing_user = session.exec(
+            select(User).where(
+                User.organization_id == org_id,
+                User.email == TEST_EMAIL,
+            )
+        ).first()
         if existing_user:
             user = existing_user
             role_val = getattr(user.role, "value", user.role) if hasattr(user, "role") else str(user.role)
@@ -75,6 +83,7 @@ def main() -> None:
                 session.refresh(landlord)
         else:
             user = User(
+                organization_id=org_id,
                 email=TEST_EMAIL,
                 full_name=TEST_FULL_NAME,
                 role=UserRole.landlord,

@@ -110,6 +110,7 @@ class _UnitsMockSession:
 def admin_user():
     return User(
         id="admin-user-id",
+        organization_id="test-org-mock-id",
         email="admin@test.example",
         full_name="Admin",
         role=UserRole.admin,

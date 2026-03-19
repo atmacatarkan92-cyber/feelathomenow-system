@@ -22,6 +22,7 @@ from sqlmodel import select
 
 from db.database import get_session
 from db.models import User, UserCredentials, UserRole
+from db.organization import get_or_create_default_organization
 from auth.security import hash_password
 
 ADMIN_EMAIL = "test@feelathomenow.com"
@@ -33,7 +34,14 @@ def main() -> None:
     # DATABASE_URL is read by db.database (from os.environ / .env)
     session = get_session()
     try:
-        existing = session.exec(select(User).where(User.email == ADMIN_EMAIL)).first()
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
+        existing = session.exec(
+            select(User).where(
+                User.organization_id == org_id,
+                User.email == ADMIN_EMAIL,
+            )
+        ).first()
         if existing:
             print("--- Idempotent: no change ---")
             print(f"User already exists: {ADMIN_EMAIL}")
@@ -43,6 +51,7 @@ def main() -> None:
             return
 
         user = User(
+            organization_id=org_id,
             email=ADMIN_EMAIL,
             full_name=ADMIN_FULL_NAME,
             role=UserRole.admin,

@@ -33,6 +33,7 @@ from db.models import (  # noqa: E402
     Landlord,
     Room,
 )
+from db.organization import get_or_create_default_organization  # noqa: E402
 from auth.security import hash_password  # noqa: E402
 
 
@@ -52,9 +53,18 @@ def ensure_tenant(session):
     created_creds = False
     updated_password = False
 
-    user = session.exec(select(User).where(User.email == TENANT_EMAIL)).first()
+    org = get_or_create_default_organization(session)
+    org_id = str(org.id)
+
+    user = session.exec(
+        select(User).where(
+            User.organization_id == org_id,
+            User.email == TENANT_EMAIL,
+        )
+    ).first()
     if user is None:
         user = User(
+            organization_id=org_id,
             email=TENANT_EMAIL,
             full_name=TENANT_FULL_NAME,
             role=UserRole.tenant,
@@ -87,6 +97,7 @@ def ensure_tenant(session):
         first_room = session.exec(select(Room).limit(1)).first()
         room_id = first_room.id if first_room is not None else None
         tenant = Tenant(
+            organization_id=org_id,
             user_id=user.id,
             name=TENANT_FULL_NAME,
             email=TENANT_EMAIL,
@@ -114,9 +125,18 @@ def ensure_landlord(session):
     created_creds = False
     updated_password = False
 
-    user = session.exec(select(User).where(User.email == LANDLORD_EMAIL)).first()
+    org = get_or_create_default_organization(session)
+    org_id = str(org.id)
+
+    user = session.exec(
+        select(User).where(
+            User.organization_id == org_id,
+            User.email == LANDLORD_EMAIL,
+        )
+    ).first()
     if user is None:
         user = User(
+            organization_id=org_id,
             email=LANDLORD_EMAIL,
             full_name=LANDLORD_FULL_NAME,
             role=UserRole.landlord,

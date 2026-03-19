@@ -102,6 +102,7 @@ class TestTenantLandlordBoundary:
         from db.models import User
         tenant_user = User(
             id="tenant-user-id",
+            organization_id="test-org-mock-id",
             email="tenant@test.example",
             full_name="Tenant",
             role=UserRole.tenant,
@@ -121,6 +122,7 @@ class TestTenantLandlordBoundary:
         from db.models import User
         landlord_user = User(
             id="landlord-user-id",
+            organization_id="test-org-mock-id",
             email="landlord@test.example",
             full_name="Landlord",
             role=UserRole.landlord,

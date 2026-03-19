@@ -292,12 +292,14 @@ class UserRole(str, Enum):
 class User(SQLModel, table=True):
     """
     Authentication user for all portals (admin, tenant, landlord, manager).
+    Scoped to an organization; uniqueness of email is per-organization (see migration uq_users_organization_email_lower).
     """
 
     __tablename__ = "users"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    email: str = Field(index=True, unique=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    email: str = Field(index=True)
     full_name: str
     role: UserRole = Field(
         default=UserRole.admin,

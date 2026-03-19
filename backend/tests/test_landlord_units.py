@@ -62,6 +62,7 @@ class _Result:
 def landlord_user_and_landlord():
     user = User(
         id="test-user-landlord-id",
+        organization_id="test-org-mock-id",
         email="landlord-test@test.example",
         full_name="Test Landlord",
         role=UserRole.landlord,

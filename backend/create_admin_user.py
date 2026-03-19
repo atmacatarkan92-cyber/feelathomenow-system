@@ -15,6 +15,7 @@ from sqlmodel import select
 
 from db.database import get_session
 from db.models import User, UserCredentials, UserRole
+from db.organization import get_or_create_default_organization
 from auth.security import hash_password
 
 
@@ -27,8 +28,15 @@ def main() -> None:
             print("Email is required.")
             return
 
-        # Check if user already exists
-        existing = session.exec(select(User).where(User.email == email)).first()
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
+        # Check if user already exists in this organization
+        existing = session.exec(
+            select(User).where(
+                User.organization_id == org_id,
+                User.email == email,
+            )
+        ).first()
         if existing:
             print(f"User with email '{email}' already exists (id={existing.id}). Aborting.")
             return
@@ -45,6 +53,7 @@ def main() -> None:
             return
 
         user = User(
+            organization_id=org_id,
             email=email,
             full_name="Platform Admin",
             role=UserRole.admin,

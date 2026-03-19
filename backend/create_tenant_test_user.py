@@ -24,6 +24,7 @@ from db.models import (
     Invoice,
     Room,
 )
+from db.organization import get_or_create_default_organization
 from auth.security import hash_password
 
 TEST_EMAIL = "tenant-test@feelathomenow-test.com"
@@ -40,8 +41,15 @@ def main() -> None:
 
     session = get_session()
     try:
+        org = get_or_create_default_organization(session)
+        org_id = str(org.id)
         # 1. Resolve or create user (do not overwrite existing)
-        existing_user = session.exec(select(User).where(User.email == TEST_EMAIL)).first()
+        existing_user = session.exec(
+            select(User).where(
+                User.organization_id == org_id,
+                User.email == TEST_EMAIL,
+            )
+        ).first()
         if existing_user:
             user = existing_user
             # Ensure credentials exist so password can be used (do not overwrite)
@@ -58,6 +66,7 @@ def main() -> None:
                 session.commit()
         else:
             user = User(
+                organization_id=org_id,
                 email=TEST_EMAIL,
                 full_name=TEST_FULL_NAME,
                 role=UserRole.tenant,
@@ -87,6 +96,7 @@ def main() -> None:
                 print("No tenancy or invoice data.")
                 return
             tenant = Tenant(
+                organization_id=org_id,
                 user_id=user.id,
                 name=TEST_FULL_NAME,
                 email=TEST_EMAIL,

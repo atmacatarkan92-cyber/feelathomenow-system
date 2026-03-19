@@ -40,22 +40,32 @@ _WEAK_PASSWORDS = frozenset(
 )
 
 
+def _password_strength_core(password: str) -> bool:
+    """Shared rules for new passwords (no 'must differ from current' check)."""
+    if not password or len(password) < 8 or len(password) > 200:
+        return False
+    if password.isdigit():
+        return False
+    if not any(c.isalpha() for c in password):
+        return False
+    if password.lower() in _WEAK_PASSWORDS:
+        return False
+    return True
+
+
 def new_password_is_acceptable(new_password: str, current_password: str) -> bool:
     """
     Basic strength rules for password change (server-side only).
     Returns False if rejected; callers must not expose which rule failed.
     """
-    if not new_password or len(new_password) < 8 or len(new_password) > 200:
-        return False
     if new_password == current_password:
         return False
-    if new_password.isdigit():
-        return False
-    if not any(c.isalpha() for c in new_password):
-        return False
-    if new_password.lower() in _WEAK_PASSWORDS:
-        return False
-    return True
+    return _password_strength_core(new_password)
+
+
+def password_meets_policy_for_new_account(password: str) -> bool:
+    """Strength check for admin-created accounts (no prior password to compare)."""
+    return _password_strength_core(password)
 
 
 def _get_secret_key() -> str:

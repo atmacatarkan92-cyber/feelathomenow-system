@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
@@ -6,6 +7,8 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=200)
+    # When the same email exists in multiple organizations, clients must pass this to disambiguate.
+    organization_id: Optional[str] = None
 
     @model_validator(mode="after")
     def _password_not_whitespace_only(self):
@@ -27,6 +30,8 @@ class UserMe(BaseModel):
     role: str
     is_active: bool
     last_login_at: datetime | None = None
+    # Canonical org for this account; clients may send this as login.organization_id when email is reused across orgs.
+    organization_id: str
 
 
 class ChangePasswordRequest(BaseModel):
