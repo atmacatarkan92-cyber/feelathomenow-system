@@ -488,7 +488,7 @@ function AdminApartmentsPage() {
       runningCosts,
       currentProfit: currentRevenue - runningCosts,
     };
-  }, [filteredUnits, apartmentUnits.length, coLivingUnits.length]);
+  }, [filteredUnits, apartmentUnits.length, coLivingUnits.length, rooms]);
 
   function handleOpenCreateModal() {
     setEditingId(null);

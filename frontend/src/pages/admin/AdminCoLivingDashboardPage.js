@@ -712,7 +712,7 @@ function AdminCoLivingDashboardPage() {
     fetchAdminOccupancyRooms({ unit_id: uid, on_date: onDate })
       .then((data) => setOccupancyRoomsMap(data))
       .catch(() => setOccupancyRoomsMap(null));
-  }, [firstFilteredUnit?.id, firstFilteredUnit?.unitId]);
+  }, [firstFilteredUnit]);
 
   const dashboard = useMemo(() => {
     const totals = {
@@ -827,7 +827,7 @@ function AdminCoLivingDashboardPage() {
       bestUnit,
       worstUnit,
     };
-  }, [filteredUnits, activeMonth]);
+  }, [filteredUnits, activeMonth, rooms]);
 
   const forecast = useMemo(() => {
     let forecastRevenue = 0;
