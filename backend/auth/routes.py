@@ -1,15 +1,20 @@
-from datetime import datetime, timezone
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlmodel import select
 
-from db.models import User, UserCredentials, RefreshToken
+from db.models import User, UserCredentials, RefreshToken, PasswordResetToken
 from auth.schemas import (
     ChangePasswordRequest,
     ChangePasswordResponse,
+    ForgotPasswordRequest,
+    GenericSuccessResponse,
     LoginRequest,
     Token,
+    ResetPasswordRequest,
     UserMe,
 )
 from auth.security import (
@@ -18,15 +23,18 @@ from auth.security import (
     create_access_token,
     create_refresh_token_value,
     hash_refresh_token,
+    hash_password_reset_token,
     get_refresh_cookie_name,
     get_refresh_token_expire_days,
     get_cookie_secure,
     get_cookie_samesite,
     new_password_is_acceptable,
     password_version_ts,
+    password_meets_policy_for_new_account,
 )
 from auth.dependencies import get_current_user, get_db_session
 from app.core.rate_limit import limiter
+from email_service import send_password_reset_email, EmailServiceError
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -241,6 +249,151 @@ def change_password(
 
     session.commit()
     return ChangePasswordResponse()
+
+
+@router.post(
+    "/forgot-password",
+    response_model=GenericSuccessResponse,
+)
+@limiter.limit("10/minute")
+def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    session=Depends(get_db_session),
+):
+    """
+    Forgot password (secure reset link flow).
+
+    Security requirements:
+    - Always returns a generic success message (no account enumeration).
+    - Stores only a HASH of the reset token in DB.
+    - Generates expiring, single-use tokens.
+    - If multiple users share the same email across organizations, a token + email is
+      issued for all matched users (no guessing).
+    """
+    generic_detail = "If the account exists, a password reset link has been sent."
+
+    # Load all active users matching this email (global or per-org).
+    users = session.exec(
+        select(User).where(
+            User.email == body.email,
+            User.is_active == True,  # noqa: E712
+        )
+    ).all()
+
+    if not users:
+        return GenericSuccessResponse(detail=generic_detail)
+
+    ttl_minutes = int(os.environ.get("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "60"))
+    if ttl_minutes <= 0:
+        ttl_minutes = 60
+
+    now = datetime.now(timezone.utc)
+    frontend_url = os.environ.get("FRONTEND_URL", "").strip()
+    if not frontend_url:
+        frontend_url = "http://localhost:3000"
+
+    tokens_to_send: list[tuple[User, str]] = []
+    for u in users:
+        raw_token = secrets.token_urlsafe(48)
+        token_hash = hash_password_reset_token(raw_token)
+        session.add(
+            PasswordResetToken(
+                user_id=str(u.id),
+                token_hash=token_hash,
+                expires_at=now + timedelta(minutes=ttl_minutes),
+                used_at=None,
+            )
+        )
+        tokens_to_send.append((u, raw_token))
+
+    session.commit()
+
+    # Email delivery: never fail the endpoint response (generic message always),
+    # but do log and continue if sending fails for a recipient.
+    base = frontend_url.rstrip("/")
+    for u, raw_token in tokens_to_send:
+        reset_link = f"{base}/reset-password?token={raw_token}"
+        try:
+            send_password_reset_email(u.email, reset_link)
+        except EmailServiceError:
+            # Intentionally do not leak details to the client.
+            continue
+
+    return GenericSuccessResponse(detail=generic_detail)
+
+
+@router.post(
+    "/reset-password",
+    response_model=GenericSuccessResponse,
+)
+@limiter.limit("10/minute")
+def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    session=Depends(get_db_session),
+):
+    """
+    Reset password using a single-use reset token.
+
+    - Token lookup uses token_hash only (raw token never stored in DB).
+    - Enforces: exists + not expired + unused.
+    - Updates password hash + password_changed_at
+    - Marks token used_at and revokes refresh sessions.
+    - Old access tokens are invalidated via existing `pv` / password_changed_at check.
+    """
+    now = datetime.now(timezone.utc)
+
+    token_hash = hash_password_reset_token(body.token)
+    token_row = session.exec(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > now,
+        )
+    ).first()
+
+    if not token_row:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    if not password_meets_policy_for_new_account(body.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password does not meet requirements",
+        )
+
+    creds = session.exec(
+        select(UserCredentials).where(UserCredentials.user_id == token_row.user_id)
+    ).first()
+    if not creds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    creds.password_hash = hash_password(body.new_password)
+    creds.password_changed_at = now
+    session.add(creds)
+
+    token_row.used_at = now
+    session.add(token_row)
+
+    # Revoke all active refresh sessions for this user.
+    refresh_rows = session.exec(
+        select(RefreshToken).where(
+            RefreshToken.user_id == token_row.user_id,
+            RefreshToken.revoked_at.is_(None),
+        )
+    ).all()
+    for row in refresh_rows:
+        row.revoked_at = now
+        session.add(row)
+
+    session.commit()
+    return GenericSuccessResponse(detail="Password updated")
 
 
 @router.post("/logout")

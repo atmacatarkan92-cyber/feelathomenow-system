@@ -181,3 +181,58 @@ def send_contact_notification(
     except Exception as e:
         logger.error(f"Failed to send email: {str(e)}")
         raise EmailServiceError(f"Failed to send email: {str(e)}")
+
+
+def send_password_reset_email(recipient_email: str, reset_link: str) -> bool:
+    """
+    Send password reset email.
+
+    Security/ops notes:
+    - Caller generates the reset token and includes it in reset_link.
+    - This function does not log reset_link.
+    """
+    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
+    if not sendgrid_api_key:
+        logger.error("SENDGRID_API_KEY not configured")
+        raise EmailServiceError("Email service not configured")
+
+    sender_email = os.environ.get("SENDER_EMAIL", "noreply@feelathomenow.ch")
+
+    subject = "Reset your FeelAtHomeNow password"
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+      </head>
+      <body style="font-family: Helvetica Neue, Arial, sans-serif; line-height: 1.6; color: #2C3E50;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="margin: 0 0 12px 0;">Password reset</h2>
+          <p style="margin: 0 0 16px 0;">Use the link below to set a new password. This link will expire soon.</p>
+          <p style="margin: 0 0 16px 0;">
+            <a href="{reset_link}" style="color: #FF7A3D; text-decoration: none;">Reset password</a>
+          </p>
+          <p style="font-size: 12px; color: #888;">
+            If you did not request this, you can ignore this email.
+          </p>
+        </div>
+      </body>
+    </html>
+    """.strip()
+
+    message = Mail(
+        from_email=Email(sender_email, "FeelAtHomeNow"),
+        to_emails=To(recipient_email),
+        subject=subject,
+        html_content=Content("text/html", html_content),
+    )
+
+    sg = SendGridAPIClient(sendgrid_api_key)
+    response = sg.send(message)
+
+    if response.status_code in [200, 201, 202]:
+        logger.info("Password reset email sent")
+        return True
+
+    logger.error(f"SendGrid returned status {response.status_code} for password reset email")
+    raise EmailServiceError(f"Email sending failed with status {response.status_code}")

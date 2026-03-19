@@ -53,3 +53,24 @@ class ChangePasswordRequest(BaseModel):
 class ChangePasswordResponse(BaseModel):
     detail: str = "Password updated"
 
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class GenericSuccessResponse(BaseModel):
+    detail: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=500)
+    new_password: str = Field(min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def _validate_fields(self):
+        if not self.token or not self.token.strip():
+            raise ValueError("token must not be empty")
+        if not self.new_password or not self.new_password.strip():
+            raise ValueError("new_password must not be empty")
+        return self
+

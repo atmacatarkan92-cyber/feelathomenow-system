@@ -143,6 +143,11 @@ def hash_refresh_token(plain_token: str) -> str:
     return hashlib.sha256(plain_token.encode("utf-8")).hexdigest()
 
 
+def hash_password_reset_token(raw_token: str) -> str:
+    """One-way hash of password reset token for storage. Use for lookup/verify only."""
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
 def create_refresh_token_value():
     """
     Generate a new refresh token. Returns (plain_token, token_hash, expires_at).

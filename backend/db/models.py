@@ -335,6 +335,26 @@ class RefreshToken(SQLModel, table=True):
     replaced_by_token_id: str | None = Field(default=None, foreign_key="refresh_tokens.id", index=True)
 
 
+class PasswordResetToken(SQLModel, table=True):
+    """
+    Password reset tokens (custom recovery flow).
+
+    Security:
+    - only store token_hash in DB
+    - single-use enforced via used_at
+    - expiration enforced via expires_at (checked in code)
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(foreign_key="users.id", index=True)
+    token_hash: str = Field(index=True, unique=True)
+    expires_at: datetime = Field(index=True)
+    used_at: datetime | None = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # ---------------------------------------------------------------------------
 # Audit log (V1: write-action trail)
 # ---------------------------------------------------------------------------
