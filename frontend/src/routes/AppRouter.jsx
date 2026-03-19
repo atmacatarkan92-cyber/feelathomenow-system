@@ -35,6 +35,7 @@ import TenantLoginPage from "../pages/tenant/TenantLoginPage";
 import TenantOverviewPage from "../pages/tenant/TenantOverviewPage";
 import TenantTenanciesPage from "../pages/tenant/TenantTenanciesPage";
 import TenantInvoicesPage from "../pages/tenant/TenantInvoicesPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 import LandlordLayout from "../components/landlord/LandlordLayout";
 import LandlordLoginPage from "../pages/landlord/LandlordLoginPage";
 import LandlordOverviewPage from "../pages/landlord/LandlordOverviewPage";
@@ -75,6 +76,7 @@ export default function AppRouter() {
           <Suspense fallback={<div className="text-center py-20">Loading...</div>}>
             <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/apartments" element={<ApartmentsPage />} />
             <Route path="/wohnungen/:city" element={<ApartmentsPage />} />
             <Route path="/apartments/:id" element={<ApartmentDetailPage />} />
