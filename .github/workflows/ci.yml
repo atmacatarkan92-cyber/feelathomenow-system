@@ -26,8 +26,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql+psycopg2://ci_user:ci_password@localhost:5432/feelathomenow_ci
-      TEST_DATABASE_URL: postgresql+psycopg2://ci_user:ci_password@localhost:5432/feelathomenow_ci
+      # Alembic + role bootstrap use ci_user (superuser). Pytest uses feelathomenow_app (RLS enforced).
       SECRET_KEY: ci-placeholder-secret-key-min-32-chars-for-pytest
     defaults:
       run:
@@ -46,9 +45,21 @@ jobs:
           pip install -r requirements.txt
 
       - name: Alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+psycopg2://ci_user:ci_password@localhost:5432/feelathomenow_ci
         run: alembic upgrade head
 
+      - name: Create app role and grants (non-superuser, no BYPASSRLS)
+        env:
+          MIGRATE_DATABASE_URL: postgresql+psycopg2://ci_user:ci_password@localhost:5432/feelathomenow_ci
+          CI_MIGRATION_ROLE: ci_user
+          CI_APP_ROLE_PASSWORD: feelathomenow_app_ci_pass
+        run: python scripts/ci_grant_app_role.py
+
       - name: Backend tests (full suite)
+        env:
+          DATABASE_URL: postgresql+psycopg2://feelathomenow_app:feelathomenow_app_ci_pass@localhost:5432/feelathomenow_ci
+          TEST_DATABASE_URL: postgresql+psycopg2://feelathomenow_app:feelathomenow_app_ci_pass@localhost:5432/feelathomenow_ci
         run: pytest
 
   frontend:

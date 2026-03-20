@@ -31,6 +31,78 @@ def engine():
     return _require_engine()
 
 
+def test_rls_environment_validates_database_role_and_policies(engine):
+    """
+    Fail fast when the DB session bypasses RLS (superuser / BYPASSRLS) or migration 023
+    is missing. CI must connect as a dedicated app role; Alembic runs as the migration role.
+    """
+    expected_policies = {
+        ("unit", "org_isolation_unit"),
+        ("tenant", "org_isolation_tenant"),
+        ("room", "org_isolation_room"),
+    }
+    with Session(engine) as session:
+        cu, su = session.execute(text("SELECT current_user, session_user")).one()
+        assert cu == su, (
+            f"current_user and session_user must match (got {cu!r}, {su!r})"
+        )
+
+        rolsuper, rolbypass = session.execute(
+            text(
+                "SELECT r.rolsuper, r.rolbypassrls FROM pg_roles r "
+                "WHERE r.rolname = current_user"
+            )
+        ).one()
+        assert rolsuper is False, (
+            "DATABASE_URL must use a non-superuser role; superuser bypasses RLS."
+        )
+        assert rolbypass is False, (
+            "DATABASE_URL must use a role without BYPASSRLS; RLS is skipped for that attribute."
+        )
+
+        guc = session.execute(
+            text("SELECT current_setting('app.current_organization_id', true)")
+        ).scalar()
+        assert guc is None or guc == "", (
+            f"GUC must be unset without request context; got {guc!r}"
+        )
+
+        rls_rows = session.execute(
+            text(
+                """
+                SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relkind = 'r'
+                  AND c.relname IN ('unit', 'tenant', 'room')
+                ORDER BY c.relname
+                """
+            )
+        ).all()
+        names = [r[0] for r in rls_rows]
+        assert names == ["room", "tenant", "unit"], (
+            f"expected public.unit, tenant, room; got {names}"
+        )
+        for relname, relrowsecurity, relforcerow in rls_rows:
+            assert relrowsecurity is True, f"RLS not enabled on {relname}"
+            assert relforcerow is True, f"FORCE ROW LEVEL SECURITY not enabled on {relname}"
+
+        pols = session.execute(
+            text(
+                """
+                SELECT tablename, policyname
+                FROM pg_policies
+                WHERE tablename IN ('unit', 'tenant', 'room')
+                """
+            )
+        ).all()
+        got = {(r[0], r[1]) for r in pols}
+        assert got == expected_policies, (
+            f"expected policies {expected_policies}; got {got}. "
+            "Apply migration 023_rls_unit_tenant_room."
+        )
+
+
 @pytest.fixture
 def rls_test_ids():
     """Unique ids so tests do not collide with other data."""
@@ -94,6 +166,8 @@ def seeded_tenant_rows(engine, rls_test_ids):
 
     yield ids
 
+    # Teardown (FK-safe, deterministic): 1 tenant → 2 room → 3 unit → 4 organization.
+    # RLS on tenant/room/unit requires org_a context.
     with Session(engine) as session:
         apply_pg_organization_context(session, org_a)
         session.execute(text("DELETE FROM tenant WHERE id = :id"), {"id": ids["tenant_a"]})
@@ -101,10 +175,8 @@ def seeded_tenant_rows(engine, rls_test_ids):
         session.execute(text("DELETE FROM unit WHERE id = :id"), {"id": ids["unit_a"]})
         session.commit()
     with Session(engine) as session:
-        session.execute(
-            text("DELETE FROM organization WHERE id IN (:a, :b)"),
-            {"a": org_a, "b": org_b},
-        )
+        session.execute(text("DELETE FROM organization WHERE id = :id"), {"id": org_a})
+        session.execute(text("DELETE FROM organization WHERE id = :id"), {"id": org_b})
         session.commit()
 
 
@@ -179,6 +251,7 @@ def test_rls_insert_unit_without_context_fails(engine):
         msg = str(exc.value).lower()
         assert "row-level security" in msg or "policy" in msg
     finally:
+        # Teardown: 1 tenant (none) → 2 room (none) → 3 unit → 4 organization.
         with Session(engine) as session:
             apply_pg_organization_context(session, org_x)
             session.execute(text("DELETE FROM unit WHERE id = :id"), {"id": uid})
