@@ -11,9 +11,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from sqlmodel import select
 
-from auth.dependencies import require_roles
+from auth.dependencies import get_db_session, require_roles
 from auth.security import hash_password, password_meets_policy_for_new_account
-from db.database import get_session
 from db.models import User, UserCredentials, UserRole
 from app.core.rate_limit import limiter
 
@@ -67,6 +66,7 @@ def admin_create_user(
     request: Request,
     body: AdminCreateUserRequest,
     current_user: User = Depends(require_roles("admin")),
+    session=Depends(get_db_session),
 ):
     """
     Create a user in the same organization as the authenticated admin.
@@ -88,7 +88,6 @@ def admin_create_user(
         )
 
     email_norm = str(body.email).strip().lower()
-    session = get_session()
     try:
         existing = session.exec(
             select(User).where(
@@ -138,5 +137,3 @@ def admin_create_user(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already in use",
         )
-    finally:
-        session.close()

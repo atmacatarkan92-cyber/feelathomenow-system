@@ -9,9 +9,8 @@ from typing import Any, Dict, List, Tuple
 from fastapi import APIRouter, Depends
 from sqlmodel import select
 
-from db.database import get_session
+from auth.dependencies import get_current_tenant, get_db_session
 from db.models import Tenant, Tenancy, Invoice, User, Unit, Room
-from auth.dependencies import get_current_tenant
 from app.services.invoice_service import _invoice_to_api
 
 
@@ -52,43 +51,41 @@ def tenant_me(user_tenant: Tuple[User, Tenant] = Depends(get_current_tenant)):
 
 
 @router.get("/tenancies")
-def tenant_tenancies(user_tenant: Tuple[User, Tenant] = Depends(get_current_tenant)):
+def tenant_tenancies(
+    user_tenant: Tuple[User, Tenant] = Depends(get_current_tenant),
+    session=Depends(get_db_session),
+):
     """List tenancies for the current tenant only. Includes unit/room display names where available."""
     _, tenant = user_tenant
-    session = get_session()
-    try:
-        q = (
-            select(Tenancy)
-            .where(Tenancy.tenant_id == str(tenant.id))
-            .order_by(Tenancy.move_in_date.desc())
-        )
-        tenancies = list(session.exec(q).all())
-        result = []
-        for t in tenancies:
-            unit = session.get(Unit, t.unit_id) if t.unit_id else None
-            room = session.get(Room, t.room_id) if t.room_id else None
-            result.append(_tenancy_to_tenant_dict(
-                t,
-                unit_title=getattr(unit, "title", None) if unit else None,
-                room_name=getattr(room, "name", None) if room else None,
-            ))
-        return result
-    finally:
-        session.close()
+    q = (
+        select(Tenancy)
+        .where(Tenancy.tenant_id == str(tenant.id))
+        .order_by(Tenancy.move_in_date.desc())
+    )
+    tenancies = list(session.exec(q).all())
+    result = []
+    for t in tenancies:
+        unit = session.get(Unit, t.unit_id) if t.unit_id else None
+        room = session.get(Room, t.room_id) if t.room_id else None
+        result.append(_tenancy_to_tenant_dict(
+            t,
+            unit_title=getattr(unit, "title", None) if unit else None,
+            room_name=getattr(room, "name", None) if room else None,
+        ))
+    return result
 
 
 @router.get("/invoices")
-def tenant_invoices(user_tenant: Tuple[User, Tenant] = Depends(get_current_tenant)):
+def tenant_invoices(
+    user_tenant: Tuple[User, Tenant] = Depends(get_current_tenant),
+    session=Depends(get_db_session),
+):
     """List invoices for the current tenant only. Scoped by tenant_id in DB."""
     _, tenant = user_tenant
-    session = get_session()
-    try:
-        stmt = (
-            select(Invoice)
-            .where(Invoice.tenant_id == str(tenant.id))
-            .order_by(Invoice.issue_date.desc())
-        )
-        rows = session.exec(stmt).all()
-        return [_invoice_to_api(inv) for inv in rows]
-    finally:
-        session.close()
+    stmt = (
+        select(Invoice)
+        .where(Invoice.tenant_id == str(tenant.id))
+        .order_by(Invoice.issue_date.desc())
+    )
+    rows = session.exec(stmt).all()
+    return [_invoice_to_api(inv) for inv in rows]

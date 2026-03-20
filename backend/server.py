@@ -26,7 +26,7 @@ from db.database import get_session, engine
 from db.rls import OrgContextMiddleware
 from db.models import Inquiry, Listing, Unit
 from auth.routes import router as auth_router
-from auth.dependencies import get_current_organization, require_roles
+from auth.dependencies import get_current_organization, get_db_session, require_roles
 from auth.security import validate_auth_config
 from app.core.rate_limit import limiter
 from app.api.v1.routes_apartments import router as apartments_router
@@ -186,6 +186,7 @@ async def readiness_check():
 def submit_contact(
     inquiry: ContactInquiryCreate,
     background_tasks: BackgroundTasks,
+    session=Depends(get_db_session),
 ):
     """
     Public contact intake (unauthenticated). Persists Inquiry rows without organization_id;
@@ -193,28 +194,24 @@ def submit_contact(
     """
     if engine is None:
         raise HTTPException(status_code=503, detail="Service temporarily unavailable.")
-    session = get_session()
-    try:
-        obj = Inquiry(
-            name=inquiry.name,
-            email=inquiry.email,
-            message=inquiry.message,
-            phone=inquiry.phone or None,
-            company=inquiry.company or None,
-            language=inquiry.language or "de",
-            apartment_id=inquiry.apartment_id,
-        )
-        session.add(obj)
-        session.commit()
-        session.refresh(obj)
-        inquiry_id = obj.id
-        background_tasks.add_task(send_email_notification_sync, inquiry_id)
-        return ContactResponse(
-            success=True,
-            message="Vielen Dank für Ihre Anfrage. Wir melden uns bald bei Ihnen.",
-        )
-    finally:
-        session.close()
+    obj = Inquiry(
+        name=inquiry.name,
+        email=inquiry.email,
+        message=inquiry.message,
+        phone=inquiry.phone or None,
+        company=inquiry.company or None,
+        language=inquiry.language or "de",
+        apartment_id=inquiry.apartment_id,
+    )
+    session.add(obj)
+    session.commit()
+    session.refresh(obj)
+    inquiry_id = obj.id
+    background_tasks.add_task(send_email_notification_sync, inquiry_id)
+    return ContactResponse(
+        success=True,
+        message="Vielen Dank für Ihre Anfrage. Wir melden uns bald bei Ihnen.",
+    )
 
 
 def send_email_notification_sync(inquiry_id: str):
@@ -251,6 +248,7 @@ def send_email_notification_sync(inquiry_id: str):
 def get_inquiries(
     _: None = Depends(require_roles("admin", "manager")),
     org_id: str = Depends(get_current_organization),
+    session=Depends(get_db_session),
 ):
     """
     Organization-scoped: only inquiries linked to a listing whose unit belongs to the
@@ -262,35 +260,31 @@ def get_inquiries(
     """
     if engine is None:
         raise HTTPException(status_code=503, detail="PostgreSQL is not configured.")
-    session = get_session()
-    try:
-        from sqlmodel import select
-        stmt = (
-            select(Inquiry)
-            .join(Listing, Inquiry.apartment_id == Listing.id)
-            .join(Unit, Listing.unit_id == Unit.id)
-            .where(Unit.organization_id == org_id)
-            .order_by(Inquiry.created_at.desc())
-            .limit(500)
-        )
-        rows = session.exec(stmt).all()
-        return [
-            {
-                "id": r.id,
-                "name": r.name,
-                "email": r.email,
-                "message": r.message,
-                "phone": r.phone,
-                "company": r.company,
-                "language": r.language,
-                "apartment_id": r.apartment_id,
-                "email_sent": r.email_sent,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-            }
-            for r in rows
-        ]
-    finally:
-        session.close()
+    from sqlmodel import select
+    stmt = (
+        select(Inquiry)
+        .join(Listing, Inquiry.apartment_id == Listing.id)
+        .join(Unit, Listing.unit_id == Unit.id)
+        .where(Unit.organization_id == org_id)
+        .order_by(Inquiry.created_at.desc())
+        .limit(500)
+    )
+    rows = session.exec(stmt).all()
+    return [
+        {
+            "id": r.id,
+            "name": r.name,
+            "email": r.email,
+            "message": r.message,
+            "phone": r.phone,
+            "company": r.company,
+            "language": r.language,
+            "apartment_id": r.apartment_id,
+            "email_sent": r.email_sent,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
 
 
 # ==================== App Setup ====================

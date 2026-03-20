@@ -316,8 +316,8 @@ def test_rls_same_session_after_commit_still_sees_tenant_rows(engine, seeded_ten
 
 def test_rls_get_session_uses_context_var_like_post_auth_route(engine, seeded_tenant_rows):
     """
-    Mirrors production: get_current_user sets ContextVar, then route calls get_session().
-    Fresh Session must receive SET LOCAL via get_session -> apply_pg_organization_context.
+    Mirrors production: after auth sets ContextVar, db.database.get_session() (used by
+    get_db_session) must apply SET LOCAL via apply_pg_organization_context.
     """
     from db.database import get_session as db_get_session
     from db.rls import set_request_organization_id

@@ -9,9 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import select
 
-from db.database import get_session
+from auth.dependencies import get_current_organization, get_db_session, require_roles
 from db.models import Property, Landlord
-from auth.dependencies import get_current_organization, require_roles
 from app.core.rate_limit import limiter
 
 
@@ -78,18 +77,15 @@ class PropertyUpdate(BaseModel):
 def admin_list_properties(
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """List all properties (Phase D table)."""
-    session = get_session()
-    try:
-        properties = list(
-            session.exec(
-                select(Property).where(Property.organization_id == org_id).order_by(Property.title)
-            ).all()
-        )
-        return [_property_to_dict(p) for p in properties]
-    finally:
-        session.close()
+    properties = list(
+        session.exec(
+            select(Property).where(Property.organization_id == org_id).order_by(Property.title)
+        ).all()
+    )
+    return [_property_to_dict(p) for p in properties]
 
 
 @router.get("/properties/{property_id}", response_model=dict)
@@ -97,16 +93,13 @@ def admin_get_property(
     property_id: str,
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """Get a single property by id."""
-    session = get_session()
-    try:
-        prop = session.get(Property, property_id)
-        if not prop or str(getattr(prop, "organization_id", "")) != org_id:
-            raise HTTPException(status_code=404, detail="Property not found")
-        return _property_to_dict(prop)
-    finally:
-        session.close()
+    prop = session.get(Property, property_id)
+    if not prop or str(getattr(prop, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Property not found")
+    return _property_to_dict(prop)
 
 
 @router.post("/properties", response_model=dict)
@@ -116,31 +109,28 @@ def admin_create_property(
     body: PropertyCreate,
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """Create a new property."""
-    session = get_session()
-    try:
-        _assert_landlord_in_org(session, body.landlord_id, org_id)
-        prop = Property(
-            organization_id=org_id,
-            landlord_id=body.landlord_id,
-            title=(body.title or "").strip() or "—",
-            street=body.street,
-            house_number=body.house_number,
-            zip_code=body.zip_code,
-            city=body.city,
-            country=(body.country or "CH").strip() or "CH",
-            lat=body.lat,
-            lng=body.lng,
-            status=(body.status or "active").strip() or "active",
-            notes=body.notes,
-        )
-        session.add(prop)
-        session.commit()
-        session.refresh(prop)
-        return _property_to_dict(prop)
-    finally:
-        session.close()
+    _assert_landlord_in_org(session, body.landlord_id, org_id)
+    prop = Property(
+        organization_id=org_id,
+        landlord_id=body.landlord_id,
+        title=(body.title or "").strip() or "—",
+        street=body.street,
+        house_number=body.house_number,
+        zip_code=body.zip_code,
+        city=body.city,
+        country=(body.country or "CH").strip() or "CH",
+        lat=body.lat,
+        lng=body.lng,
+        status=(body.status or "active").strip() or "active",
+        notes=body.notes,
+    )
+    session.add(prop)
+    session.commit()
+    session.refresh(prop)
+    return _property_to_dict(prop)
 
 
 @router.put("/properties/{property_id}", response_model=dict)
@@ -149,22 +139,19 @@ def admin_put_property(
     body: PropertyUpdate,
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """Update a property (partial)."""
-    session = get_session()
-    try:
-        prop = session.get(Property, property_id)
-        if not prop or str(getattr(prop, "organization_id", "")) != org_id:
-            raise HTTPException(status_code=404, detail="Property not found")
-        data = body.model_dump(exclude_unset=True)
-        if "landlord_id" in data:
-            _assert_landlord_in_org(session, data.get("landlord_id"), org_id)
-        for k, v in data.items():
-            if hasattr(prop, k):
-                setattr(prop, k, v)
-        session.add(prop)
-        session.commit()
-        session.refresh(prop)
-        return _property_to_dict(prop)
-    finally:
-        session.close()
+    prop = session.get(Property, property_id)
+    if not prop or str(getattr(prop, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Property not found")
+    data = body.model_dump(exclude_unset=True)
+    if "landlord_id" in data:
+        _assert_landlord_in_org(session, data.get("landlord_id"), org_id)
+    for k, v in data.items():
+        if hasattr(prop, k):
+            setattr(prop, k, v)
+    session.add(prop)
+    session.commit()
+    session.refresh(prop)
+    return _property_to_dict(prop)

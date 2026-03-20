@@ -9,9 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlmodel import select
 
-from db.database import get_session
+from auth.dependencies import get_current_organization, get_db_session, require_roles
 from db.models import Landlord, User
-from auth.dependencies import get_current_organization, require_roles
 from app.core.rate_limit import limiter
 
 
@@ -58,20 +57,17 @@ class LandlordUpdate(BaseModel):
 def admin_list_landlords(
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """List all landlords (Phase D table)."""
-    session = get_session()
-    try:
-        landlords = list(
-            session.exec(
-                select(Landlord)
-                .where(Landlord.organization_id == org_id)
-                .order_by(Landlord.contact_name, Landlord.company_name)
-            ).all()
-        )
-        return [_landlord_to_dict(l) for l in landlords]
-    finally:
-        session.close()
+    landlords = list(
+        session.exec(
+            select(Landlord)
+            .where(Landlord.organization_id == org_id)
+            .order_by(Landlord.contact_name, Landlord.company_name)
+        ).all()
+    )
+    return [_landlord_to_dict(l) for l in landlords]
 
 
 @router.get("/landlords/{landlord_id}", response_model=dict)
@@ -79,16 +75,13 @@ def admin_get_landlord(
     landlord_id: str,
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """Get a single landlord by id."""
-    session = get_session()
-    try:
-        landlord = session.get(Landlord, landlord_id)
-        if not landlord or str(landlord.organization_id) != org_id:
-            raise HTTPException(status_code=404, detail="Landlord not found")
-        return _landlord_to_dict(landlord)
-    finally:
-        session.close()
+    landlord = session.get(Landlord, landlord_id)
+    if not landlord or str(landlord.organization_id) != org_id:
+        raise HTTPException(status_code=404, detail="Landlord not found")
+    return _landlord_to_dict(landlord)
 
 
 @router.post("/landlords", response_model=dict)
@@ -98,30 +91,27 @@ def admin_create_landlord(
     body: LandlordCreate,
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """Create a new landlord."""
-    session = get_session()
-    try:
-        if body.user_id:
-            u = session.get(User, body.user_id)
-            if not u or str(u.organization_id) != org_id:
-                raise HTTPException(status_code=400, detail="Invalid user reference")
-        landlord = Landlord(
-            organization_id=org_id,
-            user_id=body.user_id,
-            company_name=body.company_name,
-            contact_name=(body.contact_name or "").strip() or "—",
-            email=(body.email or "").strip() or "",
-            phone=body.phone,
-            notes=body.notes,
-            status=(body.status or "active").strip() or "active",
-        )
-        session.add(landlord)
-        session.commit()
-        session.refresh(landlord)
-        return _landlord_to_dict(landlord)
-    finally:
-        session.close()
+    if body.user_id:
+        u = session.get(User, body.user_id)
+        if not u or str(u.organization_id) != org_id:
+            raise HTTPException(status_code=400, detail="Invalid user reference")
+    landlord = Landlord(
+        organization_id=org_id,
+        user_id=body.user_id,
+        company_name=body.company_name,
+        contact_name=(body.contact_name or "").strip() or "—",
+        email=(body.email or "").strip() or "",
+        phone=body.phone,
+        notes=body.notes,
+        status=(body.status or "active").strip() or "active",
+    )
+    session.add(landlord)
+    session.commit()
+    session.refresh(landlord)
+    return _landlord_to_dict(landlord)
 
 
 @router.put("/landlords/{landlord_id}", response_model=dict)
@@ -130,24 +120,21 @@ def admin_put_landlord(
     body: LandlordUpdate,
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
 ):
     """Update a landlord (partial)."""
-    session = get_session()
-    try:
-        landlord = session.get(Landlord, landlord_id)
-        if not landlord or str(landlord.organization_id) != org_id:
-            raise HTTPException(status_code=404, detail="Landlord not found")
-        data = body.model_dump(exclude_unset=True)
-        if "user_id" in data and data["user_id"]:
-            u = session.get(User, data["user_id"])
-            if not u or str(u.organization_id) != org_id:
-                raise HTTPException(status_code=400, detail="Invalid user reference")
-        for k, v in data.items():
-            if hasattr(landlord, k):
-                setattr(landlord, k, v)
-        session.add(landlord)
-        session.commit()
-        session.refresh(landlord)
-        return _landlord_to_dict(landlord)
-    finally:
-        session.close()
+    landlord = session.get(Landlord, landlord_id)
+    if not landlord or str(landlord.organization_id) != org_id:
+        raise HTTPException(status_code=404, detail="Landlord not found")
+    data = body.model_dump(exclude_unset=True)
+    if "user_id" in data and data["user_id"]:
+        u = session.get(User, data["user_id"])
+        if not u or str(u.organization_id) != org_id:
+            raise HTTPException(status_code=400, detail="Invalid user reference")
+    for k, v in data.items():
+        if hasattr(landlord, k):
+            setattr(landlord, k, v)
+    session.add(landlord)
+    session.commit()
+    session.refresh(landlord)
+    return _landlord_to_dict(landlord)

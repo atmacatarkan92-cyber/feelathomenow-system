@@ -10,9 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, model_validator
 from sqlmodel import select
 
-from db.database import get_session
+from auth.dependencies import get_current_landlord, get_db_session
 from db.models import User, Landlord, Property, Unit, Tenancy, Tenant, Invoice
-from auth.dependencies import get_current_landlord
 from app.services.invoice_service import _invoice_to_api
 
 
@@ -122,155 +121,142 @@ def landlord_me(user_landlord: Tuple[User, Landlord] = Depends(get_current_landl
 
 
 @router.get("/properties", response_model=List[dict])
-def landlord_list_properties(user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord)):
+def landlord_list_properties(
+    user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
+    session=Depends(get_db_session),
+):
     """List properties for the current landlord. Scoped by Property.landlord_id == current_landlord.id."""
     _, landlord = user_landlord
-    session = get_session()
-    try:
-        q = (
-            select(Property)
-            .where(Property.landlord_id == str(landlord.id))
-            .where(Property.organization_id == str(landlord.organization_id))
-            .order_by(Property.title)
-        )
-        properties = list(session.exec(q).all())
-        return [_property_to_dict(p) for p in properties]
-    finally:
-        session.close()
+    q = (
+        select(Property)
+        .where(Property.landlord_id == str(landlord.id))
+        .where(Property.organization_id == str(landlord.organization_id))
+        .order_by(Property.title)
+    )
+    properties = list(session.exec(q).all())
+    return [_property_to_dict(p) for p in properties]
 
 
 @router.get("/properties/{property_id}", response_model=dict)
 def landlord_get_property(
     property_id: str,
     user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
+    session=Depends(get_db_session),
 ):
     """Get one property. 404 if not found or not owned by current landlord."""
     _, landlord = user_landlord
-    session = get_session()
-    try:
-        prop = session.get(Property, property_id)
-        if (
-            not prop
-            or str(prop.landlord_id) != str(landlord.id)
-            or str(prop.organization_id) != str(landlord.organization_id)
-        ):
-            raise HTTPException(status_code=404, detail="Property not found")
-        return _property_to_dict(prop)
-    finally:
-        session.close()
+    prop = session.get(Property, property_id)
+    if (
+        not prop
+        or str(prop.landlord_id) != str(landlord.id)
+        or str(prop.organization_id) != str(landlord.organization_id)
+    ):
+        raise HTTPException(status_code=404, detail="Property not found")
+    return _property_to_dict(prop)
 
 
 @router.get("/units", response_model=List[dict])
 def landlord_list_units(
     property_id: Optional[str] = None,
     user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
+    session=Depends(get_db_session),
 ):
     """List units for the current landlord's properties. Optional ?property_id= (must belong to landlord)."""
     _, landlord = user_landlord
-    session = get_session()
-    try:
-        # Resolve landlord's property ids
-        q_props = select(Property.id).where(
-            Property.landlord_id == str(landlord.id),
-            Property.organization_id == str(landlord.organization_id),
-        )
-        landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
-        if property_id is not None:
-            if property_id not in landlord_property_ids:
-                return []
-            landlord_property_ids = [property_id]
-        if not landlord_property_ids:
+    # Resolve landlord's property ids
+    q_props = select(Property.id).where(
+        Property.landlord_id == str(landlord.id),
+        Property.organization_id == str(landlord.organization_id),
+    )
+    landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
+    if property_id is not None:
+        if property_id not in landlord_property_ids:
             return []
-        q = (
-            select(Unit, Property)
-            .select_from(Unit)
-            .join(Property, Unit.property_id == Property.id)
-            .where(Unit.property_id.in_(landlord_property_ids))
-            .where(Unit.organization_id == str(landlord.organization_id))
-            .order_by(Unit.title)
-        )
-        rows = session.exec(q).all()
-        return [_unit_to_dict(u, p.title if p else None) for u, p in rows]
-    finally:
-        session.close()
+        landlord_property_ids = [property_id]
+    if not landlord_property_ids:
+        return []
+    q = (
+        select(Unit, Property)
+        .select_from(Unit)
+        .join(Property, Unit.property_id == Property.id)
+        .where(Unit.property_id.in_(landlord_property_ids))
+        .where(Unit.organization_id == str(landlord.organization_id))
+        .order_by(Unit.title)
+    )
+    rows = session.exec(q).all()
+    return [_unit_to_dict(u, p.title if p else None) for u, p in rows]
 
 
 @router.post("/units", response_model=dict)
 def landlord_create_unit(
     body: LandlordUnitCreate,
     user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
+    session=Depends(get_db_session),
 ):
     """Create a unit only if the selected property belongs to the current landlord."""
     _, landlord = user_landlord
-    session = get_session()
-    try:
-        q_props = select(Property.id).where(
-            Property.landlord_id == str(landlord.id),
-            Property.organization_id == str(landlord.organization_id),
+    q_props = select(Property.id).where(
+        Property.landlord_id == str(landlord.id),
+        Property.organization_id == str(landlord.organization_id),
+    )
+    landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
+    if body.property_id not in landlord_property_ids:
+        raise HTTPException(
+            status_code=403,
+            detail="Property not found or you do not have permission to add units to it.",
         )
-        landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
-        if body.property_id not in landlord_property_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="Property not found or you do not have permission to add units to it.",
-            )
-        title = (body.title or "").strip() or "New Unit"
-        unit = Unit(
-            organization_id=str(landlord.organization_id),
-            title=title,
-            address=body.address or "",
-            city=body.city or "",
-            rooms=body.rooms,
-            type=body.type,
-            city_id=body.city_id,
-            property_id=body.property_id,
-        )
-        session.add(unit)
-        session.commit()
-        session.refresh(unit)
-        prop = session.get(Property, unit.property_id) if unit.property_id else None
-        property_title = getattr(prop, "title", None) if prop else None
-        return _unit_to_dict(unit, property_title)
-    finally:
-        session.close()
+    title = (body.title or "").strip() or "New Unit"
+    unit = Unit(
+        organization_id=str(landlord.organization_id),
+        title=title,
+        address=body.address or "",
+        city=body.city or "",
+        rooms=body.rooms,
+        type=body.type,
+        city_id=body.city_id,
+        property_id=body.property_id,
+    )
+    session.add(unit)
+    session.commit()
+    session.refresh(unit)
+    prop = session.get(Property, unit.property_id) if unit.property_id else None
+    property_title = getattr(prop, "title", None) if prop else None
+    return _unit_to_dict(unit, property_title)
 
 
 @router.get("/tenancies", response_model=List[dict])
 def landlord_list_tenancies(
     user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
+    session=Depends(get_db_session),
 ):
     """List tenancies for units belonging to the current landlord. Scope: Unit.property_id -> Property.landlord_id."""
     _, landlord = user_landlord
-    session = get_session()
-    try:
-        q_props = select(Property.id).where(
-            Property.landlord_id == str(landlord.id),
-            Property.organization_id == str(landlord.organization_id),
-        )
-        landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
-        if not landlord_property_ids:
-            return []
-        q_units = select(Unit.id).where(
-            Unit.property_id.in_(landlord_property_ids),
-            Unit.organization_id == str(landlord.organization_id),
-        )
-        landlord_unit_ids = [str(row) for row in session.exec(q_units).all()]
-        if not landlord_unit_ids:
-            return []
-        q = (
-            select(Tenancy, Unit, Property, Tenant)
-            .select_from(Tenancy)
-            .join(Unit, Tenancy.unit_id == Unit.id)
-            .join(Property, Unit.property_id == Property.id)
-            .outerjoin(Tenant, Tenancy.tenant_id == Tenant.id)
-            .where(Tenancy.unit_id.in_(landlord_unit_ids))
-            .where(Tenancy.organization_id == str(landlord.organization_id))
-            .order_by(Tenancy.move_in_date.desc())
-        )
-        rows = list(session.exec(q).all())
-        return [_tenancy_to_dict(t, unit, prop, tenant) for t, unit, prop, tenant in rows]
-    finally:
-        session.close()
+    q_props = select(Property.id).where(
+        Property.landlord_id == str(landlord.id),
+        Property.organization_id == str(landlord.organization_id),
+    )
+    landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
+    if not landlord_property_ids:
+        return []
+    q_units = select(Unit.id).where(
+        Unit.property_id.in_(landlord_property_ids),
+        Unit.organization_id == str(landlord.organization_id),
+    )
+    landlord_unit_ids = [str(row) for row in session.exec(q_units).all()]
+    if not landlord_unit_ids:
+        return []
+    q = (
+        select(Tenancy, Unit, Property, Tenant)
+        .select_from(Tenancy)
+        .join(Unit, Tenancy.unit_id == Unit.id)
+        .join(Property, Unit.property_id == Property.id)
+        .outerjoin(Tenant, Tenancy.tenant_id == Tenant.id)
+        .where(Tenancy.unit_id.in_(landlord_unit_ids))
+        .where(Tenancy.organization_id == str(landlord.organization_id))
+        .order_by(Tenancy.move_in_date.desc())
+    )
+    rows = list(session.exec(q).all())
+    return [_tenancy_to_dict(t, unit, prop, tenant) for t, unit, prop, tenant in rows]
 
 
 def _enrich_invoice_for_landlord(inv: Invoice, unit: Optional[Unit], prop: Optional[Property], tenant: Optional[Tenant]) -> dict:
@@ -292,36 +278,33 @@ def _enrich_invoice_for_landlord(inv: Invoice, unit: Optional[Unit], prop: Optio
 @router.get("/invoices", response_model=List[dict])
 def landlord_list_invoices(
     user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
+    session=Depends(get_db_session),
 ):
     """List invoices for the current landlord's units. Scope: Landlord -> Property -> Unit -> Invoice."""
     _, landlord = user_landlord
-    session = get_session()
-    try:
-        q_props = select(Property.id).where(
-            Property.landlord_id == str(landlord.id),
-            Property.organization_id == str(landlord.organization_id),
-        )
-        landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
-        if not landlord_property_ids:
-            return []
-        q_units = select(Unit.id).where(
-            Unit.property_id.in_(landlord_property_ids),
-            Unit.organization_id == str(landlord.organization_id),
-        )
-        landlord_unit_ids = [str(row) for row in session.exec(q_units).all()]
-        if not landlord_unit_ids:
-            return []
-        stmt = (
-            select(Invoice, Unit, Property, Tenant)
-            .select_from(Invoice)
-            .join(Unit, Invoice.unit_id == Unit.id)
-            .join(Property, Unit.property_id == Property.id)
-            .outerjoin(Tenant, Invoice.tenant_id == Tenant.id)
-            .where(Invoice.unit_id.in_(landlord_unit_ids))
-            .where(Invoice.organization_id == str(landlord.organization_id))
-            .order_by(Invoice.issue_date.desc())
-        )
-        rows = list(session.exec(stmt).all())
-        return [_enrich_invoice_for_landlord(inv, unit, prop, tenant) for inv, unit, prop, tenant in rows]
-    finally:
-        session.close()
+    q_props = select(Property.id).where(
+        Property.landlord_id == str(landlord.id),
+        Property.organization_id == str(landlord.organization_id),
+    )
+    landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
+    if not landlord_property_ids:
+        return []
+    q_units = select(Unit.id).where(
+        Unit.property_id.in_(landlord_property_ids),
+        Unit.organization_id == str(landlord.organization_id),
+    )
+    landlord_unit_ids = [str(row) for row in session.exec(q_units).all()]
+    if not landlord_unit_ids:
+        return []
+    stmt = (
+        select(Invoice, Unit, Property, Tenant)
+        .select_from(Invoice)
+        .join(Unit, Invoice.unit_id == Unit.id)
+        .join(Property, Unit.property_id == Property.id)
+        .outerjoin(Tenant, Invoice.tenant_id == Tenant.id)
+        .where(Invoice.unit_id.in_(landlord_unit_ids))
+        .where(Invoice.organization_id == str(landlord.organization_id))
+        .order_by(Invoice.issue_date.desc())
+    )
+    rows = list(session.exec(stmt).all())
+    return [_enrich_invoice_for_landlord(inv, unit, prop, tenant) for inv, unit, prop, tenant in rows]
