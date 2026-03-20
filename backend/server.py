@@ -1,34 +1,21 @@
 import os
 import logging
 from pathlib import Path
-from typing import List, Optional
-from datetime import datetime, timezone, date
 
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Query, Depends, Header, Body
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from sqlalchemy import text
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from starlette.middleware.base import BaseHTTPMiddleware
 
-from models import (
-    Apartment,
-    ApartmentCreate,
-    ContactInquiry,
-    ContactInquiryCreate,
-    ContactResponse,
-)
-
-from email_service import send_contact_notification, EmailServiceError
-from db.database import get_session, engine
+from db.database import engine
 from db.rls import OrgContextMiddleware
-from db.models import Inquiry, Listing, Unit
 from auth.routes import router as auth_router
-from auth.dependencies import get_current_organization, get_db_session, require_roles
 from auth.security import validate_auth_config
 from app.core.rate_limit import limiter
+from app.core.security_headers_middleware import SecurityHeadersMiddleware
+from app.api.v1.routes_health import router as health_router
+from app.api.v1.routes_contact import router as contact_router
 from app.api.v1.routes_apartments import router as apartments_router
 from app.api.v1.routes_admin_listings import router as admin_listings_router
 from app.api.v1.routes_admin_units import router as admin_units_router
@@ -116,179 +103,6 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-
-        # Basic clickjacking / MIME sniffing / referrer / permissions protections
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
-
-        # Content Security Policy: restrict sources while allowing required integrations
-        csp = (
-            "default-src 'self'; "
-            "img-src 'self' data: https:; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "connect-src 'self' https://*.onrender.com https://*.vercel.app https://*.sentry.io https://sentry.io; "
-            "font-src 'self' data: https://cdn.jsdelivr.net; "
-            "frame-ancestors 'none';"
-        )
-        response.headers["Content-Security-Policy"] = csp
-
-        # Only send HSTS in production (HTTPS termination in front of the app)
-        if os.environ.get("ENVIRONMENT") == "production":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-
-        return response
-
-api_router = APIRouter(prefix="/api")
-
-NOTIFICATION_EMAIL = os.environ.get("NOTIFICATION_EMAIL", "info@feelathomenow.ch")
-
-
-# ==================== Health & Readiness ====================
-
-@api_router.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "service": "feelathomenow-api",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-
-
-@api_router.get("/ready")
-async def readiness_check():
-    """For orchestrators: 503 if PostgreSQL is configured but down."""
-    checks = {}
-    if engine:
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            checks["postgres"] = True
-        except Exception as e:
-            logger.warning("PostgreSQL readiness failed: %s", e)
-            checks["postgres"] = False
-    all_ok = all(checks.values()) if checks else True
-    status = 200 if all_ok else 503
-    return JSONResponse(
-        status_code=status,
-        content={"ready": all_ok, "checks": checks},
-    )
-
-
-# ==================== Contact Form API ====================
-
-@api_router.post("/contact", response_model=ContactResponse)
-def submit_contact(
-    inquiry: ContactInquiryCreate,
-    background_tasks: BackgroundTasks,
-    session=Depends(get_db_session),
-):
-    """
-    Public contact intake (unauthenticated). Persists Inquiry rows without organization_id;
-    not mixed into org-scoped admin listings. See GET /api/admin/inquiries for org filtering.
-    """
-    if engine is None:
-        raise HTTPException(status_code=503, detail="Service temporarily unavailable.")
-    obj = Inquiry(
-        name=inquiry.name,
-        email=inquiry.email,
-        message=inquiry.message,
-        phone=inquiry.phone or None,
-        company=inquiry.company or None,
-        language=inquiry.language or "de",
-        apartment_id=inquiry.apartment_id,
-    )
-    session.add(obj)
-    session.commit()
-    session.refresh(obj)
-    inquiry_id = obj.id
-    background_tasks.add_task(send_email_notification_sync, inquiry_id)
-    return ContactResponse(
-        success=True,
-        message="Vielen Dank für Ihre Anfrage. Wir melden uns bald bei Ihnen.",
-    )
-
-
-def send_email_notification_sync(inquiry_id: str):
-    """Background task: send notification email and mark inquiry.email_sent in PostgreSQL."""
-    if engine is None:
-        return
-    session = get_session()
-    try:
-        inquiry = session.get(Inquiry, inquiry_id)
-        if not inquiry:
-            return
-        try:
-            send_contact_notification(
-                recipient_email=NOTIFICATION_EMAIL,
-                contact_name=inquiry.name,
-                contact_email=inquiry.email,
-                contact_phone=inquiry.phone or "",
-                contact_company=inquiry.company or "",
-                contact_message=inquiry.message,
-                language=inquiry.language or "de",
-            )
-            inquiry.email_sent = True
-            session.add(inquiry)
-            session.commit()
-        except EmailServiceError as e:
-            logger.error(str(e))
-    finally:
-        session.close()
-
-
-# ==================== Admin API ====================
-
-@api_router.get("/admin/inquiries", response_model=List[dict])
-def get_inquiries(
-    _: None = Depends(require_roles("admin", "manager")),
-    org_id: str = Depends(get_current_organization),
-    session=Depends(get_db_session),
-):
-    """
-    Organization-scoped: only inquiries linked to a listing whose unit belongs to the
-    current admin/manager organization (Inquiry.apartment_id -> Listing -> Unit).
-
-    Rows with apartment_id IS NULL are omitted (public contact intake; not attributable to a
-    listing/org in this query). Operational follow-up: review with
-    SELECT id, created_at FROM inquiries WHERE apartment_id IS NULL;
-    """
-    if engine is None:
-        raise HTTPException(status_code=503, detail="PostgreSQL is not configured.")
-    from sqlmodel import select
-    stmt = (
-        select(Inquiry)
-        .join(Listing, Inquiry.apartment_id == Listing.id)
-        .join(Unit, Listing.unit_id == Unit.id)
-        .where(Unit.organization_id == org_id)
-        .order_by(Inquiry.created_at.desc())
-        .limit(500)
-    )
-    rows = session.exec(stmt).all()
-    return [
-        {
-            "id": r.id,
-            "name": r.name,
-            "email": r.email,
-            "message": r.message,
-            "phone": r.phone,
-            "company": r.company,
-            "language": r.language,
-            "apartment_id": r.apartment_id,
-            "email_sent": r.email_sent,
-            "created_at": r.created_at.isoformat() if r.created_at else None,
-        }
-        for r in rows
-    ]
-
-
-# ==================== App Setup ====================
-
 # CORS: explicit origins (required when allow_credentials=True; "*" is invalid with credentials)
 _DEV_ORIGINS = [
     "http://localhost:3000",
@@ -336,7 +150,8 @@ app.include_router(admin_properties_router)
 app.include_router(admin_users_router)
 app.include_router(tenant_router)
 app.include_router(landlord_router)
-app.include_router(api_router)
+app.include_router(health_router)
+app.include_router(contact_router)
 
 
 @app.on_event("startup")
