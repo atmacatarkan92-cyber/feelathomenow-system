@@ -6,7 +6,7 @@ Revises: 023_rls_unit_tenant_room
 Idempotent: safe if columns/FKs/indexes already exist. Does not modify prior migration files.
 Downgrade: not supported (one-way repair).
 
-Drift repair only: VARCHAR organization keys (no UUID type migration).
+Drift repair only: organization_id types aligned with organization.id (UUID or VARCHAR).
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import text
+from sqlalchemy.dialects import postgresql
 
 revision: str = "024_repair_org_schema_from_drift"
 down_revision: Union[str, None] = "023_rls_unit_tenant_room"
@@ -74,6 +75,57 @@ def _organization_id_data_type(conn) -> str:
     return (r or "").lower()
 
 
+def _column_data_type(conn, table: str, column: str) -> str:
+    r = conn.execute(
+        text(
+            """
+            SELECT data_type FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = :t
+              AND column_name = :c
+            """
+        ),
+        {"t": table, "c": column},
+    ).scalar()
+    return (r or "").lower()
+
+
+def _is_varchar_family(dt: str) -> bool:
+    return dt in ("character varying", "varchar", "text")
+
+
+def _ensure_child_organization_id_column_match(conn, table: str, fk_name: str) -> None:
+    if not _column_exists(conn, table, "organization_id"):
+        return
+    org_dt = _organization_id_data_type(conn)
+    col_dt = _column_data_type(conn, table, "organization_id")
+    if org_dt == "uuid" and col_dt == "uuid":
+        return
+    if _is_varchar_family(org_dt) and _is_varchar_family(col_dt):
+        return
+    if org_dt == "uuid" and _is_varchar_family(col_dt):
+        conn.execute(
+            text(f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {fk_name}")
+        )
+        conn.execute(
+            text(
+                f"ALTER TABLE {table} ALTER COLUMN organization_id TYPE uuid "
+                f"USING organization_id::uuid"
+            )
+        )
+        return
+    if _is_varchar_family(org_dt) and col_dt == "uuid":
+        conn.execute(
+            text(f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {fk_name}")
+        )
+        conn.execute(
+            text(
+                f"ALTER TABLE {table} ALTER COLUMN organization_id TYPE varchar "
+                f"USING organization_id::text"
+            )
+        )
+
+
 def _ensure_organization_table(conn) -> None:
     if not _table_exists(conn, "organization"):
         conn.execute(
@@ -97,10 +149,8 @@ def _ensure_organization_table(conn) -> None:
 
 def _ensure_default_organization_row(conn) -> str:
     dt = _organization_id_data_type(conn)
-    if dt == "uuid":
+    if "uuid" in dt:
         id_expr = "gen_random_uuid()"
-    elif dt == "character varying":
-        id_expr = "gen_random_uuid()::text"
     else:
         id_expr = "gen_random_uuid()::text"
     conn.execute(
@@ -129,27 +179,47 @@ def _ensure_default_organization_row(conn) -> str:
 def upgrade() -> None:
     conn = op.get_bind()
 
+    # STEP 1: organization table (+ created_at if drift)
     _ensure_organization_table(conn)
 
+    # STEP 2: default organization row
     default_org_id = _ensure_default_organization_row(conn)
 
-    # --- nullable columns (only if missing) ---
+    # organization.id type (single read for add_column + docs)
+    org_dt = _organization_id_data_type(conn)
+    org_id_type = (
+        postgresql.UUID(as_uuid=True) if "uuid" in org_dt else sa.String()
+    )
+
+    # STEP 3: ensure organization_id columns exist on landlords, properties, unit
     if not _column_exists(conn, "landlords", "organization_id"):
         op.add_column(
             "landlords",
-            sa.Column("organization_id", sa.String(), nullable=True),
+            sa.Column("organization_id", org_id_type, nullable=True),
         )
     if not _column_exists(conn, "properties", "organization_id"):
         op.add_column(
             "properties",
-            sa.Column("organization_id", sa.String(), nullable=True),
+            sa.Column("organization_id", org_id_type, nullable=True),
         )
     if not _column_exists(conn, "unit", "organization_id"):
         op.add_column(
             "unit",
-            sa.Column("organization_id", sa.String(), nullable=True),
+            sa.Column("organization_id", org_id_type, nullable=True),
         )
 
+    # STEP 4: align column types with organization.id (before backfill / FKs)
+    _ensure_child_organization_id_column_match(
+        conn, "landlords", "landlords_organization_id_fkey"
+    )
+    _ensure_child_organization_id_column_match(
+        conn, "properties", "properties_organization_id_fkey"
+    )
+    _ensure_child_organization_id_column_match(
+        conn, "unit", "unit_organization_id_fkey"
+    )
+
+    # STEP 5: backfill
     # --- backfill: landlords from users ---
     conn.execute(
         text(
@@ -228,7 +298,7 @@ def upgrade() -> None:
         {"oid": default_org_id},
     )
 
-    # --- indexes (IF NOT EXISTS) ---
+    # STEP 6: indexes (IF NOT EXISTS)
     conn.execute(
         text(
             "CREATE INDEX IF NOT EXISTS ix_landlords_organization_id ON landlords (organization_id)"
@@ -245,7 +315,7 @@ def upgrade() -> None:
         )
     )
 
-    # --- FKs (only if missing) ---
+    # STEP 7: foreign keys (only if missing)
     if not _fk_exists(conn, "landlords_organization_id_fkey"):
         op.create_foreign_key(
             "landlords_organization_id_fkey",
@@ -271,6 +341,7 @@ def upgrade() -> None:
             ["id"],
         )
 
+    # STEP 8: NULL + orphan checks
     # --- verify no NULLs ---
     for table in ("landlords", "properties", "unit"):
         n = conn.execute(
@@ -297,7 +368,7 @@ def upgrade() -> None:
                 f"024_repair: {table} has {n} row(s) with organization_id not present in organization(id)."
             )
 
-    # --- NOT NULL (only after checks; raw SQL avoids existing_type drift) ---
+    # STEP 9: NOT NULL (only after checks; raw SQL avoids existing_type drift)
     conn.execute(
         text("ALTER TABLE landlords ALTER COLUMN organization_id SET NOT NULL")
     )
