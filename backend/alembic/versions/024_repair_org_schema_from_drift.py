@@ -61,20 +61,24 @@ def _fk_exists(conn, name: str) -> bool:
 
 
 def _ensure_organization_table(conn) -> None:
-    if _table_exists(conn, "organization"):
-        return
-    conn.execute(
-        text(
-            """
-            CREATE TABLE organization (
-                id VARCHAR NOT NULL,
-                name VARCHAR NOT NULL,
-                created_at TIMESTAMP NOT NULL,
-                CONSTRAINT organization_pkey PRIMARY KEY (id)
+    if not _table_exists(conn, "organization"):
+        conn.execute(
+            text(
+                """
+                CREATE TABLE organization (
+                    id VARCHAR NOT NULL,
+                    name VARCHAR NOT NULL,
+                    created_at TIMESTAMP NOT NULL,
+                    CONSTRAINT organization_pkey PRIMARY KEY (id)
+                )
+                """
             )
-            """
         )
-    )
+        return
+    if not _column_exists(conn, "organization", "created_at"):
+        conn.execute(
+            text("ALTER TABLE organization ADD COLUMN created_at TIMESTAMP")
+        )
 
 
 def _ensure_default_organization_row(conn) -> str:
