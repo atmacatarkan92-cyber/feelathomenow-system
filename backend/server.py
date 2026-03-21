@@ -9,6 +9,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from db.database import engine
+from db.startup_repair_users_org import apply_users_organization_id_hotfix
 from db.rls import OrgContextMiddleware
 from auth.routes import router as auth_router
 from auth.security import validate_auth_config
@@ -170,6 +171,8 @@ app.include_router(contact_router)
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting FeelAtHomeNow API...")
+    # Temporary hotfix: ensure users.organization_id exists (e.g. missed Alembic on Render).
+    apply_users_organization_id_hotfix(engine)
     validate_auth_config()  # Refuse to start if SECRET_KEY is not set
     # Production: schema is managed by Alembic only; skip create_db() to avoid "relation already exists"
     if engine is not None and os.environ.get("ENVIRONMENT") != "production":
