@@ -293,13 +293,18 @@ def upgrade() -> None:
     )
 
     # --- landlords: deterministic MIN(properties.organization_id) where still NULL ---
+    min_org_expr = (
+        "MIN(p.organization_id::text)::uuid"
+        if "uuid" in org_dt
+        else "MIN(p.organization_id)"
+    )
     conn.execute(
         text(
-            """
+            f"""
             UPDATE landlords l
             SET organization_id = sub.org_id
             FROM (
-                SELECT l2.id AS lid, MIN(p.organization_id) AS org_id
+                SELECT l2.id AS lid, {min_org_expr} AS org_id
                 FROM landlords l2
                 INNER JOIN properties p ON p.landlord_id = l2.id
                 WHERE l2.organization_id IS NULL
