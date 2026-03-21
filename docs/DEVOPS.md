@@ -38,7 +38,7 @@ Docs: http://localhost:8000/docs
 3. Start dev server: `npm start` or `yarn start`
 
 Frontend: http://localhost:3000 (or the port printed by the script).  
-Set `REACT_APP_BACKEND_URL=http://localhost:8000` in `frontend/.env` if the API runs elsewhere.
+Set `REACT_APP_API_URL=http://localhost:8000` in `frontend/.env` if the API runs elsewhere.
 
 ---
 
@@ -66,7 +66,7 @@ Set `REACT_APP_BACKEND_URL=http://localhost:8000` in `frontend/.env` if the API 
 | frontend | build: ./frontend | 80   | Nginx serving built React app  |
 
 - **Backend**: On startup, the backend container runs `alembic upgrade head` then starts `uvicorn server:app --host 0.0.0.0 --port 8000`. Migrations run automatically; no manual step needed.
-- **Frontend**: CRA/craco build with Node 20; output is `build/`. Nginx serves that folder on port 80. The build uses `REACT_APP_BACKEND_URL` from `.env` or docker-compose build-args so the app talks to the correct API (e.g. `http://localhost:8000` when backend is on the same host).
+- **Frontend**: CRA/craco build with Node 20; output is `build/`. Nginx serves that folder on port 80. The build uses `REACT_APP_API_URL` from `.env` or docker-compose build-args so the app talks to the correct API (e.g. `http://localhost:8000` when backend is on the same host).
 
 ### URLs
 
@@ -94,7 +94,7 @@ Documented in `.env.example`. Main ones:
 | `SECRET_KEY`           | backend   | JWT/auth secret (required) |
 | `ENVIRONMENT`          | backend   | e.g. development, production (for Sentry env) |
 | `SENTRY_DSN`           | backend   | Optional; if set, Sentry is initialized |
-| `REACT_APP_BACKEND_URL`| frontend  | API base URL (build-time; e.g. http://localhost:8000) |
+| `REACT_APP_API_URL`| frontend  | API base URL (build-time; e.g. http://localhost:8000) |
 | `REACT_APP_ADMIN_API_KEY` | frontend | Optional; X-API-Key for admin API |
 | `REACT_APP_SENTRY_DSN` | frontend  | Optional; Sentry DSN if frontend Sentry is enabled |
 

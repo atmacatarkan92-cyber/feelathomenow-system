@@ -164,7 +164,7 @@ Content-Type: application/json
     │   │   └── LanguageContext.js
     │   └── utils/
     │       └── translations.js
-    └── .env               # REACT_APP_BACKEND_URL
+    └── .env               # REACT_APP_API_URL
 ```
 
 ---
@@ -204,7 +204,7 @@ NOTIFICATION_EMAIL="info@feelathomenow.ch"
 
 ### Frontend (.env)
 ```
-REACT_APP_BACKEND_URL=https://apartment-finder-dev.preview.emergentagent.com
+REACT_APP_API_URL=https://apartment-finder-dev.preview.emergentagent.com
 ```
 
 ---

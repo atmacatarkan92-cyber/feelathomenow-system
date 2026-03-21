@@ -38,7 +38,7 @@ pytest tests/test_critical_paths.py -v
 
 - **No test database.** Landlord and tenant success paths use `app.dependency_overrides` for `get_current_landlord` / `get_current_user` and a small **MockSession** that returns fixture data for `session.exec(...).all()`.
 - **SECRET_KEY** must be set (conftest sets a test value so no production secrets are needed).
-- Existing **test_apartments_contacts.py** still uses `requests` and a live server (`REACT_APP_BACKEND_URL`); it is unchanged and can be run separately against a running API.
+- Existing **test_apartments_contacts.py** still uses `requests` and a live server (`REACT_APP_API_URL`); it is unchanged and can be run separately against a running API.
 
 ---
 

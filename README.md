@@ -64,8 +64,8 @@ yarn install
 # Copy environment variables
 cp .env.example .env
 
-# Edit .env with your backend URL
-# REACT_APP_BACKEND_URL=http://localhost:8001
+# Edit .env with your backend URL (see frontend/.env.example)
+# REACT_APP_API_URL=http://localhost:8001
 
 # Run the development server
 yarn start
@@ -127,7 +127,7 @@ Create a table named "Apartments" with these fields:
 
 | Variable | Description |
 |----------|-------------|
-| REACT_APP_BACKEND_URL | Backend API URL |
+| REACT_APP_API_URL | Backend API base URL (no trailing slash) |
 
 ## License
 

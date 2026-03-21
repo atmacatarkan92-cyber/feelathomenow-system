@@ -228,7 +228,7 @@ export function normalizeFetchError(e, fallbackMessage) {
   const msg = e?.message || "";
   if (msg === "Failed to fetch" || msg.includes("Load failed") || msg.includes("NetworkError")) {
     return new Error(
-      "Verbindung zum Server fehlgeschlagen. Bitte Backend-URL (REACT_APP_BACKEND_URL) und CORS prüfen."
+      "Verbindung zum Server fehlgeschlagen. Bitte Backend-URL (REACT_APP_API_URL) und CORS prüfen."
     );
   }
   return e instanceof Error ? e : new Error(fallbackMessage);

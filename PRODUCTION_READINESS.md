@@ -44,7 +44,7 @@ This document outlines prioritized improvements to make FeelAtHomeNow production
 ### 2.1 Single Source of Truth
 
 - **Backend**: One `.env.example` listing every variable (with dummy values and comments). Load via `python-dotenv`; validate required vars at startup and fail fast with a clear message.
-- **Frontend**: Single module (e.g. `src/config.js`) that reads `process.env.REACT_APP_BACKEND_URL` and exports `API_BASE_URL`. Use it everywhere instead of hardcoded `http://127.0.0.1:8000`.
+- **Frontend**: Single module (e.g. `src/config.js`) that reads `process.env.REACT_APP_API_URL` and exports `API_BASE_URL`. Use it everywhere instead of hardcoded `http://127.0.0.1:8000`.
 - **tenant-app**: Keep Base44 config in env (`VITE_BASE44_APP_ID`, etc.); ensure production builds use production Base44 app/base URL.
 
 ### 2.2 Multi-Environment

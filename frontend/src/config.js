@@ -1,12 +1,11 @@
 /**
  * Central API configuration. Use for all backend requests.
- * Set REACT_APP_BACKEND_URL in .env (e.g. http://localhost:8000 for dev).
+ * Set REACT_APP_API_URL in .env (e.g. http://localhost:8000 for dev). See .env.example.
  * Set REACT_APP_ADMIN_API_KEY in .env when backend uses ADMIN_API_KEY (production).
  */
 import { getAccessToken } from "./authStore";
 
-const API_BASE_URL =
-  process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "";
 
 export function getApiHeaders() {
   const headers = { "Content-Type": "application/json" };

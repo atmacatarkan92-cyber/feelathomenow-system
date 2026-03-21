@@ -4,8 +4,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # API URL at build time (for CRA env injection)
-ARG REACT_APP_BACKEND_URL=http://localhost:8000
-ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
+ARG REACT_APP_API_URL=http://localhost:8000
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # Install dependencies (layer caching)
 COPY package.json package-lock.json* yarn.lock* ./
