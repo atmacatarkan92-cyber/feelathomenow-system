@@ -33,7 +33,7 @@ def upgrade() -> None:
         text(
             """
             ALTER TABLE tenancies
-            ADD COLUMN IF NOT EXISTS organization_id VARCHAR
+            ADD COLUMN IF NOT EXISTS organization_id UUID
             REFERENCES organization(id)
             """
         )
