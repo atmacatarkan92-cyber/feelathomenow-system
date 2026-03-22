@@ -90,17 +90,6 @@ def upgrade() -> None:
             """
         )
     )
-    conn.execute(
-        text(
-            """
-            UPDATE invoices i
-            SET organization_id = te.organization_id
-            FROM tenant te
-            WHERE i.tenant_id = te.id
-              AND i.organization_id IS NULL
-            """
-        )
-    )
     remaining_invoices = conn.execute(
         text("SELECT COUNT(*) FROM invoices WHERE organization_id IS NULL")
     ).scalar()
