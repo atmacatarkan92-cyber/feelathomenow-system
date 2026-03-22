@@ -3,8 +3,8 @@
 Revision ID: 025_rls_core_tables
 Revises: 024_repair_org_schema_from_drift
 
-Policies use current_setting('app.current_organization_id', true) — VARCHAR-safe; missing
-setting yields NULL and denies rows (fail-closed).
+Policies compare organization_id to current_setting('app.current_organization_id', true)::uuid;
+missing setting yields NULL and denies rows (fail-closed).
 
 unit_costs has no organization_id; isolation is via parent unit.organization_id.
 
@@ -75,8 +75,8 @@ def upgrade() -> None:
             text(
                 f"""
             CREATE POLICY {policy} ON {table} FOR ALL
-            USING (organization_id = current_setting('app.current_organization_id', true))
-            WITH CHECK (organization_id = current_setting('app.current_organization_id', true))
+            USING (organization_id = current_setting('app.current_organization_id', true)::uuid)
+            WITH CHECK (organization_id = current_setting('app.current_organization_id', true)::uuid)
         """
             )
         )
@@ -92,14 +92,14 @@ def upgrade() -> None:
                 EXISTS (
                     SELECT 1 FROM unit u
                     WHERE u.id = unit_costs.unit_id
-                      AND u.organization_id = current_setting('app.current_organization_id', true)
+                      AND u.organization_id = current_setting('app.current_organization_id', true)::uuid
                 )
             )
             WITH CHECK (
                 EXISTS (
                     SELECT 1 FROM unit u
                     WHERE u.id = unit_costs.unit_id
-                      AND u.organization_id = current_setting('app.current_organization_id', true)
+                      AND u.organization_id = current_setting('app.current_organization_id', true)::uuid
                 )
             )
         """
