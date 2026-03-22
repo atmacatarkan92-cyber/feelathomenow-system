@@ -10,60 +10,6 @@ import {
   normalizeRoom,
 } from "../../api/adminData";
 
-const initialUnits = [
-  {
-    id: 1,
-    unitId: "FAH-U-0001",
-    place: "Zürich",
-    zip: "8001",
-    address: "Bahnhofstrasse 12",
-    type: "Apartment",
-    status: "Belegt",
-    rooms: 2.5,
-    occupiedRooms: 0,
-    tenantPriceMonthly: 2450,
-    landlordRentMonthly: 1850,
-    utilitiesMonthly: 180,
-    cleaningCostMonthly: 120,
-    availableFrom: "2026-04-01",
-    landlordLeaseStartDate: "2026-04-01",
-  },
-  {
-    id: 2,
-    unitId: "FAH-U-0002",
-    place: "Basel",
-    zip: "4058",
-    address: "Clarastrasse 8",
-    type: "Co-Living",
-    status: "Teilbelegt",
-    rooms: 3,
-    occupiedRooms: 1,
-    tenantPriceMonthly: 3400,
-    landlordRentMonthly: 2400,
-    utilitiesMonthly: 250,
-    cleaningCostMonthly: 180,
-    availableFrom: "2026-03-15",
-    landlordLeaseStartDate: "2026-04-01",
-  },
-  {
-    id: 3,
-    unitId: "FAH-U-0003",
-    place: "Bern",
-    zip: "3011",
-    address: "Marktgasse 21",
-    type: "Apartment",
-    status: "Reserviert",
-    rooms: 3.5,
-    occupiedRooms: 0,
-    tenantPriceMonthly: 2200,
-    landlordRentMonthly: 1700,
-    utilitiesMonthly: 160,
-    cleaningCostMonthly: 100,
-    availableFrom: "2026-04-15",
-    landlordLeaseStartDate: "2026-04-01",
-  },
-];
-
 const emptyForm = {
   place: "",
   zip: "",
@@ -290,7 +236,7 @@ function ApartmentTable({ items, onEdit, onDelete }) {
   );
 }
 
-function CoLivingTable({ items, onEdit, onDelete }) {
+function CoLivingTable({ items, rooms, onEdit, onDelete }) {
   return (
     <SectionCard
       title="Co-Living Units"
@@ -406,19 +352,58 @@ function AdminApartmentsPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchAdminUnits()
-      .then((data) => setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []))
-      .catch(() => setUnits([]));
-    fetchAdminRooms()
-      .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
-      .catch(() => setRooms([]));
-    fetchAdminProperties()
-      .then((data) => setProperties(Array.isArray(data) ? data : []))
-      .catch(() => setProperties([]));
+    let cancelled = false;
+    setLoading(true);
+    setFetchError("");
+
+    Promise.allSettled([
+      fetchAdminUnits(),
+      fetchAdminRooms(),
+      fetchAdminProperties(),
+    ]).then((results) => {
+      if (cancelled) return;
+
+      const [unitsRes, roomsRes, propsRes] = results;
+
+      if (unitsRes.status === "fulfilled") {
+        const data = unitsRes.value;
+        setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []);
+      } else {
+        console.error(unitsRes.reason);
+        setFetchError(
+          unitsRes.reason?.message || "Einheiten konnten nicht geladen werden."
+        );
+        setUnits([]);
+      }
+
+      if (roomsRes.status === "fulfilled") {
+        const data = roomsRes.value;
+        setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []);
+      } else {
+        console.error(roomsRes.reason);
+        setRooms([]);
+      }
+
+      if (propsRes.status === "fulfilled") {
+        const data = propsRes.value;
+        setProperties(Array.isArray(data) ? data : []);
+      } else {
+        console.error(propsRes.reason);
+        setProperties([]);
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -654,67 +639,90 @@ function AdminApartmentsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-        <StatCard
-          label="Units gesamt"
-          value={summary.totalUnits}
-          hint="Alle gefilterten Einheiten"
-        />
-        <StatCard
-          label="Apartments"
-          value={summary.totalApartments}
-          hint="Klassische Einzelwohnungen"
-        />
-        <StatCard
-          label="Co-Living Units"
-          value={summary.totalCoLivingUnits}
-          hint="Mehrzimmer-Einheiten"
-        />
-        <StatCard
-          label="Aktueller Umsatz"
-          value={formatCurrency(summary.currentRevenue)}
-          hint="Auf Basis der aktuellen Daten"
-        />
-        <StatCard
-          label="Gewinn aktuell"
-          value={formatCurrency(summary.currentProfit)}
-          hint="Umsatz minus laufende Kosten"
-        />
-      </div>
+      {loading && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center text-slate-600">
+          Laden…
+        </div>
+      )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 flex flex-wrap items-center gap-4">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Suche nach Unit ID, Ort, PLZ, Adresse oder Typ..."
-          className="w-full md:w-96 border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-        />
-        <select
-          value={propertyFilter}
-          onChange={(e) => setPropertyFilter(e.target.value)}
-          className="border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 min-w-[180px]"
-        >
-          <option value="">Alle Liegenschaften</option>
-          {properties.map((p) => (
-            <option key={p.id} value={p.id}>{p.title || p.id}</option>
-          ))}
-        </select>
-      </div>
+      {!loading && fetchError && (
+        <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-8 text-center text-red-600">
+          {fetchError}
+        </div>
+      )}
 
-      <div className="space-y-6">
-        <ApartmentTable
-          items={apartmentUnits}
-          onEdit={handleOpenEditModal}
-          onDelete={handleDelete}
-        />
+      {!loading && !fetchError && units.length === 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center text-slate-600">
+          Keine Daten vorhanden
+        </div>
+      )}
 
-        <CoLivingTable
-          items={coLivingUnits}
-          onEdit={handleOpenEditModal}
-          onDelete={handleDelete}
-        />
-      </div>
+      {!loading && !fetchError && units.length > 0 && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+            <StatCard
+              label="Units gesamt"
+              value={summary.totalUnits}
+              hint="Alle gefilterten Einheiten"
+            />
+            <StatCard
+              label="Apartments"
+              value={summary.totalApartments}
+              hint="Klassische Einzelwohnungen"
+            />
+            <StatCard
+              label="Co-Living Units"
+              value={summary.totalCoLivingUnits}
+              hint="Mehrzimmer-Einheiten"
+            />
+            <StatCard
+              label="Aktueller Umsatz"
+              value={formatCurrency(summary.currentRevenue)}
+              hint="Auf Basis der aktuellen Daten"
+            />
+            <StatCard
+              label="Gewinn aktuell"
+              value={formatCurrency(summary.currentProfit)}
+              hint="Umsatz minus laufende Kosten"
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 flex flex-wrap items-center gap-4">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Suche nach Unit ID, Ort, PLZ, Adresse oder Typ..."
+              className="w-full md:w-96 border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            <select
+              value={propertyFilter}
+              onChange={(e) => setPropertyFilter(e.target.value)}
+              className="border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 min-w-[180px]"
+            >
+              <option value="">Alle Liegenschaften</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>{p.title || p.id}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-6">
+            <ApartmentTable
+              items={apartmentUnits}
+              onEdit={handleOpenEditModal}
+              onDelete={handleDelete}
+            />
+
+            <CoLivingTable
+              items={coLivingUnits}
+              rooms={rooms}
+              onEdit={handleOpenEditModal}
+              onDelete={handleDelete}
+            />
+          </div>
+        </>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
