@@ -97,7 +97,7 @@ class Room(SQLModel, table=True):
     __tablename__ = "room"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    unit_id: str = Field(index=True)
+    unit_id: str = Field(foreign_key="unit.id", index=True)
     name: str
     price: int = Field(default=0)
     floor: Optional[int] = Field(default=None)
@@ -213,7 +213,6 @@ class TenancyStatus(str, Enum):
 class Tenancy(SQLModel, table=True):
     """
     Links a tenant to a room for a period. Used for occupancy and revenue.
-    Aligned to live DB column names where they differ from default (move_out_date date, monthly_rent, deposit_amount).
     """
 
     __tablename__ = "tenancies"
@@ -224,9 +223,9 @@ class Tenancy(SQLModel, table=True):
     room_id: str = Field(foreign_key="room.id", index=True)
     unit_id: str = Field(foreign_key="unit.id", index=True)
     move_in_date: date = Field(...)
-    move_out_date: Optional[date] = Field(default=None, sa_column_kwargs={"name": "move_out_date date"})
-    rent_chf: float = Field(default=0, sa_column_kwargs={"name": "monthly_rent"})
-    deposit_chf: Optional[float] = Field(default=None, sa_column_kwargs={"name": "deposit_amount"})
+    move_out_date: Optional[date] = Field(default=None)
+    rent_chf: float = Field(default=0)
+    deposit_chf: Optional[float] = Field(default=None)
     status: TenancyStatus = Field(default=TenancyStatus.active, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -244,7 +243,7 @@ class Invoice(SQLModel, table=True):
     __tablename__ = "invoices"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    organization_id: Optional[str] = Field(default=None, foreign_key="organization.id", index=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
     invoice_number: Optional[str] = Field(default=None, max_length=64, index=True)
     tenant_id: Optional[str] = Field(default=None, index=True)
     tenancy_id: Optional[str] = Field(default=None, index=True)
