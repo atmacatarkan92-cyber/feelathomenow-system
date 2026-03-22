@@ -27,6 +27,13 @@ function formatCurrency(value) {
   return `CHF ${roundCurrency(value).toLocaleString("de-CH")}`;
 }
 
+function formatChfOrDash(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "-";
+  }
+  return formatCurrency(value);
+}
+
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
@@ -114,49 +121,6 @@ function overlapsMonth(startDate, endDate, monthStart, monthEnd) {
   return true;
 }
 
-function getRunningMonthlyCosts(unit) {
-  if (!hasLeaseStarted(unit)) return 0;
-
-  return (
-    Number(unit.landlordRentMonthly || 0) +
-    Number(unit.utilitiesMonthly || 0) +
-    Number(unit.cleaningCostMonthly || 0)
-  );
-}
-
-function getRunningMonthlyCostsForMonth(unit, activeMonth) {
-  const leaseStartDate =
-    unit.landlordLeaseStartDate || unit.availableFrom || null;
-
-  if (!leaseStartDate) {
-    return 0;
-  }
-
-  const monthStart = getMonthStart(activeMonth);
-  const monthEnd = getMonthEnd(activeMonth);
-
-  if (isDateAfter(leaseStartDate, monthEnd)) {
-    return 0;
-  }
-
-  const monthlyCosts =
-    Number(unit.landlordRentMonthly || 0) +
-    Number(unit.utilitiesMonthly || 0) +
-    Number(unit.cleaningCostMonthly || 0);
-
-  const leaseStart = new Date(leaseStartDate);
-
-  if (leaseStart <= monthStart) {
-    return monthlyCosts;
-  }
-
-  const daysInMonth = monthEnd.getDate();
-  const activeDays = daysInMonth - leaseStart.getDate() + 1;
-  const proratedCosts = (monthlyCosts / daysInMonth) * activeDays;
-
-  return proratedCosts;
-}
-
 function getRoomsForUnit(unitId, allRooms = []) {
   return allRooms.filter((room) => (room.unitId || room.unit_id) === unitId);
 }
@@ -165,26 +129,24 @@ function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
   const rooms = getRoomsForUnit(unit.unitId || unit.id, allRooms);
   const monthStart = getMonthStart(activeMonth);
   const monthEnd = getMonthEnd(activeMonth);
+  const leaseStarted = hasLeaseStarted(unit);
 
   if (rooms.length === 0) {
     const total = Number(unit.rooms || 0);
-    const fullRevenue = Number(unit.tenantPriceMonthly || 0);
-    const currentRevenue = 0;
-    const runningCosts = getRunningMonthlyCostsForMonth(unit, activeMonth);
 
     return {
       occupiedCount: 0,
       reservedCount: 0,
       freeCount: total,
       totalRooms: total,
-      fullRevenue,
-      currentRevenue,
-      vacancyLoss: Math.max(fullRevenue - currentRevenue, 0),
-      currentProfit: currentRevenue - runningCosts,
-      runningCosts,
+      fullRevenue: null,
+      currentRevenue: null,
+      vacancyLoss: null,
+      currentProfit: null,
+      runningCosts: null,
       isFullyOccupied: false,
       isPartiallyOccupied: false,
-      leaseStarted: runningCosts > 0,
+      leaseStarted,
     };
   }
 
@@ -275,8 +237,6 @@ function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
     0
   );
 
-  const runningCosts = getRunningMonthlyCostsForMonth(unit, activeMonth);
-
   return {
     occupiedCount: occupiedRooms.length,
     reservedCount: reservedRooms.length,
@@ -285,13 +245,13 @@ function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
     fullRevenue,
     currentRevenue,
     vacancyLoss: Math.max(fullRevenue - currentRevenue, 0),
-    currentProfit: currentRevenue - runningCosts,
-    runningCosts,
+    currentProfit: null,
+    runningCosts: null,
     isFullyOccupied:
       rooms.length > 0 && occupiedRooms.length === rooms.length,
     isPartiallyOccupied:
       occupiedRooms.length > 0 && occupiedRooms.length < rooms.length,
-    leaseStarted: runningCosts > 0,
+    leaseStarted,
   };
 }
 
@@ -374,13 +334,6 @@ function buildMonthlyForecast(units, allRooms = []) {
       const rooms = getRoomsForUnit(unit.unitId || unit.id, allRooms);
 
       if (rooms.length === 0) {
-        const totalRooms = Number(unit.rooms || 0);
-        const occupiedRooms = Number(unit.occupiedRooms || 0);
-        const fullRevenue = Number(unit.tenantPriceMonthly || 0);
-        const roomValue = totalRooms > 0 ? fullRevenue / totalRooms : 0;
-
-        secureRevenue += occupiedRooms * roomValue;
-        freeRevenue += Math.max(totalRooms - occupiedRooms, 0) * roomValue;
         return;
       }
 
@@ -410,7 +363,7 @@ function buildWarnings(units, rankedUnits, activeMonth, allRooms = []) {
   const warnings = [];
 
   rankedUnits.forEach((unit) => {
-    if (unit.currentRevenue <= 0) {
+    if (unit.currentRevenue != null && unit.currentRevenue <= 0) {
       warnings.push({
         type: "danger",
         title: `${unit.unitId} · ${unit.place}`,
@@ -418,7 +371,7 @@ function buildWarnings(units, rankedUnits, activeMonth, allRooms = []) {
       });
     }
 
-    if (unit.breakEvenGap < 0) {
+    if (unit.breakEvenGap != null && unit.breakEvenGap < 0) {
       warnings.push({
         type: "danger",
         title: `${unit.unitId} · ${unit.place}`,
@@ -448,7 +401,10 @@ function buildWarnings(units, rankedUnits, activeMonth, allRooms = []) {
   units.forEach((unit) => {
     if (!hasLeaseStarted(unit)) {
       const metrics = getCoLivingMetricsForMonth(unit, activeMonth, allRooms);
-      if (metrics.currentRevenue <= 0) {
+      if (
+        metrics.currentRevenue != null &&
+        metrics.currentRevenue <= 0
+      ) {
         warnings.push({
           type: "danger",
           title: `${unit.unitId} · ${unit.place}`,
@@ -721,11 +677,11 @@ function AdminCoLivingDashboardPage() {
       occupiedRooms: 0,
       reservedRooms: 0,
       freeRooms: 0,
-      fullRevenue: 0,
-      currentRevenue: 0,
-      runningCosts: 0,
-      vacancyLoss: 0,
-      currentProfit: 0,
+      fullRevenue: null,
+      currentRevenue: null,
+      runningCosts: null,
+      vacancyLoss: null,
+      currentProfit: null,
       fullUnits: 0,
       partialUnits: 0,
       notStartedUnits: 0,
@@ -761,11 +717,18 @@ function AdminCoLivingDashboardPage() {
       totals.occupiedRooms += metrics.occupiedCount;
       totals.reservedRooms += metrics.reservedCount;
       totals.freeRooms += metrics.freeCount;
-      totals.fullRevenue += metrics.fullRevenue;
-      totals.currentRevenue += metrics.currentRevenue;
-      totals.runningCosts += metrics.runningCosts;
-      totals.vacancyLoss += metrics.vacancyLoss;
-      totals.currentProfit += metrics.currentProfit;
+      if (metrics.fullRevenue != null) {
+        totals.fullRevenue =
+          (totals.fullRevenue ?? 0) + metrics.fullRevenue;
+      }
+      if (metrics.currentRevenue != null) {
+        totals.currentRevenue =
+          (totals.currentRevenue ?? 0) + metrics.currentRevenue;
+      }
+      if (metrics.vacancyLoss != null) {
+        totals.vacancyLoss =
+          (totals.vacancyLoss ?? 0) + metrics.vacancyLoss;
+      }
       totals.vacancyDays += unitVacancyDays;
       totals.lostRevenue7Days += unitLostRevenue7Days;
 
@@ -787,7 +750,10 @@ function AdminCoLivingDashboardPage() {
         runningCosts: metrics.runningCosts,
         fullRevenue: metrics.fullRevenue,
         breakEvenRevenue: metrics.runningCosts,
-        breakEvenGap: metrics.currentRevenue - metrics.runningCosts,
+        breakEvenGap:
+          metrics.currentRevenue != null && metrics.runningCosts != null
+            ? metrics.currentRevenue - metrics.runningCosts
+            : null,
         vacancyDays: unitVacancyDays,
         lostRevenue7Days: unitLostRevenue7Days,
       };
@@ -805,13 +771,16 @@ function AdminCoLivingDashboardPage() {
       totals.totalRooms > 0 ? (totals.freeRooms / totals.totalRooms) * 100 : 0;
 
     const averageRevenuePerRoom =
-      totals.totalRooms > 0 ? totals.currentRevenue / totals.totalRooms : 0;
-    const averageProfitPerUnit =
-      totals.unitsCount > 0 ? totals.currentProfit / totals.unitsCount : 0;
+      totals.totalRooms > 0 && totals.currentRevenue != null
+        ? totals.currentRevenue / totals.totalRooms
+        : null;
+    const averageProfitPerUnit = null;
 
-    const rankedUnits = [...unitPerformance].sort(
-      (a, b) => b.currentProfit - a.currentProfit
-    );
+    const rankedUnits = [...unitPerformance].sort((a, b) => {
+      const br = b.currentRevenue ?? -Infinity;
+      const ar = a.currentRevenue ?? -Infinity;
+      return br - ar;
+    });
     const bestUnit = rankedUnits.length > 0 ? rankedUnits[0] : null;
     const worstUnit =
       rankedUnits.length > 0 ? rankedUnits[rankedUnits.length - 1] : null;
@@ -830,45 +799,46 @@ function AdminCoLivingDashboardPage() {
   }, [filteredUnits, activeMonth, rooms]);
 
   const forecast = useMemo(() => {
-    let forecastRevenue = 0;
-    let forecastCosts = 0;
+    let forecastRevenue = null;
     let forecastOccupiedRooms = 0;
     let forecastReservedRooms = 0;
     let forecastTotalRooms = 0;
     let criticalUnits = 0;
 
     filteredUnits.forEach((unit) => {
-      const metrics = getCoLivingMetricsForMonth(unit, activeMonth);
+      const metrics = getCoLivingMetricsForMonth(unit, activeMonth, rooms);
       const totalRooms = Number(metrics.totalRooms || 0);
       const occupiedCount = Number(metrics.occupiedCount || 0);
       const reservedCount = Number(metrics.reservedCount || 0);
-      const fullRevenue = Number(metrics.fullRevenue || 0);
-      const runningCosts = Number(metrics.runningCosts || 0);
+      const fullRevenue =
+        metrics.fullRevenue != null ? Number(metrics.fullRevenue) : null;
 
       let reservedWeight = 1;
       if (selectedPeriod === "thisMonth") reservedWeight = 0.35;
       if (selectedPeriod === "nextMonth") reservedWeight = 0.7;
       if (selectedPeriod === "customMonth") reservedWeight = 0.7;
 
-      const roomValue = totalRooms > 0 ? fullRevenue / totalRooms : 0;
+      if (fullRevenue == null || totalRooms <= 0) {
+        forecastOccupiedRooms += occupiedCount;
+        forecastReservedRooms += reservedCount * reservedWeight;
+        forecastTotalRooms += totalRooms;
+        return;
+      }
+
+      const roomValue = fullRevenue / totalRooms;
       const expectedBookedRooms = Math.min(
         occupiedCount + reservedCount * reservedWeight,
         totalRooms
       );
 
       const expectedRevenue = roomValue * expectedBookedRooms;
-      const expectedProfit = expectedRevenue - runningCosts;
 
-      forecastRevenue += expectedRevenue;
-      forecastCosts += runningCosts;
+      forecastRevenue = (forecastRevenue ?? 0) + expectedRevenue;
       forecastOccupiedRooms += occupiedCount;
       forecastReservedRooms += reservedCount * reservedWeight;
       forecastTotalRooms += totalRooms;
 
-      if (
-        expectedProfit < 0 ||
-        expectedBookedRooms / Math.max(totalRooms, 1) < 0.5
-      ) {
+      if (expectedBookedRooms / Math.max(totalRooms, 1) < 0.5) {
         criticalUnits += 1;
       }
     });
@@ -879,16 +849,14 @@ function AdminCoLivingDashboardPage() {
           100
         : 0;
 
-    const forecastProfit = forecastRevenue - forecastCosts;
-
     return {
       forecastRevenue,
-      forecastCosts,
-      forecastProfit,
+      forecastCosts: null,
+      forecastProfit: null,
       expectedOccupancyRate,
       criticalUnits,
     };
-  }, [filteredUnits, selectedPeriod, activeMonth]);
+  }, [filteredUnits, selectedPeriod, activeMonth, rooms]);
 
   const monthlyRevenueForecast = useMemo(() => {
     if (revenueForecastApi && Array.isArray(revenueForecastApi.by_month) && revenueForecastApi.by_month.length > 0) {
@@ -930,43 +898,32 @@ function AdminCoLivingDashboardPage() {
   const monthlyChartData = useMemo(() => {
     return Array.from({ length: 6 }, (_, index) => {
       const monthDate = addMonths(startOfMonth(activeMonth), index - 2);
-      let umsatz = 0;
-      let ausgaben = 0;
+      let umsatz = null;
 
       filteredUnits.forEach((unit) => {
         const metrics = getCoLivingMetricsForMonth(unit, monthDate, rooms);
-        umsatz += Number(metrics.currentRevenue || 0);
-        ausgaben += Number(metrics.runningCosts || 0);
+        if (metrics.currentRevenue != null) {
+          umsatz = (umsatz ?? 0) + metrics.currentRevenue;
+        }
       });
 
       return {
         month: monthDate.toLocaleDateString("de-CH", { month: "short" }),
         umsatz,
-        ausgaben,
-        gewinn: umsatz - ausgaben,
       };
     });
   }, [filteredUnits, activeMonth, rooms]);
 
   const revenueTrend = getTrendLabel(
-    monthlyChartData[5]?.umsatz || 0,
-    monthlyChartData[4]?.umsatz || 0
+    monthlyChartData[5]?.umsatz ?? 0,
+    monthlyChartData[4]?.umsatz ?? 0
   );
 
-  const profitTrend = getTrendLabel(
-    monthlyChartData[5]?.gewinn || 0,
-    monthlyChartData[4]?.gewinn || 0
-  );
+  const profitTrend = null;
 
-  const costTrend = getTrendLabel(
-    monthlyChartData[5]?.ausgaben || 0,
-    monthlyChartData[4]?.ausgaben || 0
-  );
+  const costTrend = null;
 
-  const occupancyTrend = getTrendLabel(
-    dashboardDisplay.occupiedRate,
-    dashboardDisplay.occupiedRate * 0.94
-  );
+  const occupancyTrend = null;
 
   return (
     <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
@@ -1092,21 +1049,21 @@ function AdminCoLivingDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
           <HeroCard
             title="Aktueller Umsatz"
-            value={formatCurrency(dashboard.currentRevenue)}
+            value={formatChfOrDash(dashboard.currentRevenue)}
             subtitle="Nur belegte Rooms werden als Umsatz gerechnet"
             accent="orange"
             trend={revenueTrend}
           />
           <HeroCard
             title="Gewinn aktuell"
-            value={formatCurrency(dashboard.currentProfit)}
+            value={formatChfOrDash(dashboard.currentProfit)}
             subtitle="Umsatz minus laufende Ausgaben"
             accent="green"
             trend={profitTrend}
           />
           <HeroCard
             title="Aktuelle Ausgaben"
-            value={formatCurrency(dashboard.runningCosts)}
+            value={formatChfOrDash(dashboard.runningCosts)}
             subtitle="Miete an Vermieter, Nebenkosten und Reinigung"
             accent="slate"
             trend={costTrend}
@@ -1128,19 +1085,19 @@ function AdminCoLivingDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
             <HeroCard
               title="Forecast Umsatz"
-              value={formatCurrency(forecast.forecastRevenue)}
+              value={formatChfOrDash(forecast.forecastRevenue)}
               subtitle="Erwarteter Umsatz im gewählten Zeitraum"
               accent="blue"
             />
             <HeroCard
               title="Forecast Gewinn"
-              value={formatCurrency(forecast.forecastProfit)}
+              value={formatChfOrDash(forecast.forecastProfit)}
               subtitle="Erwarteter Gewinn nach Kosten"
               accent="green"
             />
             <HeroCard
               title="Forecast Kosten"
-              value={formatCurrency(forecast.forecastCosts)}
+              value={formatChfOrDash(forecast.forecastCosts)}
               subtitle="Erwartete laufende Kosten im gewählten Zeitraum"
               accent="slate"
             />
@@ -1233,7 +1190,7 @@ function AdminCoLivingDashboardPage() {
               />
               <SmallStatCard
                 label="Umsatzverlust 7 Tage"
-                value={formatCurrency(dashboard.lostRevenue7Days)}
+                value={formatChfOrDash(dashboard.lostRevenue7Days)}
                 hint="Geschätzter Verlust durch frei / reserviert"
               />
             </div>
@@ -1336,22 +1293,22 @@ function AdminCoLivingDashboardPage() {
               <div className="grid grid-cols-1 gap-4">
                 <SmallStatCard
                   label="Vollbelegung Umsatz"
-                  value={formatCurrency(dashboard.fullRevenue)}
+                  value={formatChfOrDash(dashboard.fullRevenue)}
                   hint="Maximum bei 100% Auslastung"
                 />
                 <SmallStatCard
                   label="Leerstand"
-                  value={formatCurrency(dashboard.vacancyLoss)}
+                  value={formatChfOrDash(dashboard.vacancyLoss)}
                   hint="Fehlender Umsatz durch freie Rooms"
                 />
                 <SmallStatCard
                   label="Ø Umsatz pro Room"
-                  value={formatCurrency(dashboard.averageRevenuePerRoom)}
+                  value={formatChfOrDash(dashboard.averageRevenuePerRoom)}
                   hint="Aktueller Durchschnitt über alle Rooms"
                 />
                 <SmallStatCard
                   label="Ø Gewinn pro Unit"
-                  value={formatCurrency(dashboard.averageProfitPerUnit)}
+                  value={formatChfOrDash(dashboard.averageProfitPerUnit)}
                   hint="Aktueller Durchschnitt über alle Co-Living Units"
                 />
               </div>
@@ -1385,19 +1342,19 @@ function AdminCoLivingDashboardPage() {
                       {row.month}
                     </td>
                     <td className="py-4 pr-4 text-emerald-700 font-medium">
-                      {formatCurrency(row.secureRevenue)}
+                      {formatChfOrDash(row.secureRevenue)}
                     </td>
                     <td className="py-4 pr-4 text-sky-700 font-medium">
-                      {formatCurrency(row.reservedRevenue)}
+                      {formatChfOrDash(row.reservedRevenue)}
                     </td>
                     <td className="py-4 pr-4 text-amber-700 font-medium">
-                      {formatCurrency(row.riskRevenue)}
+                      {formatChfOrDash(row.riskRevenue)}
                     </td>
                     <td className="py-4 pr-4 text-rose-700 font-medium">
-                      {formatCurrency(row.freeRevenue)}
+                      {formatChfOrDash(row.freeRevenue)}
                     </td>
                     <td className="py-4 pr-4 font-bold text-slate-900">
-                      {formatCurrency(row.forecastRevenue)}
+                      {formatChfOrDash(row.forecastRevenue)}
                     </td>
                   </tr>
                 ))}
@@ -1421,31 +1378,19 @@ function AdminCoLivingDashboardPage() {
                       tick={{ fill: "#64748b", fontSize: 12 }}
                     />
                     <YAxis tick={{ fill: "#64748b", fontSize: 12 }} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Tooltip
+                      formatter={(value) =>
+                        value === null || value === undefined
+                          ? "-"
+                          : formatCurrency(value)
+                      }
+                    />
                     <Legend />
                     <Line
                       type="monotone"
                       dataKey="umsatz"
                       name="Umsatz"
                       stroke="#f97316"
-                      strokeWidth={4}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 6 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="ausgaben"
-                      name="Ausgaben"
-                      stroke="#334155"
-                      strokeWidth={4}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 6 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="gewinn"
-                      name="Gewinn"
-                      stroke="#16a34a"
                       strokeWidth={4}
                       dot={{ r: 3 }}
                       activeDot={{ r: 6 }}

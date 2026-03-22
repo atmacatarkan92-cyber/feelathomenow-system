@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchAdminUnits, fetchAdminRevenueForecast, normalizeUnit } from "../../api/adminData";
 
-function formatCurrency(value) {
-  const amount = Number(value || 0);
-  return `CHF ${amount.toLocaleString("de-CH")}`;
+function formatCurrencyMaybe(value) {
+  if (value === null || value === undefined) return "-";
+  return `CHF ${Number(value).toLocaleString("de-CH")}`;
 }
 
 function AdminForecastPage() {
@@ -23,32 +23,30 @@ function AdminForecastPage() {
   }, [currentYear, currentMonth]);
 
   const forecast = useMemo(() => {
-    const fromApi = revenueForecast && revenueForecast.summary;
-    const totalRevenue = fromApi ? revenueForecast.summary.expected_revenue : null;
-    const rows = units.map((unit) => {
-      const revenue = Number(unit.tenantPriceMonthly || 0);
-      const costs =
-        Number(unit.landlordRentMonthly || 0) +
-        Number(unit.utilitiesMonthly || 0) +
-        Number(unit.cleaningCostMonthly || 0);
-      const profit = revenue - costs;
-      const risk = profit < 300 ? "hoch" : profit < 800 ? "mittel" : "niedrig";
+    const api = revenueForecast;
+    if (!api || !api.summary) {
+      return { rows: [], totalRevenue: null, totalProfit: null };
+    }
+    const totalRevenue =
+      api.summary.expected_revenue != null
+        ? api.summary.expected_revenue
+        : null;
+    const unitRows = Array.isArray(api.units) ? api.units : [];
+    const rows = unitRows.map((rec) => {
+      const u = units.find((x) => String(x.id) === String(rec.unit_id));
       return {
-        id: unit.unitId,
-        city: unit.place,
-        revenue,
-        costs,
-        profit,
-        risk,
+        id: u?.unitId || rec.unit_id,
+        city: u?.place ?? "-",
+        revenue: rec.expected_revenue != null ? rec.expected_revenue : null,
+        costs: null,
+        profit: null,
+        risk: null,
       };
     });
-    const fallbackRevenue = rows.reduce((a, b) => a + b.revenue, 0);
-    const fallbackProfit = rows.reduce((a, b) => a + b.profit, 0);
     return {
       rows,
-      totalRevenue: totalRevenue != null ? totalRevenue : fallbackRevenue,
-      totalProfit: fallbackProfit,
-      fromTenancyApi: !!fromApi,
+      totalRevenue,
+      totalProfit: null,
     };
   }, [units, revenueForecast]);
 
@@ -89,12 +87,12 @@ function AdminForecastPage() {
 
         <div className="card">
           <h4>Erwarteter Umsatz</h4>
-          <h2>{formatCurrency(forecast.totalRevenue)}</h2>
+          <h2>{formatCurrencyMaybe(forecast.totalRevenue)}</h2>
         </div>
 
         <div className="card">
           <h4>Erwarteter Gewinn</h4>
-          <h2>{formatCurrency(forecast.totalProfit)}</h2>
+          <h2>{formatCurrencyMaybe(forecast.totalProfit)}</h2>
         </div>
 
       </div>
@@ -127,50 +125,22 @@ function AdminForecastPage() {
 
           <tbody>
 
-            {forecast.rows.map(row => {
-
-              const color =
-                row.risk === "hoch"
-                  ? "#DC2626"
-                  : row.risk === "mittel"
-                  ? "#F59E0B"
-                  : "#16A34A";
-
-              return (
-                <tr key={row.id} style={{borderBottom:"1px solid #F1F5F9"}}>
-
-                  <td style={{padding:"10px",fontWeight:700}}>
-                    {row.id}
+            {forecast.rows.map((row) => (
+                <tr key={row.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                  <td style={{ padding: "10px", fontWeight: 700 }}>{row.id}</td>
+                  <td style={{ padding: "10px" }}>{row.city}</td>
+                  <td style={{ padding: "10px" }}>
+                    {formatCurrencyMaybe(row.revenue)}
                   </td>
-
-                  <td style={{padding:"10px"}}>
-                    {row.city}
+                  <td style={{ padding: "10px" }}>{formatCurrencyMaybe(row.costs)}</td>
+                  <td style={{ padding: "10px", fontWeight: 700 }}>
+                    {formatCurrencyMaybe(row.profit)}
                   </td>
-
-                  <td style={{padding:"10px"}}>
-                    {formatCurrency(row.revenue)}
+                  <td style={{ padding: "10px", fontWeight: 700, color: "#64748B" }}>
+                    {row.risk ?? "-"}
                   </td>
-
-                  <td style={{padding:"10px"}}>
-                    {formatCurrency(row.costs)}
-                  </td>
-
-                  <td style={{padding:"10px",fontWeight:700}}>
-                    {formatCurrency(row.profit)}
-                  </td>
-
-                  <td style={{
-                    padding:"10px",
-                    fontWeight:700,
-                    color
-                  }}>
-                    {row.risk}
-                  </td>
-
                 </tr>
-              );
-
-            })}
+              ))}
 
           </tbody>
 

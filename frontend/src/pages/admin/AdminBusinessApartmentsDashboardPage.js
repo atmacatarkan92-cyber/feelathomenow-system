@@ -27,6 +27,13 @@ function formatCurrency(value) {
   return `CHF ${roundCurrency(value).toLocaleString("de-CH")}`;
 }
 
+function formatChfOrDash(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "-";
+  }
+  return formatCurrency(value);
+}
+
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
@@ -215,6 +222,7 @@ function AdminBusinessApartmentsDashboardPage() {
   const [chartsError, setChartsError] = useState("");
   const [financeChartData, setFinanceChartData] = useState([]);
   const [occupancyChartData, setOccupancyChartData] = useState([]);
+  const [latestUnitProfit, setLatestUnitProfit] = useState({});
 
   useEffect(() => {
     fetchAdminUnits()
@@ -246,6 +254,7 @@ function AdminBusinessApartmentsDashboardPage() {
     if (filteredUnits.length === 0) {
       setFinanceChartData([]);
       setOccupancyChartData([]);
+      setLatestUnitProfit({});
       setChartsLoading(false);
       setChartsError("");
       return undefined;
@@ -296,6 +305,20 @@ function AdminBusinessApartmentsDashboardPage() {
           }
           return { month: label, occupied, free };
         });
+        const lastIdx = months.length - 1;
+        const lastProfit = profits[lastIdx];
+        const profitByUnitId = {};
+        for (const row of lastProfit?.units || []) {
+          const id = String(row.unit_id);
+          if (allowedIds.has(id)) {
+            profitByUnitId[id] = {
+              revenue: row.revenue != null ? Number(row.revenue) : null,
+              costs: row.costs != null ? Number(row.costs) : null,
+              profit: row.profit != null ? Number(row.profit) : null,
+            };
+          }
+        }
+        setLatestUnitProfit(profitByUnitId);
         setFinanceChartData(finance);
         setOccupancyChartData(occRows);
         setChartsLoading(false);
@@ -308,6 +331,7 @@ function AdminBusinessApartmentsDashboardPage() {
         );
         setFinanceChartData([]);
         setOccupancyChartData([]);
+        setLatestUnitProfit({});
         setChartsLoading(false);
       });
     return () => {
@@ -319,35 +343,30 @@ function AdminBusinessApartmentsDashboardPage() {
     let totalApartments = 0;
     let occupiedApartments = 0;
     let freeApartments = 0;
-    let currentRevenue = 0;
-    let runningCosts = 0;
-    let currentProfit = 0;
 
     const performance = filteredUnits.map((unit) => {
-      const apartmentRevenue = Number(unit.tenantPriceMonthly || 0);
-      const apartmentCosts =
-        Number(unit.landlordRentMonthly || 0) +
-        Number(unit.utilitiesMonthly || 0) +
-        Number(unit.cleaningCostMonthly || 0);
+      const uid = String(unit.id ?? "");
+      const uAlt = String(unit.unitId ?? "");
+      const fin =
+        latestUnitProfit[uid] || latestUnitProfit[uAlt] || {
+          revenue: null,
+          costs: null,
+          profit: null,
+        };
 
       const occupied = unit.status === "Belegt" || unit.status === "Occupied";
-      const revenue = occupied ? apartmentRevenue : 0;
-      const profit = revenue - apartmentCosts;
 
       totalApartments += 1;
       if (occupied) occupiedApartments += 1;
       if (!occupied) freeApartments += 1;
-      currentRevenue += revenue;
-      runningCosts += apartmentCosts;
-      currentProfit += profit;
 
       return {
         unitId: unit.unitId,
         place: unit.place,
         title: unit.title || unit.unitId,
-        revenue,
-        costs: apartmentCosts,
-        profit,
+        revenue: fin.revenue,
+        costs: fin.costs,
+        profit: fin.profit,
         occupied,
       };
     });
@@ -355,21 +374,25 @@ function AdminBusinessApartmentsDashboardPage() {
     const occupiedRate =
       totalApartments > 0 ? (occupiedApartments / totalApartments) * 100 : 0;
 
-    const ranked = [...performance].sort((a, b) => b.profit - a.profit);
+    const ranked = [...performance].sort((a, b) => {
+      const pb = b.profit;
+      const pa = a.profit;
+      if (pb == null && pa == null) return 0;
+      if (pb == null) return -1;
+      if (pa == null) return 1;
+      return pb - pa;
+    });
 
     return {
       totalApartments,
       occupiedApartments,
       freeApartments,
-      currentRevenue,
-      runningCosts,
-      currentProfit,
       occupiedRate,
       bestUnit: ranked[0] || null,
       worstUnit: ranked[ranked.length - 1] || null,
       performance: ranked,
     };
-  }, [filteredUnits]);
+  }, [filteredUnits, latestUnitProfit]);
 
   const revenueTrend = useMemo(() => {
     if (financeChartData.length < 2) return null;
@@ -398,6 +421,11 @@ function AdminBusinessApartmentsDashboardPage() {
     const prev = occupancyChartData[occupancyChartData.length - 2];
     return getTrendLabel(occupancyRateFromChartRow(cur), occupancyRateFromChartRow(prev));
   }, [occupancyChartData]);
+
+  const latestFinanceMonth =
+    financeChartData.length > 0
+      ? financeChartData[financeChartData.length - 1]
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
@@ -481,21 +509,33 @@ function AdminBusinessApartmentsDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
           <HeroCard
             title="Aktueller Umsatz"
-            value={formatCurrency(dashboard.currentRevenue)}
+            value={
+              chartsLoading || chartsError || !latestFinanceMonth
+                ? "-"
+                : formatCurrency(latestFinanceMonth.revenue)
+            }
             subtitle="Umsatz aus aktuell belegten Apartments"
             accent="orange"
             trend={revenueTrend}
           />
           <HeroCard
             title="Gewinn aktuell"
-            value={formatCurrency(dashboard.currentProfit)}
+            value={
+              chartsLoading || chartsError || !latestFinanceMonth
+                ? "-"
+                : formatCurrency(latestFinanceMonth.profit)
+            }
             subtitle="Umsatz minus laufende Ausgaben"
             accent="green"
             trend={profitTrend}
           />
           <HeroCard
             title="Aktuelle Ausgaben"
-            value={formatCurrency(dashboard.runningCosts)}
+            value={
+              chartsLoading || chartsError || !latestFinanceMonth
+                ? "-"
+                : formatCurrency(latestFinanceMonth.costs)
+            }
             subtitle="Miete, Nebenkosten und Reinigung"
             accent="slate"
             trend={costTrend}
@@ -594,7 +634,7 @@ function AdminBusinessApartmentsDashboardPage() {
               value={dashboard.bestUnit ? dashboard.bestUnit.unitId : "-"}
               hint={
                 dashboard.bestUnit
-                  ? `${dashboard.bestUnit.place} · ${formatCurrency(
+                  ? `${dashboard.bestUnit.place} · ${formatChfOrDash(
                       dashboard.bestUnit.profit
                     )} Gewinn`
                   : "Keine Daten vorhanden"
@@ -605,7 +645,7 @@ function AdminBusinessApartmentsDashboardPage() {
               value={dashboard.worstUnit ? dashboard.worstUnit.unitId : "-"}
               hint={
                 dashboard.worstUnit
-                  ? `${dashboard.worstUnit.place} · ${formatCurrency(
+                  ? `${dashboard.worstUnit.place} · ${formatChfOrDash(
                       dashboard.worstUnit.profit
                     )} Gewinn`
                   : "Keine Daten vorhanden"
@@ -614,11 +654,13 @@ function AdminBusinessApartmentsDashboardPage() {
             <SmallStatCard
               label="Ø Gewinn pro Apartment"
               value={
-                dashboard.totalApartments > 0
+                latestFinanceMonth &&
+                dashboard.totalApartments > 0 &&
+                latestFinanceMonth.profit != null
                   ? formatCurrency(
-                      dashboard.currentProfit / dashboard.totalApartments
+                      latestFinanceMonth.profit / dashboard.totalApartments
                     )
-                  : "CHF 0"
+                  : "-"
               }
               hint="Durchschnitt über alle Business Apartments"
             />
@@ -665,13 +707,13 @@ function AdminBusinessApartmentsDashboardPage() {
                       )}
                     </td>
                     <td className="py-4 pr-4 font-medium">
-                      {formatCurrency(unit.revenue)}
+                      {formatChfOrDash(unit.revenue)}
                     </td>
                     <td className="py-4 pr-4 font-medium">
-                      {formatCurrency(unit.costs)}
+                      {formatChfOrDash(unit.costs)}
                     </td>
                     <td className="py-4 pr-4 font-medium">
-                      {formatCurrency(unit.profit)}
+                      {formatChfOrDash(unit.profit)}
                     </td>
                   </tr>
                 ))}

@@ -13,6 +13,13 @@ function formatCurrency(value) {
   return `CHF ${roundCurrency(value).toLocaleString("de-CH")}`;
 }
 
+function formatChfOrDash(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "-";
+  }
+  return formatCurrency(value);
+}
+
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
@@ -26,16 +33,6 @@ function hasLeaseStarted(unit) {
   return unit.landlordLeaseStartDate <= getTodayDateString();
 }
 
-function getRunningMonthlyCosts(unit) {
-  if (!hasLeaseStarted(unit)) return 0;
-
-  return (
-    Number(unit.landlordRentMonthly || 0) +
-    Number(unit.utilitiesMonthly || 0) +
-    Number(unit.cleaningCostMonthly || 0)
-  );
-}
-
 function getRoomsForUnit(unitId, allRooms) {
   return allRooms.filter((room) => room.unitId === unitId);
 }
@@ -47,24 +44,16 @@ function getCoLivingMetrics(unit, allRooms) {
   if (rooms.length === 0) {
     const occupied = Number(unit.occupiedRooms || 0);
     const total = Number(unit.rooms || 0);
-    const fullRevenue = rooms.reduce(
-  (sum, room) => sum + Number(room.priceMonthly || 0),
-  0
-);
-    const currentRevenue =
-      total > 0 && leaseStarted ? (fullRevenue / total) * occupied : 0;
-    const runningCosts = getRunningMonthlyCosts(unit);
-
     return {
       occupiedCount: occupied,
       reservedCount: 0,
       freeCount: Math.max(total - occupied, 0),
       totalRooms: total,
-      fullRevenue,
-      currentRevenue,
-      vacancyLoss: leaseStarted ? fullRevenue - currentRevenue : 0,
-      currentProfit: currentRevenue - runningCosts,
-      runningCosts,
+      fullRevenue: null,
+      currentRevenue: null,
+      vacancyLoss: null,
+      currentProfit: null,
+      runningCosts: null,
       leaseStarted,
     };
   }
@@ -85,8 +74,6 @@ function getCoLivingMetrics(unit, allRooms) {
       )
     : 0;
 
-  const runningCosts = getRunningMonthlyCosts(unit);
-
   return {
     occupiedCount: occupiedRooms.length,
     reservedCount: reservedRooms.length,
@@ -95,8 +82,8 @@ function getCoLivingMetrics(unit, allRooms) {
     fullRevenue,
     currentRevenue,
     vacancyLoss: leaseStarted ? fullRevenue - currentRevenue : 0,
-    currentProfit: currentRevenue - runningCosts,
-    runningCosts,
+    currentProfit: null,
+    runningCosts: null,
     leaseStarted,
   };
 }
@@ -182,7 +169,7 @@ function buildUnitWarnings(unit, rooms, metrics) {
     });
   }
 
-  if (metrics.currentRevenue <= 0) {
+  if (metrics.currentRevenue != null && metrics.currentRevenue <= 0) {
     warnings.push({
       tone: "rose",
       text: "Keine aktuellen Einnahmen vorhanden.",
@@ -196,7 +183,10 @@ function buildUnitWarnings(unit, rooms, metrics) {
     });
   }
 
-  if (metrics.currentProfit < 0) {
+  if (
+    metrics.currentProfit != null &&
+    metrics.currentProfit < 0
+  ) {
     warnings.push({
       tone: "rose",
       text: `Aktuell unter Break-Even um ${formatCurrency(
@@ -306,10 +296,6 @@ function AdminUnitDetailPage() {
         status: "",
         availableFrom: "",
         landlordLeaseStartDate: "",
-        tenantPriceMonthly: 0,
-        landlordRentMonthly: 0,
-        utilitiesMonthly: 0,
-        cleaningCostMonthly: 0,
         occupiedRooms: 0,
       },
     [unit]
@@ -328,8 +314,6 @@ function AdminUnitDetailPage() {
       ? (metrics.occupiedCount / metrics.totalRooms) * 100
       : 0;
 
-  const monthlyProfit = metrics.currentRevenue - metrics.runningCosts;
-
   const unitWarnings = useMemo(() => {
     return buildUnitWarnings(safeUnit, unitRooms, metrics);
   }, [safeUnit, unitRooms, metrics]);
@@ -337,7 +321,10 @@ function AdminUnitDetailPage() {
   const nextUnitForecast = {
     revenue: metrics.currentRevenue,
     fullPotential: metrics.fullRevenue,
-    openPotential: Math.max(metrics.fullRevenue - metrics.currentRevenue, 0),
+    openPotential:
+      metrics.fullRevenue != null && metrics.currentRevenue != null
+        ? Math.max(metrics.fullRevenue - metrics.currentRevenue, 0)
+        : null,
     profit: metrics.currentProfit,
   };
 
@@ -629,27 +616,27 @@ function AdminUnitDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SmallStatCard
                 label="Vollbelegung Umsatz"
-                value={formatCurrency(metrics.fullRevenue)}
+                value={formatChfOrDash(metrics.fullRevenue)}
                 hint="Maximum bei voller Belegung"
                 accent="orange"
               />
               <SmallStatCard
                 label="Aktueller Umsatz"
-                value={formatCurrency(metrics.currentRevenue)}
+                value={formatChfOrDash(metrics.currentRevenue)}
                 hint="Nur belegte Rooms werden gerechnet"
                 accent="green"
               />
               <SmallStatCard
                 label="Laufende Kosten"
-                value={formatCurrency(metrics.runningCosts)}
+                value={formatChfOrDash(metrics.runningCosts)}
                 hint="Miete + NK + Reinigung"
                 accent="slate"
               />
               <SmallStatCard
                 label="Gewinn aktuell"
-                value={formatCurrency(monthlyProfit)}
+                value={formatChfOrDash(metrics.currentProfit)}
                 hint="Umsatz minus laufende Kosten"
-                accent={monthlyProfit >= 0 ? "green" : "rose"}
+                accent="slate"
               />
             </div>
           </SectionCard>
@@ -688,7 +675,7 @@ function AdminUnitDetailPage() {
           />
           <SmallStatCard
             label="Leerstand"
-            value={formatCurrency(metrics.vacancyLoss)}
+            value={formatChfOrDash(metrics.vacancyLoss)}
             hint="Fehlender Umsatz"
             accent="rose"
           />
@@ -738,27 +725,27 @@ function AdminUnitDetailPage() {
             <div className="grid grid-cols-1 gap-4">
               <SmallStatCard
                 label="Aktueller Umsatz"
-                value={formatCurrency(nextUnitForecast.revenue)}
+                value={formatChfOrDash(nextUnitForecast.revenue)}
                 hint="Live berechnet"
                 accent="green"
               />
               <SmallStatCard
                 label="Offenes Potenzial"
-                value={formatCurrency(nextUnitForecast.openPotential)}
+                value={formatChfOrDash(nextUnitForecast.openPotential)}
                 hint="Noch nicht vermietete Kapazität"
                 accent="amber"
               />
               <SmallStatCard
                 label="Vollbelegung Potenzial"
-                value={formatCurrency(nextUnitForecast.fullPotential)}
+                value={formatChfOrDash(nextUnitForecast.fullPotential)}
                 hint="Bei 100% Belegung"
                 accent="orange"
               />
               <SmallStatCard
                 label="Gewinn aktuell"
-                value={formatCurrency(nextUnitForecast.profit)}
+                value={formatChfOrDash(nextUnitForecast.profit)}
                 hint="Aktuelle Unit-Marge"
-                accent={nextUnitForecast.profit >= 0 ? "green" : "rose"}
+                accent="slate"
               />
             </div>
           </SectionCard>
@@ -778,7 +765,7 @@ function AdminUnitDetailPage() {
                       {room.roomName}
                     </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      {formatCurrency(room.priceMonthly)} ·{" "}
+                      {formatChfOrDash(room.priceMonthly)} ·{" "}
                       {room.moveInDate && room.moveInDate !== "-"
                         ? `Einzug ${room.moveInDate}`
                         : "Kein Einzug erfasst"}
@@ -804,30 +791,39 @@ function AdminUnitDetailPage() {
             <div className="grid grid-cols-1 gap-4">
               <SmallStatCard
                 label="Aktueller Umsatz"
-                value={formatCurrency(metrics.currentRevenue)}
+                value={formatChfOrDash(metrics.currentRevenue)}
                 hint="Live Umsatz"
                 accent="green"
               />
               <SmallStatCard
                 label="Break-Even"
-                value={formatCurrency(metrics.runningCosts)}
+                value={formatChfOrDash(metrics.runningCosts)}
                 hint="Notwendiger Monatsumsatz"
                 accent="slate"
               />
               <SmallStatCard
                 label="Differenz"
-                value={formatCurrency(
-                  metrics.currentRevenue - metrics.runningCosts
+                value={formatChfOrDash(
+                  metrics.currentRevenue != null &&
+                    metrics.runningCosts != null
+                    ? metrics.currentRevenue - metrics.runningCosts
+                    : null
                 )}
                 hint={
-                  metrics.currentRevenue - metrics.runningCosts >= 0
-                    ? "Über Break-Even"
-                    : "Unter Break-Even"
+                  metrics.currentRevenue != null &&
+                  metrics.runningCosts != null
+                    ? metrics.currentRevenue - metrics.runningCosts >= 0
+                      ? "Über Break-Even"
+                      : "Unter Break-Even"
+                    : "Keine Daten vorhanden"
                 }
                 accent={
-                  metrics.currentRevenue - metrics.runningCosts >= 0
-                    ? "green"
-                    : "rose"
+                  metrics.currentRevenue != null &&
+                  metrics.runningCosts != null
+                    ? metrics.currentRevenue - metrics.runningCosts >= 0
+                      ? "green"
+                      : "rose"
+                    : "slate"
                 }
               />
             </div>
@@ -881,7 +877,7 @@ function AdminUnitDetailPage() {
                       </td>
                       <td className="py-4 pr-4">{room.tenant}</td>
                       <td className="py-4 pr-4">
-                        {formatCurrency(room.priceMonthly)}
+                        {formatChfOrDash(room.priceMonthly)}
                       </td>
                       <td className="py-4 pr-4">{room.moveInDate || "-"}</td>
                       <td className="py-4 pr-4">{room.freeFromDate || "-"}</td>
