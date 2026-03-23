@@ -51,7 +51,7 @@ def upgrade() -> None:
                 unit_id,
                 daterange(
                   move_in_date,
-                  COALESCE(move_out_date + 1, 'infinity'::date),
+                  COALESCE("move_out_date date" + 1, 'infinity'::date),
                   '[)'
                 ) AS dr
               FROM tenancies
@@ -79,7 +79,7 @@ def upgrade() -> None:
               unit_id WITH =,
               daterange(
                 move_in_date,
-                COALESCE(move_out_date + 1, 'infinity'::date),
+                COALESCE("move_out_date date" + 1, 'infinity'::date),
                 '[)'
               ) WITH &&
             )
