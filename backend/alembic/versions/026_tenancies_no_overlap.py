@@ -22,6 +22,34 @@ depends_on: Union[str, Sequence[str], None] = None
 CONSTRAINT_NAME = "tenancies_unit_daterange_excl"
 
 
+def _resolve_move_out_column_sql(conn) -> str:
+    """Prefer canonical move_out_date; else legacy quoted column name (schema drift)."""
+    if conn.execute(
+        text(
+            """
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'tenancies'
+              AND column_name = 'move_out_date'
+            """
+        )
+    ).scalar():
+        return "move_out_date"
+    if conn.execute(
+        text(
+            """
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'tenancies'
+              AND column_name = 'move_out_date date'
+            """
+        )
+    ).scalar():
+        return '"move_out_date date"'
+    raise RuntimeError(
+        "Cannot add tenancies exclusion constraint: table tenancies has neither column "
+        "'move_out_date' nor legacy column 'move_out_date date' for move-out dates."
+    )
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
@@ -42,16 +70,18 @@ def upgrade() -> None:
     if exists:
         return
 
+    move_out_col_sql = _resolve_move_out_column_sql(conn)
+
     overlap_pairs = conn.execute(
         text(
-            """
+            f"""
             WITH bounds AS (
               SELECT
                 id,
                 unit_id,
                 daterange(
                   move_in_date,
-                  COALESCE("move_out_date date" + 1, 'infinity'::date),
+                  COALESCE({move_out_col_sql} + 1, 'infinity'::date),
                   '[)'
                 ) AS dr
               FROM tenancies
@@ -79,7 +109,7 @@ def upgrade() -> None:
               unit_id WITH =,
               daterange(
                 move_in_date,
-                COALESCE("move_out_date date" + 1, 'infinity'::date),
+                COALESCE({move_out_col_sql} + 1, 'infinity'::date),
                 '[)'
               ) WITH &&
             )
