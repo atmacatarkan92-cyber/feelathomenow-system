@@ -5,6 +5,7 @@ Requires DATABASE_URL and migrated schema including 026_tenancies_no_overlap.
 """
 from __future__ import annotations
 
+import re
 import uuid
 
 import pytest
@@ -26,22 +27,70 @@ def _require_engine():
     return db_mod.engine
 
 
+def _norm_constraint_def(s: str) -> str:
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _expected_exclusion_def(move_out_col_sql: str) -> str:
+    return (
+        f"EXCLUDE USING gist (unit_id WITH =, daterange(move_in_date, "
+        f"COALESCE({move_out_col_sql} + 1, 'infinity'::date), '[)') WITH &&)"
+    )
+
+
+def _resolve_move_out_column_sql(session) -> str:
+    if session.execute(
+        text(
+            """
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'tenancies'
+              AND column_name = 'move_out_date'
+            """
+        )
+    ).scalar():
+        return "move_out_date"
+    if session.execute(
+        text(
+            """
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'tenancies'
+              AND column_name = 'move_out_date date'
+            """
+        )
+    ).scalar():
+        return '"move_out_date date"'
+    pytest.fail(
+        "tenancies has neither move_out_date nor legacy 'move_out_date date' column; "
+        "migration 026 cannot be validated"
+    )
+
+
 def _require_exclusion_constraint(engine):
     with Session(engine) as session:
         row = session.execute(
             text(
                 """
-                SELECT 1 FROM pg_constraint c
+                SELECT pg_get_constraintdef(c.oid), c.contype
+                FROM pg_constraint c
                 JOIN pg_class t ON c.conrelid = t.oid
                 JOIN pg_namespace n ON n.oid = t.relnamespace
                 WHERE n.nspname = 'public' AND t.relname = 'tenancies'
                   AND c.conname = 'tenancies_unit_daterange_excl'
                 """
             )
-        ).scalar()
-    if not row:
-        pytest.skip(
-            "tenancies_unit_daterange_excl not present — apply migration 026_tenancies_no_overlap"
+        ).one_or_none()
+        if row is None:
+            pytest.skip(
+                "tenancies_unit_daterange_excl not present — apply migration 026_tenancies_no_overlap"
+            )
+        defn, contype = row[0], row[1]
+        assert contype == "x", f"expected EXCLUDE constraint, got contype={contype!r}"
+        move_out_sql = _resolve_move_out_column_sql(session)
+        expected = _norm_constraint_def(_expected_exclusion_def(move_out_sql))
+        actual = _norm_constraint_def(defn)
+        assert actual == expected, (
+            f"tenancies_unit_daterange_excl must match migration 026 exclusion rule. "
+            f"actual={defn!r} expected_template={_expected_exclusion_def(move_out_sql)!r}"
         )
 
 

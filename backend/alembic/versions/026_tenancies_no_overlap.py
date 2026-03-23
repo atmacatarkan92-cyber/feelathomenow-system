@@ -9,6 +9,7 @@ Half-open daterange [move_in, COALESCE(move_out + 1 day, infinity)) so adjacent 
 Requires btree_gist for EXCLUDE (unit_id WITH =) combined with (daterange WITH &&).
 """
 
+import re
 from typing import Sequence, Union
 
 from alembic import op
@@ -20,6 +21,19 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 CONSTRAINT_NAME = "tenancies_unit_daterange_excl"
+
+
+def _normalize_constraint_def(s: str) -> str:
+    """Collapse whitespace for comparison; preserves spaces inside quoted identifiers."""
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _expected_exclusion_definition_sql(move_out_col_sql: str) -> str:
+    """Must match what ADD CONSTRAINT emits (pg_get_constraintdef normalizes similarly)."""
+    return (
+        f"EXCLUDE USING gist (unit_id WITH =, daterange(move_in_date, "
+        f"COALESCE({move_out_col_sql} + 1, 'infinity'::date), '[)') WITH &&)"
+    )
 
 
 def _resolve_move_out_column_sql(conn) -> str:
@@ -55,21 +69,6 @@ def upgrade() -> None:
 
     conn.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
 
-    exists = conn.execute(
-        text(
-            """
-            SELECT 1 FROM pg_constraint c
-            JOIN pg_class t ON c.conrelid = t.oid
-            JOIN pg_namespace n ON n.oid = t.relnamespace
-            WHERE n.nspname = 'public' AND t.relname = 'tenancies'
-              AND c.conname = :cname
-            """
-        ),
-        {"cname": CONSTRAINT_NAME},
-    ).scalar()
-    if exists:
-        return
-
     move_out_col_sql = _resolve_move_out_column_sql(conn)
 
     overlap_pairs = conn.execute(
@@ -99,6 +98,46 @@ def upgrade() -> None:
             "same unit_id (overlapping move_in_date/move_out_date ranges). Fix or remove "
             "overlapping tenancies before re-running this migration."
         )
+
+    row = conn.execute(
+        text(
+            """
+            SELECT pg_get_constraintdef(c.oid), c.contype
+            FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            WHERE n.nspname = 'public' AND t.relname = 'tenancies'
+              AND c.conname = :cname
+            """
+        ),
+        {"cname": CONSTRAINT_NAME},
+    ).one_or_none()
+
+    expected_norm = _normalize_constraint_def(
+        _expected_exclusion_definition_sql(move_out_col_sql)
+    )
+
+    if row is not None:
+        existing_def, contype = row[0], row[1]
+        if contype != "x":
+            raise RuntimeError(
+                f"Constraint {CONSTRAINT_NAME!r} on tenancies exists but is not an EXCLUDE "
+                f"constraint (contype={contype!r}). Remove or rename it before re-running migration 026."
+            )
+        if existing_def is None:
+            raise RuntimeError(
+                f"Constraint {CONSTRAINT_NAME!r} exists but pg_get_constraintdef returned NULL."
+            )
+        actual_norm = _normalize_constraint_def(existing_def)
+        if actual_norm != expected_norm:
+            raise RuntimeError(
+                f"Constraint {CONSTRAINT_NAME!r} exists on tenancies but its definition does not "
+                f"match migration 026 (expected exclusion rule for half-open daterange per unit_id). "
+                f"pg_get_constraintdef: {existing_def!r}. "
+                f"Expected (normalized): {expected_norm!r}. "
+                f"Actual (normalized): {actual_norm!r}."
+            )
+        return
 
     conn.execute(
         text(
