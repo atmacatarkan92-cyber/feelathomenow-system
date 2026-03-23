@@ -545,7 +545,7 @@ export default function AdminUebersichtPage() {
   }, [operationsStats, invoiceStats]);
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div data-testid="admin-dashboard-page" style={{ display: "grid", gap: "24px" }}>
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px" }}>
         <span style={{ fontSize: "14px", color: "#64748B" }}>KPI-Zeitraum:</span>
         <select
@@ -831,6 +831,10 @@ export default function AdminUebersichtPage() {
 
       {profitApi.summary && (
         <div
+          data-testid="kpi-profit-summary"
+          data-revenue={profitApi.summary.total_revenue}
+          data-costs={profitApi.summary.total_costs}
+          data-profit={profitApi.summary.total_profit}
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",

@@ -619,7 +619,7 @@ function AdminApartmentsPage() {
     currentCoLivingRevenue - formRunningMonthlyCosts;
 
   return (
-    <div>
+    <div data-testid="admin-apartments-page">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-slate-800">
