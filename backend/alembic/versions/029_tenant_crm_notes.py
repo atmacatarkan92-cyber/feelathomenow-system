@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import UUID
 
 revision: str = "029_tenant_crm_notes"
 down_revision: Union[str, None] = "028_tenant_master"
@@ -18,11 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    _org_id = UUID(as_uuid=True)
     op.create_table(
         "tenant_notes",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("tenant_id", sa.String(), nullable=False),
-        sa.Column("organization_id", sa.String(), nullable=False),
+        sa.Column("organization_id", _org_id, nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("created_by_user_id", sa.String(), nullable=True),
@@ -39,7 +41,7 @@ def upgrade() -> None:
         "tenant_events",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("tenant_id", sa.String(), nullable=False),
-        sa.Column("organization_id", sa.String(), nullable=False),
+        sa.Column("organization_id", _org_id, nullable=False),
         sa.Column("action_type", sa.String(length=64), nullable=False),
         sa.Column("field_name", sa.String(length=128), nullable=True),
         sa.Column("old_value", sa.Text(), nullable=True),
