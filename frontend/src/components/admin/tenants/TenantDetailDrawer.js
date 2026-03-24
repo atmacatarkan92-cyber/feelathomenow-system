@@ -107,12 +107,14 @@ function Row({ label, value }) {
   );
 }
 
+const PERMIT_OPTIONS = new Set(["B", "C", "L", "G", "Other"]);
+
 const emptyForm = {
   firstName: "",
   lastName: "",
   birthDate: "",
   nationality: "",
-  isSwiss: false,
+  isSwiss: null,
   residencePermit: "",
   email: "",
   phone: "",
@@ -130,20 +132,22 @@ function tenantToForm(t) {
     bd && typeof bd === "string" && /^\d{4}-\d{2}-\d{2}/.test(bd)
       ? bd.slice(0, 10)
       : "";
+  const rp = t.residence_permit || "";
   return {
     firstName: (t.first_name || "").trim(),
     lastName: (t.last_name || "").trim(),
     birthDate,
-    nationality: t.nationality || "",
-    isSwiss: t.is_swiss === true,
-    residencePermit: t.residence_permit || "",
-    email: t.email || "",
-    phone: t.phone || "",
-    company: t.company || "",
-    street: t.street || "",
-    postalCode: t.postal_code || "",
-    city: t.city || "",
-    country: t.country || "",
+    nationality: (t.nationality || "").trim(),
+    isSwiss:
+      t.is_swiss === true ? true : t.is_swiss === false ? false : null,
+    residencePermit: PERMIT_OPTIONS.has(rp) ? rp : "",
+    email: (t.email || "").trim(),
+    phone: (t.phone || "").trim(),
+    company: (t.company || "").trim(),
+    street: (t.street || "").trim(),
+    postalCode: (t.postal_code || "").trim(),
+    city: (t.city || "").trim(),
+    country: (t.country || "").trim(),
   };
 }
 
@@ -198,12 +202,18 @@ export default function TenantDetailDrawer({
   };
 
   const setField = (key) => (e) => {
-    const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setForm((f) => {
-      const next = { ...f, [key]: v };
-      if (key === "isSwiss" && v === true) next.residencePermit = "";
-      return next;
-    });
+    if (key === "isSwiss") {
+      const raw = e.target.value;
+      const v = raw === "" ? null : raw === "true";
+      setForm((f) => {
+        const next = { ...f, isSwiss: v };
+        if (v === true) next.residencePermit = "";
+        return next;
+      });
+      return;
+    }
+    const v = e.target.value;
+    setForm((f) => ({ ...f, [key]: v }));
   };
 
   const handleSave = (e) => {
@@ -222,7 +232,12 @@ export default function TenantDetailDrawer({
       birth_date: form.birthDate.trim() || null,
       nationality: form.nationality.trim() || null,
       is_swiss: form.isSwiss,
-      residence_permit: form.isSwiss ? null : form.residencePermit.trim() || null,
+      residence_permit:
+        form.isSwiss === true
+          ? null
+          : form.residencePermit
+            ? form.residencePermit
+            : null,
       email: form.email.trim(),
       phone: form.phone.trim() || null,
       company: form.company.trim() || null,
@@ -240,6 +255,11 @@ export default function TenantDetailDrawer({
   };
 
   const displayName = tenant ? tenantDisplayName(tenant) : "—";
+  const permitReadLabel = (t) => {
+    const p = t?.residence_permit;
+    if (!p) return "—";
+    return PERMIT_OPTIONS.has(p) ? p : `${p} (legacy)`;
+  };
 
   return (
     <>
@@ -356,10 +376,19 @@ export default function TenantDetailDrawer({
                     <div style={sectionTitle}>Aufenthalt</div>
                     <Row
                       label="Schweizer/in"
-                      value={tenant.is_swiss === true ? "Ja" : tenant.is_swiss === false ? "Nein" : "—"}
+                      value={
+                        tenant.is_swiss === true
+                          ? "Ja"
+                          : tenant.is_swiss === false
+                            ? "Nein"
+                            : "Unbekannt"
+                      }
                     />
                     {tenant.is_swiss !== true ? (
-                      <Row label="Aufenthaltsbewilligung" value={tenant.residence_permit} />
+                      <Row
+                        label="Aufenthaltsbewilligung"
+                        value={permitReadLabel(tenant)}
+                      />
                     ) : null}
                     <div style={sectionTitle}>Kontakt</div>
                     <Row label="E-Mail" value={tenant.email} />
@@ -433,36 +462,47 @@ export default function TenantDetailDrawer({
                     </div>
 
                     <div style={{ ...sectionTitle, marginTop: "14px" }}>Aufenthalt</div>
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        color: "#334155",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={form.isSwiss}
+                    <div style={{ marginBottom: "10px" }}>
+                      <label htmlFor="td-swiss" style={labelStyle}>
+                        Schweizer/in
+                      </label>
+                      <select
+                        id="td-swiss"
+                        style={{ ...inputStyle, cursor: saving ? "default" : "pointer" }}
+                        value={
+                          form.isSwiss === null
+                            ? ""
+                            : form.isSwiss === true
+                              ? "true"
+                              : "false"
+                        }
                         onChange={setField("isSwiss")}
                         disabled={saving}
-                      />
-                      Schweizer/in
-                    </label>
-                    {!form.isSwiss ? (
+                      >
+                        <option value="">Unbekannt</option>
+                        <option value="true">Ja</option>
+                        <option value="false">Nein</option>
+                      </select>
+                    </div>
+                    {form.isSwiss !== true ? (
                       <div style={{ marginTop: "10px" }}>
                         <label htmlFor="td-permit" style={labelStyle}>
                           Aufenthaltsbewilligung
                         </label>
-                        <input
+                        <select
                           id="td-permit"
-                          style={inputStyle}
+                          style={{ ...inputStyle, cursor: saving ? "default" : "pointer" }}
                           value={form.residencePermit}
                           onChange={setField("residencePermit")}
                           disabled={saving}
-                        />
+                        >
+                          <option value="">—</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                          <option value="L">L</option>
+                          <option value="G">G</option>
+                          <option value="Other">Other</option>
+                        </select>
                       </div>
                     ) : null}
 

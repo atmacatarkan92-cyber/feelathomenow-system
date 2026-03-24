@@ -19,6 +19,9 @@ from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/api/admin", tags=["admin-tenants"])
 
+# Allowed residence permit categories (free-text drift prevention).
+ALLOWED_RESIDENCE_PERMITS = frozenset({"B", "C", "L", "G", "Other"})
+
 
 def _assert_room_in_org(session, room_id: Optional[str], org_id: str) -> None:
     if not room_id:
@@ -32,6 +35,7 @@ def _assert_room_in_org(session, room_id: Optional[str], org_id: str) -> None:
 
 
 def _display_name_from_tenant(t: Tenant) -> str:
+    """Stable display label: canonical first_name + last_name, else legacy name."""
     fn = (getattr(t, "first_name", None) or "").strip()
     ln = (getattr(t, "last_name", None) or "").strip()
     if fn or ln:
@@ -40,6 +44,7 @@ def _display_name_from_tenant(t: Tenant) -> str:
 
 
 def _refresh_legacy_name_field(tenant: Tenant) -> None:
+    """Keep DB `name` in sync whenever first_name/last_name are present (compatibility column)."""
     fn = (getattr(tenant, "first_name", None) or "").strip()
     ln = (getattr(tenant, "last_name", None) or "").strip()
     if fn or ln:
@@ -47,6 +52,7 @@ def _refresh_legacy_name_field(tenant: Tenant) -> None:
 
 
 def _tenant_to_dict(t: Tenant) -> dict:
+    """Serialize tenant; display_name/full_name always match _display_name_from_tenant."""
     legacy = getattr(t, "name", "") or ""
     display = _display_name_from_tenant(t)
     return {
@@ -78,6 +84,17 @@ def _trim_opt_str(v: Optional[str]) -> Optional[str]:
     return str(v).strip()
 
 
+def _validate_residence_permit_value(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    if s not in ALLOWED_RESIDENCE_PERMITS:
+        raise ValueError("Aufenthaltsbewilligung: nur B, C, L, G oder Other.")
+    return s
+
+
 _email_str_adapter = TypeAdapter(EmailStr)
 
 
@@ -98,7 +115,7 @@ class TenantCreate(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
     nationality: Optional[str] = None
-    is_swiss: bool = False
+    is_swiss: Optional[bool] = None
     residence_permit: Optional[str] = None
 
     @model_validator(mode="before")
@@ -129,10 +146,20 @@ class TenantCreate(BaseModel):
             return None
         return str(v).strip()
 
-    @field_validator("phone", "company", "street", "postal_code", "city", "country", "nationality", "residence_permit", mode="before")
+    @field_validator("phone", "company", "street", "postal_code", "city", "country", "nationality", mode="before")
     @classmethod
     def _optional_trim_or_none(cls, v):
         return _trim_opt_str(v) if v is not None else None
+
+    @field_validator("residence_permit", mode="before")
+    @classmethod
+    def _residence_permit_trim_create(cls, v):
+        return _trim_opt_str(v) if v is not None else None
+
+    @field_validator("residence_permit")
+    @classmethod
+    def _residence_permit_allowed_create(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_residence_permit_value(v)
 
     @field_validator("birth_date", mode="before")
     @classmethod
@@ -217,7 +244,7 @@ class TenantPatch(BaseModel):
             return ""
         return str(_email_str_adapter.validate_python(v))
 
-    @field_validator("phone", "company", "street", "postal_code", "city", "country", "nationality", "residence_permit", mode="before")
+    @field_validator("phone", "company", "street", "postal_code", "city", "country", "nationality", mode="before")
     @classmethod
     def _optional_trim_or_none_patch(cls, v):
         if v is None:
@@ -225,6 +252,20 @@ class TenantPatch(BaseModel):
         if isinstance(v, str) and not v.strip():
             return None
         return str(v).strip()
+
+    @field_validator("residence_permit", mode="before")
+    @classmethod
+    def _residence_permit_trim_patch(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return str(v).strip()
+
+    @field_validator("residence_permit")
+    @classmethod
+    def _residence_permit_allowed_patch(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_residence_permit_value(v)
 
     @field_validator("birth_date", mode="before")
     @classmethod
@@ -319,7 +360,7 @@ def admin_create_tenant(
 ):
     """Create a new tenant."""
     _assert_room_in_org(session, body.room_id, org_id)
-    residence = None if body.is_swiss else body.residence_permit
+    residence = None if body.is_swiss is True else body.residence_permit
     tenant = Tenant(
         organization_id=org_id,
         name=f"{body.first_name} {body.last_name}".strip(),
@@ -368,16 +409,23 @@ def admin_patch_tenant(
         _assert_room_in_org(session, data.get("room_id"), org_id)
     if "full_name" in data and "name" not in data:
         data["name"] = data.pop("full_name")
-    elif "name" in data:
-        pass
+    has_canonical_in_request = "first_name" in data or "last_name" in data
+    if has_canonical_in_request:
+        data.pop("name", None)
+        data.pop("full_name", None)
+    elif "name" in data or "full_name" in data:
+        fn_existing = (getattr(tenant, "first_name", None) or "").strip()
+        ln_existing = (getattr(tenant, "last_name", None) or "").strip()
+        if fn_existing or ln_existing:
+            data.pop("name", None)
+            data.pop("full_name", None)
     for k, v in data.items():
         if hasattr(tenant, k):
             if k == "email" and v is None:
                 setattr(tenant, "email", "")
             else:
                 setattr(tenant, k, v)
-    if any(k in data for k in ("first_name", "last_name")):
-        _refresh_legacy_name_field(tenant)
+    _refresh_legacy_name_field(tenant)
     if getattr(tenant, "is_swiss", None) is True:
         tenant.residence_permit = None
     session.add(tenant)

@@ -61,7 +61,7 @@ const initialForm = () => ({
   lastName: "",
   birthDate: "",
   nationality: "",
-  isSwiss: false,
+  isSwiss: null,
   residencePermit: "",
   email: "",
   phone: "",
@@ -69,7 +69,7 @@ const initialForm = () => ({
   street: "",
   postalCode: "",
   city: "",
-  country: "",
+  country: "CH",
 });
 
 /**
@@ -90,14 +90,18 @@ export default function TenantCreateModal({ open, onClose, onCreated }) {
   if (!open) return null;
 
   const set = (key) => (e) => {
-    const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setForm((f) => {
-      const next = { ...f, [key]: v };
-      if (key === "isSwiss" && v === true) {
-        next.residencePermit = "";
-      }
-      return next;
-    });
+    if (key === "isSwiss") {
+      const raw = e.target.value;
+      const v = raw === "" ? null : raw === "true";
+      setForm((f) => {
+        const next = { ...f, isSwiss: v };
+        if (v === true) next.residencePermit = "";
+        return next;
+      });
+      return;
+    }
+    const v = e.target.value;
+    setForm((f) => ({ ...f, [key]: v }));
   };
 
   const handleSubmit = (e) => {
@@ -115,15 +119,20 @@ export default function TenantCreateModal({ open, onClose, onCreated }) {
       last_name: ln,
       birth_date: form.birthDate.trim() || undefined,
       nationality: form.nationality.trim() || undefined,
-      is_swiss: form.isSwiss,
-      residence_permit: form.isSwiss ? undefined : form.residencePermit.trim() || undefined,
+      ...(form.isSwiss === null ? {} : { is_swiss: form.isSwiss }),
+      residence_permit:
+        form.isSwiss === true
+          ? undefined
+          : form.residencePermit
+            ? form.residencePermit
+            : undefined,
       email: form.email.trim() || undefined,
       phone: form.phone.trim() || undefined,
       company: form.company.trim() || undefined,
       street: form.street.trim() || undefined,
       postal_code: form.postalCode.trim() || undefined,
       city: form.city.trim() || undefined,
-      country: form.country.trim() || undefined,
+      country: (form.country.trim() || "CH") || undefined,
     };
     createAdminTenant(body)
       .then((created) => {
@@ -212,38 +221,43 @@ export default function TenantCreateModal({ open, onClose, onCreated }) {
           </div>
 
           <SectionHeading>Aufenthalt</SectionHeading>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              fontSize: "14px",
-              fontWeight: 600,
-              color: "#334155",
-              cursor: submitting ? "default" : "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={form.isSwiss}
+          <div style={{ marginBottom: "12px" }}>
+            <label htmlFor="tc-swiss" style={labelStyle}>
+              Schweizer/in
+            </label>
+            <select
+              id="tc-swiss"
+              style={{ ...inputStyle, cursor: submitting ? "default" : "pointer" }}
+              value={
+                form.isSwiss === null ? "" : form.isSwiss === true ? "true" : "false"
+              }
               onChange={set("isSwiss")}
               disabled={submitting}
-            />
-            Schweizer/in
-          </label>
-          {!form.isSwiss ? (
+            >
+              <option value="">Unbekannt</option>
+              <option value="true">Ja</option>
+              <option value="false">Nein</option>
+            </select>
+          </div>
+          {form.isSwiss !== true ? (
             <div style={{ marginTop: "12px" }}>
               <label htmlFor="tc-permit" style={labelStyle}>
                 Aufenthaltsbewilligung
               </label>
-              <input
+              <select
                 id="tc-permit"
-                style={inputStyle}
+                style={{ ...inputStyle, cursor: submitting ? "default" : "pointer" }}
                 value={form.residencePermit}
                 onChange={set("residencePermit")}
-                placeholder="z. B. B, C, L"
                 disabled={submitting}
-              />
+              >
+                <option value="">—</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="L">L</option>
+                <option value="G">G</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
           ) : null}
 
