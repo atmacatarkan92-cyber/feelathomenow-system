@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -9,7 +10,6 @@ import {
   normalizeRoom,
 } from "../../api/adminData";
 import TenantCreateModal from "../../components/admin/tenants/TenantCreateModal";
-import TenantDetailDrawer from "../../components/admin/tenants/TenantDetailDrawer";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
 
 function formatCurrency(value) {
@@ -209,6 +209,7 @@ function getCardStyle(accentColor) {
 }
 
 function AdminTenantsPage() {
+  const navigate = useNavigate();
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -219,7 +220,6 @@ function AdminTenantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
-  const [detailTenantId, setDetailTenantId] = useState(null);
 
   const reloadData = useCallback(() => {
     setLoadError(null);
@@ -267,11 +267,6 @@ function AdminTenantsPage() {
     }
     return list;
   }, [rows, searchQuery, statusFilter]);
-
-  const selectedDetailRow = useMemo(() => {
-    if (!detailTenantId) return null;
-    return rows.find((r) => String(r.id) === String(detailTenantId)) || null;
-  }, [rows, detailTenantId]);
 
   const summary = useMemo(() => {
     const activeCount = rows.filter((row) => {
@@ -343,10 +338,6 @@ function AdminTenantsPage() {
     );
   }
 
-  const detailStatusMeta = selectedDetailRow
-    ? getStatusMeta(selectedDetailRow.status)
-    : getStatusMeta("");
-
   return (
     <div style={{ display: "grid", gap: "24px" }}>
       <TenantCreateModal
@@ -356,20 +347,6 @@ function AdminTenantsPage() {
           reloadData();
         }}
       />
-      <TenantDetailDrawer
-        open={Boolean(detailTenantId)}
-        tenantId={detailTenantId}
-        statusMeta={detailStatusMeta}
-        onClose={() => setDetailTenantId(null)}
-        onTenantUpdated={(updated) => {
-          setTenants((prev) =>
-            prev.map((t) =>
-              String(t.id) === String(updated.id) ? { ...t, ...updated } : t
-            )
-          );
-        }}
-      />
-
       <div>
         <div
           style={{
@@ -594,7 +571,7 @@ function AdminTenantsPage() {
                       borderBottom: "1px solid #F1F5F9",
                       cursor: "pointer",
                     }}
-                    onClick={() => setDetailTenantId(row.id)}
+                    onClick={() => navigate(`/admin/tenants/${row.id}`)}
                   >
                     <td style={{ padding: "12px" }}>
                       <div style={{ fontWeight: 700, color: "#0F172A" }}>
@@ -653,7 +630,7 @@ function AdminTenantsPage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDetailTenantId(row.id);
+                          navigate(`/admin/tenants/${row.id}`);
                         }}
                         style={{
                           padding: "6px 12px",

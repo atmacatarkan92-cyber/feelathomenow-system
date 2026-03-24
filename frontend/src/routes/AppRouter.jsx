@@ -12,6 +12,7 @@ import AdminCoLivingDashboardPage from "../pages/admin/AdminCoLivingDashboardPag
 import AdminApartmentsPage from "../pages/admin/AdminApartmentsPage";
 import AdminLeadsPage from "../pages/admin/AdminLeadsPage";
 import AdminTenantsPage from "../pages/admin/AdminTenantsPage";
+import AdminTenantDetailPage from "../pages/admin/AdminTenantDetailPage";
 import AdminLandlordsPage from "../pages/admin/AdminLandlordsPage";
 import AdminUnitDetailPage from "../pages/admin/AdminUnitDetailPage";
 import AdminInvoicesPage from "../pages/admin/AdminInvoicesPage";
@@ -97,6 +98,7 @@ export default function AppRouter() {
               <Route path="apartments" element={<AdminApartmentsPage />} />
               <Route path="listings" element={<AdminListingsPage />} />
               <Route path="leads" element={<AdminLeadsPage />} />
+              <Route path="tenants/:tenantId" element={<AdminTenantDetailPage />} />
               <Route path="tenants" element={<AdminTenantsPage />} />
               <Route path="landlords" element={<AdminLandlordsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
