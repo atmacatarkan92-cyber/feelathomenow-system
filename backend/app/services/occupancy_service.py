@@ -105,7 +105,7 @@ def get_unit_occupancy(session, unit_id: str, on_date: Optional[date] = None) ->
 
 
 def _get_tenant_name_and_rent(session, room_id: str, on_date: date) -> tuple:
-    """Return (tenant_name, rent_chf) for the tenancy covering this room on on_date, or (None, None)."""
+    """Return (tenant_name, monthly_rent) for the tenancy covering this room on on_date, or (None, None)."""
     today = on_date
     q = (
         select(Tenancy, Tenant)
@@ -118,7 +118,7 @@ def _get_tenant_name_and_rent(session, room_id: str, on_date: date) -> tuple:
         t, tenant = row[0], row[1]
         move_out = t.move_out_date or date(9999, 12, 31)
         if t.move_in_date <= today <= move_out:
-            return (getattr(tenant, "name", None) or None, float(t.rent_chf or 0))
+            return (getattr(tenant, "name", None) or None, float(t.monthly_rent or 0))
     return (None, None)
 
 
@@ -170,7 +170,7 @@ def get_unit_rooms_occupancy(
             move_out = t.move_out_date or date(9999, 12, 31)
             if t.move_in_date <= today <= move_out:
                 tenant_name = getattr(tenant, "name", None) or None
-                rent = float(t.rent_chf or 0)
+                rent = float(t.monthly_rent or 0)
                 break
 
         result.append({

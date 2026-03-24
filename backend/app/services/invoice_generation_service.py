@@ -27,7 +27,7 @@ def build_invoice_number(invoice_id: int, year: int, month: int) -> str:
 def generate_monthly_invoices(session, year: int, month: int, *, organization_id: str) -> dict:
     """
     Find all tenancies with status=active that overlap the given month.
-    For each: prorate rent_chf by overlapping days, create one Invoice and PDF.
+    For each: prorate monthly_rent by overlapping days, create one Invoice and PDF.
     Skip if an invoice already exists for (tenancy_id, billing_year, billing_month).
 
     Returns: { "created_count": int, "skipped_count": int, "year": year, "month": month }
@@ -65,7 +65,7 @@ def generate_monthly_invoices(session, year: int, month: int, *, organization_id
         start = max(first, t.move_in_date)
         end = min(last, move_out)
         overlapping_days = (end - start).days + 1
-        prorated_amount = round(float(t.rent_chf) * (overlapping_days / days_in_month), 2)
+        prorated_amount = round(float(t.monthly_rent) * (overlapping_days / days_in_month), 2)
 
         inv = Invoice(
             organization_id=org_id,

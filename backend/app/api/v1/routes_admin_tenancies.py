@@ -29,8 +29,8 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
         "unit_id": str(t.unit_id),
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
-        "rent_chf": float(t.rent_chf),
-        "deposit_chf": float(t.deposit_chf) if t.deposit_chf is not None else None,
+        "monthly_rent": float(t.monthly_rent),
+        "deposit_amount": float(t.deposit_amount) if t.deposit_amount is not None else None,
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "created_at": t.created_at.isoformat() if getattr(t, "created_at", None) else None,
     }
@@ -42,8 +42,8 @@ class TenancyCreate(BaseModel):
     unit_id: str
     move_in_date: date
     move_out_date: Optional[date] = None
-    rent_chf: float = Field(default=0, ge=0)
-    deposit_chf: Optional[float] = Field(default=None, ge=0)
+    monthly_rent: float = Field(default=0, ge=0)
+    deposit_amount: Optional[float] = Field(default=None, ge=0)
     status: TenancyStatus = TenancyStatus.active
 
     @model_validator(mode="after")
@@ -62,8 +62,8 @@ class TenancyCreate(BaseModel):
 class TenancyPatch(BaseModel):
     move_in_date: Optional[date] = None
     move_out_date: Optional[date] = None
-    rent_chf: Optional[float] = Field(default=None, ge=0)
-    deposit_chf: Optional[float] = Field(default=None, ge=0)
+    monthly_rent: Optional[float] = Field(default=None, ge=0)
+    deposit_amount: Optional[float] = Field(default=None, ge=0)
     status: Optional[TenancyStatus] = None
 
     @model_validator(mode="after")
@@ -206,8 +206,8 @@ def admin_create_tenancy(
         unit_id=body.unit_id,
         move_in_date=body.move_in_date,
         move_out_date=body.move_out_date,
-        rent_chf=body.rent_chf,
-        deposit_chf=body.deposit_chf,
+        monthly_rent=body.monthly_rent,
+        deposit_amount=body.deposit_amount,
         status=status,
     )
     session.add(tenancy)

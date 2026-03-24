@@ -105,7 +105,7 @@ class TestLandlordTenanciesList:
             unit_id=unit_id,
             move_in_date=date(2024, 1, 1),
             move_out_date=None,
-            rent_chf=1500.0,
+            monthly_rent=1500.0,
             status=TenancyStatus.active,
             created_at=datetime.utcnow(),
         )

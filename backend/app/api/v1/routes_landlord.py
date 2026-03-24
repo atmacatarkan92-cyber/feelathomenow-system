@@ -85,9 +85,8 @@ def _tenancy_to_dict(
         "unit_id": str(t.unit_id),
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
-        "rent_chf": float(t.rent_chf),
-        "monthly_rent": float(t.rent_chf),
-        "deposit_chf": float(t.deposit_chf) if t.deposit_chf is not None else None,
+        "monthly_rent": float(t.monthly_rent),
+        "deposit_amount": float(t.deposit_amount) if t.deposit_amount is not None else None,
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "created_at": t.created_at.isoformat() if getattr(t, "created_at", None) else None,
     }

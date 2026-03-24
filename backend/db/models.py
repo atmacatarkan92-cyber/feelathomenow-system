@@ -224,8 +224,8 @@ class Tenancy(SQLModel, table=True):
     unit_id: str = Field(foreign_key="unit.id", index=True)
     move_in_date: date = Field(...)
     move_out_date: Optional[date] = Field(default=None)
-    rent_chf: float = Field(default=0)
-    deposit_chf: Optional[float] = Field(default=None)
+    monthly_rent: float = Field(default=0)
+    deposit_amount: Optional[float] = Field(default=None)
     status: TenancyStatus = Field(default=TenancyStatus.active, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

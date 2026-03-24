@@ -54,7 +54,7 @@ def calculate_monthly_revenue(session, unit_id: str, year: int, month: int) -> d
                 end = min(last, move_out)
                 days = (end - start).days + 1
                 days_in_month = (last - first).days + 1
-                expected_revenue += float(t.rent_chf) * (days / days_in_month)
+                expected_revenue += float(t.monthly_rent) * (days / days_in_month)
                 occupied_rooms += 1
                 found = True
                 break

@@ -19,8 +19,8 @@ def test_tenancy_create_rejects_move_out_before_move_in():
             unit_id="unit-1",
             move_in_date=date(2024, 1, 10),
             move_out_date=date(2024, 1, 9),
-            rent_chf=1000,
-            deposit_chf=None,
+            monthly_rent=1000,
+            deposit_amount=None,
             status="active",
         )
 
@@ -33,8 +33,8 @@ def test_tenancy_create_rejects_negative_rent():
             unit_id="unit-1",
             move_in_date=date(2024, 1, 10),
             move_out_date=None,
-            rent_chf=-1,
-            deposit_chf=None,
+            monthly_rent=-1,
+            deposit_amount=None,
             status="active",
         )
 

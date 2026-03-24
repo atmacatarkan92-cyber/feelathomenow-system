@@ -31,7 +31,7 @@ def _tenancy_to_tenant_dict(
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
-        "rent_chf": float(t.rent_chf) if t.rent_chf is not None else 0,
+        "monthly_rent": float(t.monthly_rent) if t.monthly_rent is not None else 0,
     }
 
 
