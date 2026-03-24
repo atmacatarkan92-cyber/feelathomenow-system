@@ -1,6 +1,6 @@
 """Tenancies: rename rent_chf→monthly_rent and deposit_chf→deposit_amount.
 
-Revision ID: 027_tenancies_rename_financial_columns
+Revision ID: 027_tenancies_rename_cols
 Revises: 026_tenancies_no_overlap
 
 Why:
@@ -23,7 +23,7 @@ from typing import Sequence, Union
 from alembic import op
 from sqlalchemy import text
 
-revision: str = "027_tenancies_rename_financial_columns"
+revision: str = "027_tenancies_rename_cols"
 down_revision: Union[str, None] = "026_tenancies_no_overlap"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
