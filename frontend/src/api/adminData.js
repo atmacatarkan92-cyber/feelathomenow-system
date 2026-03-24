@@ -79,13 +79,81 @@ export function fetchAdminRooms(unitId = null) {
   });
 }
 
-export function fetchAdminTenants() {
-  return fetch(`${API_BASE_URL}/api/admin/tenants`, { headers: getApiHeaders() })
+/**
+ * @param {{ skip?: number, limit?: number, q?: string }} [params]
+ */
+export function fetchAdminTenants(params = {}) {
+  const sp = new URLSearchParams();
+  if (params.skip != null) sp.set("skip", String(params.skip));
+  if (params.limit != null) sp.set("limit", String(params.limit));
+  if (params.q != null && String(params.q).trim()) {
+    sp.set("q", String(params.q).trim());
+  }
+  const qs = sp.toString();
+  const url = `${API_BASE_URL}/api/admin/tenants${qs ? `?${qs}` : ""}`;
+  return fetch(url, { headers: getApiHeaders() })
     .then((res) => {
       if (!res.ok) throw new Error("Tenants konnten nicht geladen werden.");
       return res.json();
     })
     .then((data) => expectPaginatedItems(data, "GET /api/admin/tenants"));
+}
+
+export function fetchAdminTenant(tenantId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/tenants/${encodeURIComponent(tenantId)}`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error("Mieter konnte nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
+async function parseAdminErrorResponse(res) {
+  const text = await res.text();
+  try {
+    const j = JSON.parse(text);
+    if (Array.isArray(j.detail)) {
+      return j.detail
+        .map((d) => (typeof d === "string" ? d : d.msg || d.message || ""))
+        .filter(Boolean)
+        .join(" ");
+    }
+    if (typeof j.detail === "string") return j.detail;
+  } catch (_) {
+    /* ignore */
+  }
+  return text || "Die Anfrage ist fehlgeschlagen.";
+}
+
+export async function createAdminTenant(body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/tenants`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export async function updateAdminTenant(tenantId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/tenants/${encodeURIComponent(tenantId)}`,
+    {
+      method: "PATCH",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
 }
 
 /**

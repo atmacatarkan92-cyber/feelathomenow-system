@@ -6,8 +6,8 @@ Protected by require_roles("admin", "manager").
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, EmailStr, Field, model_validator
-from sqlalchemy import func
+from pydantic import BaseModel, EmailStr, TypeAdapter, field_validator, model_validator
+from sqlalchemy import func, or_
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
@@ -44,25 +44,8 @@ def _tenant_to_dict(t: Tenant) -> dict:
 
 
 class TenantCreate(BaseModel):
-    full_name: Optional[str] = None
-    name: Optional[str] = None
-    email: EmailStr
-    phone: Optional[str] = None
-    company: Optional[str] = None
-    room_id: Optional[str] = None
+    """Create tenant: name required; email optional but validated when provided."""
 
-    @model_validator(mode="after")
-    def _no_whitespace_only_strings(self):
-        if self.full_name is not None and not self.full_name.strip():
-            raise ValueError("full_name must not be empty")
-        if self.name is not None and not self.name.strip():
-            raise ValueError("name must not be empty")
-        if self.room_id is not None and not self.room_id.strip():
-            raise ValueError("room_id must not be empty")
-        return self
-
-
-class TenantPatch(BaseModel):
     full_name: Optional[str] = None
     name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -70,15 +53,108 @@ class TenantPatch(BaseModel):
     company: Optional[str] = None
     room_id: Optional[str] = None
 
-    @model_validator(mode="after")
-    def _no_whitespace_only_strings(self):
-        if self.full_name is not None and not self.full_name.strip():
-            raise ValueError("full_name must not be empty")
-        if self.name is not None and not self.name.strip():
-            raise ValueError("name must not be empty")
-        if self.room_id is not None and not self.room_id.strip():
-            raise ValueError("room_id must not be empty")
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _merge_full_name_into_name(cls, data):
+        if isinstance(data, dict):
+            if data.get("name") is None and data.get("full_name") is not None:
+                data["name"] = data["full_name"]
+        return data
+
+    @field_validator("name")
+    @classmethod
+    def _name_required_stripped(cls, v: Optional[str]) -> str:
+        s = (v or "").strip()
+        if not s:
+            raise ValueError("Name ist erforderlich.")
+        return s
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _email_empty_to_none(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        return str(v).strip()
+
+    @field_validator("phone", "company", mode="before")
+    @classmethod
+    def _optional_trim_or_none(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        return str(v).strip()
+
+    @field_validator("room_id", mode="before")
+    @classmethod
+    def _room_id_trim_or_none(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        return str(v).strip()
+
+
+_email_str_adapter = TypeAdapter(EmailStr)
+
+
+class TenantPatch(BaseModel):
+    full_name: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    room_id: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _merge_full_name_into_name(cls, data):
+        if isinstance(data, dict):
+            if data.get("name") is None and data.get("full_name") is not None:
+                data["name"] = data["full_name"]
+        return data
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_empty_if_set(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s:
+            raise ValueError("Name darf nicht leer sein.")
+        return s
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _email_strip(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return ""
+        return str(v).strip()
+
+    @field_validator("email")
+    @classmethod
+    def _email_format_if_non_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        if v == "":
+            return ""
+        return str(_email_str_adapter.validate_python(v))
+
+    @field_validator("phone", "company", mode="before")
+    @classmethod
+    def _optional_trim_or_none_patch(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return str(v).strip()
+
+    @field_validator("room_id", mode="before")
+    @classmethod
+    def _room_id_trim_or_none_patch(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return str(v).strip()
 
 
 class TenantListResponse(BaseModel):
@@ -92,25 +168,48 @@ class TenantListResponse(BaseModel):
 def admin_list_tenants(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    q: Optional[str] = Query(None, max_length=200, description="Search name, email, phone"),
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    """List all tenants."""
-    base_query = (
-        select(Tenant)
-        .where(Tenant.organization_id == org_id)
-        .order_by(Tenant.name)
-    )
-    _total_rows = session.exec(
-        select(func.count())
-        .select_from(Tenant)
-        .where(Tenant.organization_id == org_id)
-    ).all()
+    """List tenants for the current organization, optionally filtered by search."""
+    org_filter = Tenant.organization_id == org_id
+    search_filter = None
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        search_filter = or_(
+            Tenant.name.ilike(term),
+            Tenant.email.ilike(term),
+            Tenant.phone.ilike(term),
+        )
+
+    base_query = select(Tenant).where(org_filter)
+    count_query = select(func.count()).select_from(Tenant).where(org_filter)
+    if search_filter is not None:
+        base_query = base_query.where(search_filter)
+        count_query = count_query.where(search_filter)
+
+    base_query = base_query.order_by(Tenant.name)
+    _total_rows = session.exec(count_query).all()
     total = int(_total_rows[0]) if _total_rows else 0
     paged_rows = session.exec(base_query.offset(skip).limit(limit)).all()
     items = [_tenant_to_dict(t) for t in paged_rows]
     return TenantListResponse(items=items, total=total, skip=skip, limit=limit)
+
+
+@router.get("/tenants/{tenant_id}", response_model=dict)
+def admin_get_tenant(
+    tenant_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """Return a single tenant if it belongs to the current organization."""
+    tenant = session.get(Tenant, tenant_id)
+    if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return _tenant_to_dict(tenant)
 
 
 @router.post("/tenants", response_model=dict)
@@ -124,11 +223,10 @@ def admin_create_tenant(
 ):
     """Create a new tenant."""
     _assert_room_in_org(session, body.room_id, org_id)
-    name = (body.full_name or body.name or "").strip() or "Tenant"
     tenant = Tenant(
         organization_id=org_id,
-        name=name,
-        email=body.email or "",
+        name=body.name,
+        email="" if body.email is None else str(body.email),
         room_id=body.room_id,
         phone=body.phone,
         company=body.company,
@@ -167,7 +265,10 @@ def admin_patch_tenant(
         pass
     for k, v in data.items():
         if hasattr(tenant, k):
-            setattr(tenant, k, v)
+            if k == "email" and v is None:
+                setattr(tenant, "email", "")
+            else:
+                setattr(tenant, k, v)
     session.add(tenant)
     create_audit_log(
         session, str(current_user.id), "update", "tenant", str(tenant_id),

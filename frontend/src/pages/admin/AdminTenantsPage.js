@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -8,6 +8,8 @@ import {
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
+import TenantCreateModal from "../../components/admin/tenants/TenantCreateModal";
+import TenantDetailDrawer from "../../components/admin/tenants/TenantDetailDrawer";
 
 function formatCurrency(value) {
   const amount = Number(value || 0);
@@ -77,6 +79,32 @@ function getStatusMeta(status) {
     color: "#475569",
     border: "#CBD5E1",
   };
+}
+
+function rowMatchesStatusFilter(row, filterKey) {
+  if (!filterKey || filterKey === "all") return true;
+  const s = String(row.status || "").toLowerCase();
+  if (filterKey === "active") {
+    return s === "active" || s === "aktiv" || s === "belegt";
+  }
+  if (filterKey === "reserved") {
+    return s === "reserved" || s === "reserviert";
+  }
+  if (filterKey === "ended") {
+    return (
+      s === "ended" ||
+      s === "beendet" ||
+      s === "move_out" ||
+      s === "ausgezogen"
+    );
+  }
+  if (filterKey === "open") {
+    if (rowMatchesStatusFilter(row, "active")) return false;
+    if (rowMatchesStatusFilter(row, "reserved")) return false;
+    if (rowMatchesStatusFilter(row, "ended")) return false;
+    return true;
+  }
+  return true;
 }
 
 function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
@@ -191,13 +219,17 @@ function AdminTenantsPage() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [detailTenantId, setDetailTenantId] = useState(null);
 
-  useEffect(() => {
+  const reloadData = useCallback(() => {
     setLoadError(null);
-    Promise.all([
+    return Promise.all([
       fetchAdminUnits(),
       fetchAdminRooms(),
-      fetchAdminTenants(),
+      fetchAdminTenants({ limit: 200 }),
       fetchAdminTenancies(),
       fetchAdminInvoices(),
     ])
@@ -210,13 +242,39 @@ function AdminTenantsPage() {
       })
       .catch((e) => {
         setLoadError(e?.message ?? "Fehler beim Laden.");
-      })
-      .finally(() => setLoading(false));
+      });
   }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    reloadData().finally(() => setLoading(false));
+  }, [reloadData]);
 
   const rows = useMemo(() => {
     return buildTenantRows(tenants, tenancies, rooms, units, invoices);
   }, [tenants, tenancies, rooms, units, invoices]);
+
+  const filteredRows = useMemo(() => {
+    let list = rows;
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((row) => {
+        const name = String(row.fullName || "").toLowerCase();
+        const email = String(row.email || "").toLowerCase();
+        const phone = String(row.phone || "").toLowerCase();
+        return name.includes(q) || email.includes(q) || phone.includes(q);
+      });
+    }
+    if (statusFilter && statusFilter !== "all") {
+      list = list.filter((row) => rowMatchesStatusFilter(row, statusFilter));
+    }
+    return list;
+  }, [rows, searchQuery, statusFilter]);
+
+  const selectedDetailRow = useMemo(() => {
+    if (!detailTenantId) return null;
+    return rows.find((r) => String(r.id) === String(detailTenantId)) || null;
+  }, [rows, detailTenantId]);
 
   const summary = useMemo(() => {
     const activeCount = rows.filter((row) => {
@@ -288,8 +346,33 @@ function AdminTenantsPage() {
     );
   }
 
+  const detailStatusMeta = selectedDetailRow
+    ? getStatusMeta(selectedDetailRow.status)
+    : getStatusMeta("");
+
   return (
     <div style={{ display: "grid", gap: "24px" }}>
+      <TenantCreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          reloadData();
+        }}
+      />
+      <TenantDetailDrawer
+        open={Boolean(detailTenantId)}
+        tenantId={detailTenantId}
+        statusMeta={detailStatusMeta}
+        onClose={() => setDetailTenantId(null)}
+        onTenantUpdated={(updated) => {
+          setTenants((prev) =>
+            prev.map((t) =>
+              String(t.id) === String(updated.id) ? { ...t, ...updated } : t
+            )
+          );
+        }}
+      />
+
       <div>
         <div
           style={{
@@ -302,14 +385,42 @@ function AdminTenantsPage() {
           FeelAtHomeNow Admin
         </div>
 
-        <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>
-          Mieter
-        </h2>
-
-        <p style={{ color: "#64748B", marginTop: "10px" }}>
-          Übersicht über Mieter, Zimmer, Mietverhältnisse und verknüpfte
-          Rechnungen.
-        </p>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "16px",
+          }}
+        >
+          <div>
+            <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>
+              Mieter
+            </h2>
+            <p style={{ color: "#64748B", marginTop: "10px", maxWidth: "560px" }}>
+              CRM-Übersicht: Mieter durchsuchen, anlegen und bearbeiten. Mietverhältnisse
+              und weitere Module folgen.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            style={{
+              padding: "12px 18px",
+              borderRadius: "12px",
+              border: "none",
+              background: "#f97316",
+              color: "#FFFFFF",
+              fontWeight: 700,
+              fontSize: "15px",
+              cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(249, 115, 22, 0.35)",
+            }}
+          >
+            Neuer Mieter
+          </button>
+        </div>
       </div>
 
       <div
@@ -381,6 +492,8 @@ function AdminTenantsPage() {
         <div
           style={{
             display: "flex",
+            flexWrap: "wrap",
+            gap: "12px",
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: "16px",
@@ -390,13 +503,59 @@ function AdminTenantsPage() {
             Mieterübersicht
           </h3>
 
-          <div style={{ fontSize: "14px", color: "#64748B" }}>
-            {rows.length} Einträge
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px",
+              alignItems: "center",
+            }}
+          >
+            <input
+              type="search"
+              placeholder="Suche: Name, E-Mail, Telefon …"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                minWidth: "200px",
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1px solid #E2E8F0",
+                fontSize: "14px",
+              }}
+              aria-label="Mieter suchen"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1px solid #E2E8F0",
+                fontSize: "14px",
+                background: "#FFFFFF",
+              }}
+              aria-label="Status filtern"
+            >
+              <option value="all">Alle Status</option>
+              <option value="active">Aktiv</option>
+              <option value="reserved">Reserviert</option>
+              <option value="ended">Ausgezogen</option>
+              <option value="open">Offen / Sonstige</option>
+            </select>
           </div>
         </div>
 
+        <div style={{ fontSize: "14px", color: "#64748B", marginBottom: "12px" }}>
+          {filteredRows.length === rows.length
+            ? `${rows.length} Einträge`
+            : `${filteredRows.length} von ${rows.length} Einträgen (gefiltert)`}
+        </div>
+
         {rows.length === 0 ? (
-          <p>Keine Mieter gefunden.</p>
+          <p>Keine Mieter erfasst.</p>
+        ) : filteredRows.length === 0 ? (
+          <p>Keine Mieter für diese Filter.</p>
         ) : (
           <table
             style={{
@@ -423,15 +582,23 @@ function AdminTenantsPage() {
                 <th style={{ padding: "12px" }}>Rechnungen offen</th>
                 <th style={{ padding: "12px" }}>Offener Betrag</th>
                 <th style={{ padding: "12px" }}>Status</th>
+                <th style={{ padding: "12px", width: "100px" }}>Aktion</th>
               </tr>
             </thead>
 
             <tbody>
-              {rows.map((row) => {
+              {filteredRows.map((row) => {
                 const statusMeta = getStatusMeta(row.status);
 
                 return (
-                  <tr key={row.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                  <tr
+                    key={row.id}
+                    style={{
+                      borderBottom: "1px solid #F1F5F9",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setDetailTenantId(row.id)}
+                  >
                     <td style={{ padding: "12px" }}>
                       <div style={{ fontWeight: 700, color: "#0F172A" }}>
                         {row.fullName}
@@ -483,6 +650,26 @@ function AdminTenantsPage() {
                       >
                         {statusMeta.label}
                       </span>
+                    </td>
+                    <td style={{ padding: "12px" }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailTenantId(row.id);
+                        }}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid #E2E8F0",
+                          background: "#FFFFFF",
+                          fontWeight: 600,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Öffnen
+                      </button>
                     </td>
                   </tr>
                 );
