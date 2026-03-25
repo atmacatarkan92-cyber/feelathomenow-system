@@ -270,9 +270,64 @@ def admin_patch_tenancy(
         if hasattr(tenancy, k):
             setattr(tenancy, k, v)
     session.add(tenancy)
+    new_snapshot = model_snapshot(tenancy)
+
+    def _de_date_display(val) -> str:
+        if val is None or val == "":
+            return "—"
+        s = str(val)[:10]
+        if len(s) == 10 and s[4] == "-" and s[7] == "-":
+            y, m, d = s.split("-")
+            return f"{d}.{m}.{y}"
+        return str(val)
+
+    def _status_de(val) -> str:
+        if val is None or val == "":
+            return "—"
+        key = str(val).lower()
+        return {"active": "Aktiv", "reserved": "Reserviert", "ended": "Beendet"}.get(key, str(val))
+
+    if data:
+        parts: List[str] = []
+        if "move_in_date" in data:
+            parts.append(
+                f"Einzug {_de_date_display(old_snapshot.get('move_in_date'))} → "
+                f"{_de_date_display(new_snapshot.get('move_in_date'))}"
+            )
+        if "move_out_date" in data:
+            parts.append(
+                f"Auszug {_de_date_display(old_snapshot.get('move_out_date'))} → "
+                f"{_de_date_display(new_snapshot.get('move_out_date'))}"
+            )
+        if "status" in data:
+            parts.append(
+                f"Status {_status_de(old_snapshot.get('status'))} → {_status_de(new_snapshot.get('status'))}"
+            )
+        if "monthly_rent" in data:
+            parts.append(
+                f"Miete {old_snapshot.get('monthly_rent')} → {new_snapshot.get('monthly_rent')} CHF/Monat"
+            )
+        if "deposit_amount" in data:
+            parts.append(
+                f"Kaution {old_snapshot.get('deposit_amount')} → {new_snapshot.get('deposit_amount')} CHF"
+            )
+        summary = (
+            "Mietverhältnis aktualisiert: " + ", ".join(parts)
+            if parts
+            else "Mietverhältnis aktualisiert"
+        )
+        record_tenant_event(
+            session,
+            tenant_id=str(tenancy.tenant_id),
+            organization_id=org_id,
+            action_type="tenancy_updated",
+            created_by_user_id=str(current_user.id),
+            summary=summary,
+        )
+
     create_audit_log(
         session, str(current_user.id), "update", "tenancy", str(tenancy_id),
-        old_values=old_snapshot, new_values=model_snapshot(tenancy),
+        old_values=old_snapshot, new_values=new_snapshot,
     )
     session.commit()
     session.refresh(tenancy)
