@@ -44,7 +44,11 @@ function parseAdminErrorBodyText(text) {
 
 async function parseAdminErrorResponse(res) {
   const text = await res.text();
-  return parseAdminErrorBodyText(text);
+  let msg = parseAdminErrorBodyText(text).trim();
+  if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
+    msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+  }
+  return msg;
 }
 
 export function fetchAdminUnits() {

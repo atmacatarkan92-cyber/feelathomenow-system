@@ -28,6 +28,14 @@ const emptyForm = {
   landlordLeaseStartDate: "",
 };
 
+/** Stable room count from number input (avoids `|| 0` turning "" into 0 incorrectly for parsing). */
+function parseRoomsTotal(raw) {
+  if (raw === "" || raw === null || raw === undefined) return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+}
+
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
 }
@@ -415,6 +423,13 @@ function AdminApartmentsPage() {
   const [formData, setFormData] = useState(emptyForm);
   const [coLivingRoomRows, setCoLivingRoomRows] = useState([]);
 
+  const normalizedUnitType = (formData.type || "").trim();
+  const isCoLivingType = normalizedUnitType === "Co-Living";
+  const parsedRoomsTotal = useMemo(
+    () => parseRoomsTotal(formData.rooms),
+    [formData.rooms]
+  );
+
   const nextUnitId = useMemo(() => {
     const maxNumber = units.reduce((max, item) => {
       const uid = item.unitId || item.id || "";
@@ -427,11 +442,11 @@ function AdminApartmentsPage() {
 
   useEffect(() => {
     if (!isModalOpen || editingId) return;
-    if (formData.type !== "Co-Living") {
+    if (!isCoLivingType) {
       setCoLivingRoomRows([]);
       return;
     }
-    const n = Math.max(0, parseInt(String(formData.rooms || 0), 10) || 0);
+    const n = parsedRoomsTotal;
     if (n === 0) {
       setCoLivingRoomRows([]);
       return;
@@ -448,7 +463,7 @@ function AdminApartmentsPage() {
         };
       })
     );
-  }, [isModalOpen, editingId, formData.type, formData.rooms]);
+  }, [isModalOpen, editingId, isCoLivingType, parsedRoomsTotal]);
 
   const filteredUnits = useMemo(() => {
     let result = units;
@@ -554,7 +569,7 @@ function AdminApartmentsPage() {
     let nextValue = value;
 
     if (name === "occupiedRooms") {
-      const totalRooms = Number(formData.rooms || 0);
+      const totalRooms = parseRoomsTotal(formData.rooms);
       const occupied = Number(value || 0);
 
       if (occupied > totalRooms && totalRooms > 0) {
@@ -581,8 +596,8 @@ function AdminApartmentsPage() {
     event.preventDefault();
     setSaveError("");
 
-    if (!editingId && formData.type === "Co-Living") {
-      const n = Number(formData.rooms || 0);
+    if (!editingId && isCoLivingType) {
+      const n = parsedRoomsTotal;
       if (n > 0) {
         if (coLivingRoomRows.length !== n) {
           setSaveError(
@@ -636,13 +651,13 @@ function AdminApartmentsPage() {
       address: (formData.address || "").trim() || "",
       city: (formData.place || "").trim() || "",
       city_id: null,
-      type: (formData.type || "").trim() || null,
-      rooms: Number(formData.rooms || 0) || 0,
+      type: normalizedUnitType || null,
+      rooms: parsedRoomsTotal,
       property_id: (formData.property_id || "").trim() || null,
     };
 
-    if (!editingId && formData.type === "Co-Living") {
-      const n = Number(formData.rooms || 0);
+    if (!editingId && isCoLivingType) {
+      const n = parsedRoomsTotal;
       if (n > 0) {
         apiPayload.co_living_rooms = coLivingRoomRows.map((row) => {
           const floorRaw = row.floor;
@@ -678,7 +693,12 @@ function AdminApartmentsPage() {
         handleCloseModal();
       })
       .catch((e) => {
-        setSaveError(e.message || "Speichern fehlgeschlagen.");
+        const msg =
+          (typeof e === "string" && e) ||
+          (e && typeof e.message === "string" && e.message) ||
+          (e != null && String(e)) ||
+          "Speichern fehlgeschlagen.";
+        setSaveError(msg);
       })
       .finally(() => setSaving(false));
   }
@@ -692,10 +712,29 @@ function AdminApartmentsPage() {
 
     setDeleteError("");
     deleteAdminUnit(id)
-      .then(() => Promise.all([fetchAdminUnits(), fetchAdminRooms()]))
-      .then(([unitsData, roomsData]) => {
-        setUnits(Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []);
-        setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
+      .then(() => {
+        setUnits((prev) => prev.filter((item) => item.id !== id));
+        setRooms((prev) =>
+          prev.filter(
+            (r) => String(r.unitId || r.unit_id) !== String(id)
+          )
+        );
+        return Promise.all([fetchAdminUnits(), fetchAdminRooms()])
+          .then(([unitsData, roomsData]) => {
+            setUnits(
+              Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []
+            );
+            setRooms(
+              Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []
+            );
+          })
+          .catch((refetchErr) => {
+            setDeleteError(
+              `Gelöscht. Liste konnte nicht aktualisiert werden: ${
+                refetchErr?.message || String(refetchErr)
+              }`
+            );
+          });
       })
       .catch((e) => {
         setDeleteError(e?.message || "Löschen fehlgeschlagen.");
@@ -716,23 +755,23 @@ function AdminApartmentsPage() {
     Number(formData.tenantPriceMonthly || 0) - formRunningMonthlyCosts;
 
   const currentFreeRooms =
-    formData.type === "Co-Living"
+    isCoLivingType
       ? Math.max(
-          Number(formData.rooms || 0) - Number(formData.occupiedRooms || 0),
+          parsedRoomsTotal - Number(formData.occupiedRooms || 0),
           0
         )
       : "-";
 
   const currentCoLivingRevenue =
-    formData.type === "Co-Living" &&
-    Number(formData.rooms || 0) > 0 &&
+    isCoLivingType &&
+    parsedRoomsTotal > 0 &&
     formLeaseStarted
-      ? (Number(formData.tenantPriceMonthly || 0) / Number(formData.rooms || 0)) *
+      ? (Number(formData.tenantPriceMonthly || 0) / parsedRoomsTotal) *
         Number(formData.occupiedRooms || 0)
       : 0;
 
   const currentCoLivingVacancy =
-    formData.type === "Co-Living" && formLeaseStarted
+    isCoLivingType && formLeaseStarted
       ? Number(formData.tenantPriceMonthly || 0) - currentCoLivingRevenue
       : 0;
 
@@ -942,8 +981,8 @@ function AdminApartmentsPage() {
                     onChange={handleChange}
                     className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                   >
-                    <option>Apartment</option>
-                    <option>Co-Living</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="Co-Living">Co-Living</option>
                   </select>
                 </div>
 
@@ -970,7 +1009,7 @@ function AdminApartmentsPage() {
                   <label className="block text-sm text-slate-600 mb-2">
                     Zimmer gesamt
                   </label>
-                  {formData.type === "Co-Living" ? (
+                  {isCoLivingType ? (
                     <p className="text-xs text-slate-500 mb-2">
                       Zimmer-Details erscheinen, sobald «Zimmer gesamt» größer als 0 ist.
                     </p>
@@ -986,9 +1025,9 @@ function AdminApartmentsPage() {
                   />
                 </div>
 
-                {formData.type === "Co-Living" &&
+                {isCoLivingType &&
                   !editingId &&
-                  Number(formData.rooms || 0) > 0 &&
+                  parsedRoomsTotal > 0 &&
                   coLivingRoomRows.map((row, idx) => (
                     <div
                       key={idx}
@@ -1066,7 +1105,7 @@ function AdminApartmentsPage() {
                     </div>
                   ))}
 
-                {formData.type === "Co-Living" && (
+                {isCoLivingType && (
                   <div>
                     <label className="block text-sm text-slate-600 mb-2">
                       Zimmer belegt (Übergang)
@@ -1077,7 +1116,7 @@ function AdminApartmentsPage() {
                       value={formData.occupiedRooms}
                       onChange={handleChange}
                       min="0"
-                      max={formData.rooms || 0}
+                      max={parsedRoomsTotal}
                       className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
@@ -1131,7 +1170,7 @@ function AdminApartmentsPage() {
 
                 <div>
                   <label className="block text-sm text-slate-600 mb-2">
-                    {formData.type === "Co-Living"
+                    {isCoLivingType
                       ? "Vollbelegung Umsatz / Monat"
                       : "Mieterpreis pro Monat"}
                   </label>
@@ -1142,7 +1181,7 @@ function AdminApartmentsPage() {
                     onChange={handleChange}
                     required
                     placeholder={
-                      formData.type === "Co-Living" ? "z. B. 3400" : "z. B. 2450"
+                      isCoLivingType ? "z. B. 3400" : "z. B. 2450"
                     }
                     className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -1195,7 +1234,7 @@ function AdminApartmentsPage() {
               </div>
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formData.type === "Apartment" ? (
+                {!isCoLivingType ? (
                   <>
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                       <p className="text-sm text-slate-500">Gewinn aktuell</p>

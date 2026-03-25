@@ -48,6 +48,9 @@ def _set_refresh_cookie(response: JSONResponse, refresh_token_plain: str) -> Non
     name = get_refresh_cookie_name()
     secure = get_cookie_secure()
     samesite = get_cookie_samesite()
+    # Browsers require Secure=true when SameSite=None; cross-site refresh breaks without it.
+    if samesite == "none":
+        secure = True
     days = get_refresh_token_expire_days()
     max_age = 60 * 60 * 24 * days
     response.set_cookie(

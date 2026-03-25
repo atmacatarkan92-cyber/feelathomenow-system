@@ -171,8 +171,16 @@ def get_cookie_secure() -> bool:
 
 
 def get_cookie_samesite() -> str:
-    """SameSite attribute. Lax is a safe default; use Strict for stricter CSRF."""
-    v = os.getenv("COOKIE_SAMESITE", "lax").strip().lower()
+    """SameSite attribute. Lax is a safe default; use Strict for stricter CSRF.
+
+    For SPA on one host (e.g. Vercel) and API on another (e.g. Render), the browser
+    will not send SameSite=Lax cookies on cross-site fetch — refresh must use
+    SameSite=None + Secure. Set COOKIE_SAMESITE=none and COOKIE_SECURE=true, or
+    set AUTH_REFRESH_CROSS_SITE=true to default to none (Secure is enforced in routes).
+    """
+    v = os.getenv("COOKIE_SAMESITE", "").strip().lower()
     if v in ("lax", "strict", "none"):
         return v
+    if os.getenv("AUTH_REFRESH_CROSS_SITE", "").lower() in ("1", "true", "yes"):
+        return "none"
     return "lax"
