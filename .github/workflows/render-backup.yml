@@ -1,42 +1,20 @@
-name: Backup PostgreSQL to S3/R2
+name: Render Backup
 
 on:
   workflow_dispatch:
 
 jobs:
-  backup:
+  trigger-backup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Create backup (safe mode)
+      - name: List Render Postgres instances
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
           set -euo pipefail
 
-          echo "Starting PostgreSQL backup..."
+          echo "Calling Render API..."
 
-          # Schema + data, aber ohne problematische Tabellen
-          pg_dump "$DATABASE_URL" \
-            --no-owner \
-            --no-privileges \
-            --format=custom \
-            --exclude-table=tenant_events \
-            --file=backup.dump
-
-          echo "Backup completed successfully."
-
-      - name: Validate backup file
-        run: |
-          if [ ! -f backup.dump ]; then
-            echo "::error::Backup file not found"
-            exit 1
-          fi
-
-          echo "Backup file exists."
-
-      - name: Summary
-        run: echo "Backup job finished."
+          curl -sS -f "https://api.render.com/v1/postgres" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}"
