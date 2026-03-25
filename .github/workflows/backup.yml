@@ -21,29 +21,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Install PostgreSQL client and AWS CLI
+      - name: Install PostgreSQL client 16 and AWS CLI
         run: |
-          set -Eeuo pipefail
+          set -euo pipefail
           echo "==> Installing dependencies..."
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-client-16
           if command -v aws >/dev/null 2>&1; then
             echo "==> AWS CLI already installed, skipping install"
-            aws --version
           else
             curl -sSf "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
             unzip -q -o /tmp/awscliv2.zip -d /tmp
             sudo /tmp/aws/install
-            aws --version
           fi
+
+      - name: Log tool versions
+        run: |
+          set -euo pipefail
           pg_dump --version
+          pg_restore --version
+          aws --version
 
       - name: Set backup paths and timestamp
         id: paths
         run: |
-          set -Eeuo pipefail
+          set -euo pipefail
+          mkdir -p backups
           TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M")
-          echo "backup_file=backup_${TIMESTAMP}.dump" >> "$GITHUB_OUTPUT"
+          echo "backup_file=backups/backup_${TIMESTAMP}_${GITHUB_RUN_NUMBER}.dump" >> "$GITHUB_OUTPUT"
           YYYY=$(date -u +"%Y")
           MM=$(date -u +"%m")
           DD=$(date -u +"%d")
@@ -53,8 +58,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -euo pipefail
           echo "==> Backup started at $(date -u -Iseconds)"
-          set -Eeuo pipefail
           if [ -z "${DATABASE_URL}" ]; then
             echo "::error::DATABASE_URL secret is missing or empty"
             exit 1
@@ -73,29 +78,53 @@ jobs:
             echo "::error::Computed backup filename is empty"
             exit 1
           fi
-          pg_dump -v -Fc --no-row-security -f "$FILE" "$URL"
+          pg_dump -v \
+            --format=custom \
+            --clean \
+            --if-exists \
+            --no-owner \
+            --no-privileges \
+            -f "$FILE" \
+            "$URL"
           LS=$(ls -la "$FILE")
           echo "==> Backup completed: $LS"
           echo "backup_file=$FILE" >> $GITHUB_ENV
+
+      - name: Validate backup file
+        run: |
+          set -euo pipefail
+          FILE="${{ steps.paths.outputs.backup_file }}"
+          if [ ! -f "$FILE" ]; then
+            echo "::error::Backup file missing: $FILE"
+            exit 1
+          fi
+          SIZE=$(stat -c%s "$FILE")
+          if [ "$SIZE" -eq 0 ]; then
+            echo "::error::Backup file is empty"
+            exit 1
+          fi
+          pg_restore --list "$FILE" > /dev/null
+          echo "==> Backup validation OK (${SIZE} bytes)"
 
       - name: Upload backup to S3/R2
         env:
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
           S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
         run: |
-          set -Eeuo pipefail
+          set -euo pipefail
           PREFIX="${{ steps.paths.outputs.s3_prefix }}"
           FILE="${{ env.backup_file }}"
+          FILENAME="$(basename "$FILE")"
           if [ -z "$S3_BUCKET" ]; then
             echo "::error::S3_BUCKET secret is missing"
             exit 1
           fi
           ENDPOINT_URL="${S3_ENDPOINT:-}"
-          echo "==> Uploading s3://${S3_BUCKET}/${PREFIX}/${FILE}"
+          echo "==> Uploading s3://${S3_BUCKET}/${PREFIX}/${FILENAME}"
           if [ -n "$ENDPOINT_URL" ]; then
-            aws s3 cp "$FILE" "s3://${S3_BUCKET}/${PREFIX}/${FILE}" --endpoint-url "$ENDPOINT_URL"
+            aws s3 cp "$FILE" "s3://${S3_BUCKET}/${PREFIX}/${FILENAME}" --endpoint-url "$ENDPOINT_URL"
           else
-            aws s3 cp "$FILE" "s3://${S3_BUCKET}/${PREFIX}/${FILE}"
+            aws s3 cp "$FILE" "s3://${S3_BUCKET}/${PREFIX}/${FILENAME}"
           fi
           echo "==> Upload success"
 
@@ -104,7 +133,7 @@ jobs:
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
           S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
         run: |
-          set -Eeuo pipefail
+          set -euo pipefail
           KEEP="${{ env.RETENTION_COUNT }}"
           ENDPOINT_URL="${S3_ENDPOINT:-}"
           if ! [[ "$KEEP" =~ ^[0-9]+$ ]]; then
@@ -155,7 +184,7 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          set -Eeuo pipefail
+          set -euo pipefail
           echo "==> Backup job finished at $(date -u -Iseconds)"
           if [ "${{ job.status }}" != "success" ]; then
             echo "::error::Backup or upload failed - check logs above"
