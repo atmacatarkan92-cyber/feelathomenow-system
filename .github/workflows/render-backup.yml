@@ -1,6 +1,8 @@
 name: Render Backup
 
 on:
+  schedule:
+    - cron: "0 3 * * 0"  # every Sunday at 03:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -8,13 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: List visible Render Postgres instances
+      - name: Trigger Render export
         run: |
           set -euo pipefail
 
-          echo "Listing visible Render Postgres instances..."
+          echo "Triggering Render backup export..."
 
-          RESPONSE=$(curl -sS -f "https://api.render.com/v1/postgres" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}")
+          RESPONSE=$(curl -sS -f -X POST "https://api.render.com/v1/postgres/${{ secrets.RENDER_POSTGRES_ID }}/export" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json")
 
+          echo "Response:"
           echo "$RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"error"'; then
+            echo "::error::Render API returned an error"
+            exit 1
+          fi
+
+          echo "Backup trigger completed."
