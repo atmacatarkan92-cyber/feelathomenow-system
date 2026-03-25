@@ -37,6 +37,31 @@ function parseRoomsTotal(raw) {
   return Math.floor(n);
 }
 
+function parseRoomPriceChf(raw) {
+  if (raw === "" || raw === null || raw === undefined) return NaN;
+  const n = Number(String(raw).replace(",", "."));
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function sumCoLivingRoomPricesChf(rows) {
+  if (!Array.isArray(rows)) return 0;
+  return rows.reduce((sum, row) => {
+    const p = parseRoomPriceChf(row?.price);
+    return sum + (Number.isFinite(p) && p >= 0 ? p : 0);
+  }, 0);
+}
+
+function sumFirstNCoLivingRoomPricesChf(rows, n) {
+  if (!Array.isArray(rows) || rows.length === 0) return 0;
+  const cap = Math.min(Math.max(0, Math.floor(Number(n) || 0)), rows.length);
+  let sum = 0;
+  for (let i = 0; i < cap; i++) {
+    const p = parseRoomPriceChf(rows[i]?.price);
+    sum += Number.isFinite(p) && p >= 0 ? p : 0;
+  }
+  return sum;
+}
+
 /** One row per room; preserves existing row state when count changes. */
 function ensureCoLivingRoomRows(n, prev) {
   const safe = Array.isArray(prev) ? prev : [];
@@ -470,7 +495,30 @@ function AdminApartmentsPage() {
     return ensureCoLivingRoomRows(parsedRoomsTotal, coLivingRoomRows);
   }, [isCoLivingType, editingId, parsedRoomsTotal, coLivingRoomRows]);
 
-  console.log("DEBUG CO-LIVING:", formData.type, typeof formData.type, formData.rooms);
+  const coLivingOccupiedClamped = useMemo(() => {
+    if (!isCoLivingType) return 0;
+    const total = Math.max(0, parsedRoomsTotal);
+    let o = Number(formData.occupiedRooms);
+    if (Number.isNaN(o)) o = 0;
+    o = Math.floor(o);
+    o = Math.max(0, o);
+    if (total > 0) o = Math.min(o, total);
+    return o;
+  }, [isCoLivingType, parsedRoomsTotal, formData.occupiedRooms]);
+
+  const coLivingFullOccupancyRevenue = useMemo(() => {
+    if (!isCoLivingType) return 0;
+    const rows = coLivingRowsForDisplay;
+    if (rows.length > 0 && rows.length === parsedRoomsTotal && parsedRoomsTotal > 0) {
+      return sumCoLivingRoomPricesChf(rows);
+    }
+    return Number(formData.tenantPriceMonthly || 0);
+  }, [
+    isCoLivingType,
+    coLivingRowsForDisplay,
+    parsedRoomsTotal,
+    formData.tenantPriceMonthly,
+  ]);
 
   const nextUnitId = useMemo(() => {
     const maxNumber = units.reduce((max, item) => {
@@ -603,11 +651,12 @@ function AdminApartmentsPage() {
 
     if (name === "occupiedRooms") {
       const totalRooms = parseRoomsTotal(formData.rooms);
-      const occupied = Number(value || 0);
-
-      if (occupied > totalRooms && totalRooms > 0) {
-        nextValue = totalRooms;
-      }
+      let occupied = Number(value);
+      if (Number.isNaN(occupied)) occupied = 0;
+      occupied = Math.floor(occupied);
+      if (occupied < 0) occupied = 0;
+      if (totalRooms > 0 && occupied > totalRooms) occupied = totalRooms;
+      nextValue = occupied;
     }
 
     if (name === "type" && value === "Apartment") {
@@ -792,25 +841,25 @@ function AdminApartmentsPage() {
   const currentApartmentProfit =
     Number(formData.tenantPriceMonthly || 0) - formRunningMonthlyCosts;
 
-  const currentFreeRooms =
-    isCoLivingType
-      ? Math.max(
-          parsedRoomsTotal - Number(formData.occupiedRooms || 0),
-          0
-        )
-      : "-";
+  const currentFreeRooms = isCoLivingType
+    ? Math.max(parsedRoomsTotal - coLivingOccupiedClamped, 0)
+    : "-";
 
   const currentCoLivingRevenue =
-    isCoLivingType &&
-    parsedRoomsTotal > 0 &&
-    formLeaseStarted
-      ? (Number(formData.tenantPriceMonthly || 0) / parsedRoomsTotal) *
-        Number(formData.occupiedRooms || 0)
+    isCoLivingType && parsedRoomsTotal > 0 && formLeaseStarted
+      ? coLivingRowsForDisplay.length > 0 &&
+        coLivingRowsForDisplay.length === parsedRoomsTotal
+        ? sumFirstNCoLivingRoomPricesChf(
+            coLivingRowsForDisplay,
+            coLivingOccupiedClamped
+          )
+        : (coLivingFullOccupancyRevenue / parsedRoomsTotal) *
+          coLivingOccupiedClamped
       : 0;
 
   const currentCoLivingVacancy =
     isCoLivingType && formLeaseStarted
-      ? Number(formData.tenantPriceMonthly || 0) - currentCoLivingRevenue
+      ? coLivingFullOccupancyRevenue - currentCoLivingRevenue
       : 0;
 
   const currentCoLivingProfit =
@@ -1231,17 +1280,27 @@ function AdminApartmentsPage() {
                       ? "Vollbelegung Umsatz / Monat"
                       : "Mieterpreis pro Monat"}
                   </label>
-                  <input
-                    type="number"
-                    name="tenantPriceMonthly"
-                    value={formData.tenantPriceMonthly}
-                    onChange={handleChange}
-                    required
-                    placeholder={
-                      isCoLivingType ? "z. B. 3400" : "z. B. 2450"
-                    }
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
+                  {isCoLivingType ? (
+                    <div
+                      className="w-full border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 text-slate-800"
+                      aria-readonly="true"
+                    >
+                      {formatCurrency(coLivingFullOccupancyRevenue)}
+                      <span className="block text-xs text-slate-500 mt-1 font-normal">
+                        Summe der Zimmerpreise (nicht editierbar)
+                      </span>
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      name="tenantPriceMonthly"
+                      value={formData.tenantPriceMonthly}
+                      onChange={handleChange}
+                      required
+                      placeholder="z. B. 2450"
+                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  )}
                 </div>
 
                 <div>
