@@ -1,8 +1,6 @@
 name: Render Backup
 
 on:
-  schedule:
-    - cron: "0 3 * * 0"  # every Sunday at 03:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -10,13 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Verify Render Postgres ID
+      - name: List visible Render Postgres instances
         run: |
           set -euo pipefail
 
-          echo "Verifying Render Postgres instance..."
+          echo "Listing visible Render Postgres instances..."
 
-          RESPONSE=$(curl -sS -f "https://api.render.com/v1/postgres/${{ secrets.RENDER_POSTGRES_ID }}" \
+          RESPONSE=$(curl -sS -f "https://api.render.com/v1/postgres" \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}")
 
           echo "$RESPONSE"
