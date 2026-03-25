@@ -51,6 +51,16 @@ function ensureCoLivingRoomRows(n, prev) {
   });
 }
 
+/** Match backend `Co-Living` even when the select/copy uses Unicode hyphens (U+2011, U+2013). */
+function normalizeUnitTypeLabel(raw) {
+  const t = String(raw ?? "").trim();
+  if (!t) return "";
+  const hyphenNorm = t.replace(/\u2011/g, "-").replace(/\u2013/g, "-");
+  const compact = hyphenNorm.replace(/\s+/g, "");
+  if (/^co[-]?living$/i.test(compact)) return "Co-Living";
+  return hyphenNorm;
+}
+
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
 }
@@ -438,12 +448,17 @@ function AdminApartmentsPage() {
   const [formData, setFormData] = useState(emptyForm);
   const [coLivingRoomRows, setCoLivingRoomRows] = useState([]);
 
-  const normalizedUnitType = (formData.type || "").trim();
+  const normalizedUnitType = normalizeUnitTypeLabel(formData.type);
   const isCoLivingType = normalizedUnitType === "Co-Living";
   const parsedRoomsTotal = useMemo(
     () => parseRoomsTotal(formData.rooms),
     [formData.rooms]
   );
+
+  const coLivingRowsForDisplay = useMemo(() => {
+    if (!isCoLivingType || editingId || parsedRoomsTotal <= 0) return [];
+    return ensureCoLivingRoomRows(parsedRoomsTotal, coLivingRoomRows);
+  }, [isCoLivingType, editingId, parsedRoomsTotal, coLivingRoomRows]);
 
   const nextUnitId = useMemo(() => {
     const maxNumber = units.reduce((max, item) => {
@@ -561,8 +576,9 @@ function AdminApartmentsPage() {
 
   function handleCoLivingRoomChange(index, field, rawValue) {
     setCoLivingRoomRows((prev) => {
-      const next = [...prev];
-      if (!next[index]) return prev;
+      const base = ensureCoLivingRoomRows(parsedRoomsTotal, prev);
+      const next = [...base];
+      if (index < 0 || index >= next.length) return prev;
       next[index] = { ...next[index], [field]: rawValue };
       return next;
     });
@@ -1038,7 +1054,7 @@ function AdminApartmentsPage() {
                 {isCoLivingType &&
                   !editingId &&
                   parsedRoomsTotal > 0 &&
-                  coLivingRoomRows.map((row, idx) => (
+                  coLivingRowsForDisplay.map((row, idx) => (
                     <div
                       key={idx}
                       className="md:col-span-2 border border-slate-200 rounded-xl p-4 bg-slate-50/90"

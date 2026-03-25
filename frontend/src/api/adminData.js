@@ -31,6 +31,11 @@ function detailItemToMessage(d) {
   if (d && typeof d === "object") {
     if (typeof d.msg === "string" && d.msg) return d.msg;
     if (typeof d.message === "string" && d.message) return d.message;
+    const ctx = d.ctx;
+    if (ctx && typeof ctx === "object") {
+      if (typeof ctx.reason === "string" && ctx.reason) return ctx.reason;
+      if (typeof ctx.error === "string" && ctx.error) return ctx.error;
+    }
   }
   return "";
 }
