@@ -6,6 +6,7 @@ import {
   fetchAdminProperties,
   createAdminUnit,
   updateAdminUnit,
+  deleteAdminUnit,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -356,6 +357,7 @@ function AdminApartmentsPage() {
   const [fetchError, setFetchError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -669,11 +671,10 @@ function AdminApartmentsPage() {
       : createAdminUnit(apiPayload);
 
     promise
-      .then(() => {
-        return fetchAdminUnits();
-      })
-      .then((data) => {
-        setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []);
+      .then(() => Promise.all([fetchAdminUnits(), fetchAdminRooms()]))
+      .then(([unitsData, roomsData]) => {
+        setUnits(Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []);
+        setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
         handleCloseModal();
       })
       .catch((e) => {
@@ -689,7 +690,16 @@ function AdminApartmentsPage() {
 
     if (!confirmed) return;
 
-    setUnits((prev) => prev.filter((item) => item.id !== id));
+    setDeleteError("");
+    deleteAdminUnit(id)
+      .then(() => Promise.all([fetchAdminUnits(), fetchAdminRooms()]))
+      .then(([unitsData, roomsData]) => {
+        setUnits(Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []);
+        setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
+      })
+      .catch((e) => {
+        setDeleteError(e?.message || "Löschen fehlgeschlagen.");
+      });
   }
 
   const formLeaseStarted =
@@ -759,6 +769,12 @@ function AdminApartmentsPage() {
       {!loading && fetchError && (
         <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-8 text-center text-red-600">
           {fetchError}
+        </div>
+      )}
+
+      {!loading && deleteError && (
+        <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-4 mb-4 text-center text-red-600 text-sm">
+          {deleteError}
         </div>
       )}
 

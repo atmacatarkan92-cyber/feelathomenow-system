@@ -66,6 +66,21 @@ export function updateAdminUnit(id, body) {
   });
 }
 
+export async function deleteAdminUnit(id) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`,
+    { method: "DELETE", headers: getApiHeaders() }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  try {
+    return await res.json();
+  } catch {
+    return { status: "ok" };
+  }
+}
+
 export function fetchAdminRooms(unitId = null) {
   const url = unitId
     ? `${API_BASE_URL}/api/admin/units/${encodeURIComponent(unitId)}/rooms`
