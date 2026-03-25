@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   fetchAdminTenant,
@@ -440,6 +440,18 @@ export default function AdminTenantDetailPage() {
   const [assignStatus, setAssignStatus] = useState("active");
   const [assignErr, setAssignErr] = useState(null);
   const [assignSaving, setAssignSaving] = useState(false);
+  const assignRentUserEditedRef = useRef(false);
+
+  useEffect(() => {
+    if (!assignRoomId || !assignRooms.length) return;
+    const room = assignRooms.find((r) => String(r.id) === String(assignRoomId));
+    if (!room) return;
+    const raw = room.priceMonthly ?? room.price ?? room.base_rent_chf;
+    const p = Number(raw);
+    if (!assignRentUserEditedRef.current) {
+      setAssignMonthlyRent(Number.isFinite(p) && p >= 0 ? String(p) : "");
+    }
+  }, [assignRoomId, assignRooms]);
 
   const reloadTenanciesForTenant = useCallback(async () => {
     const res = await fetch(
@@ -607,6 +619,7 @@ export default function AdminTenantDetailPage() {
 
   const resetAssignForm = () => {
     const today = new Date().toISOString().slice(0, 10);
+    assignRentUserEditedRef.current = false;
     setAssignUnitId("");
     setAssignRoomId("");
     setAssignMoveIn(today);
@@ -1234,8 +1247,10 @@ export default function AdminTenantDetailPage() {
                           style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
                           value={assignUnitId}
                           onChange={(e) => {
+                            assignRentUserEditedRef.current = false;
                             setAssignUnitId(e.target.value);
                             setAssignRoomId("");
+                            setAssignMonthlyRent("");
                           }}
                           disabled={assignSaving || assignUnitsLoading}
                         >
@@ -1257,7 +1272,10 @@ export default function AdminTenantDetailPage() {
                           id="assign-room"
                           style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
                           value={assignRoomId}
-                          onChange={(e) => setAssignRoomId(e.target.value)}
+                          onChange={(e) => {
+                            assignRentUserEditedRef.current = false;
+                            setAssignRoomId(e.target.value);
+                          }}
                           disabled={assignSaving || !assignUnitId || assignRoomsLoading}
                         >
                           <option value="">
@@ -1303,7 +1321,7 @@ export default function AdminTenantDetailPage() {
                       </div>
                       <div>
                         <label htmlFor="assign-rent" style={labelStyle}>
-                          Monatsmiete (CHF) *
+                          Monatsmiete (CHF)
                         </label>
                         <input
                           id="assign-rent"
@@ -1312,9 +1330,11 @@ export default function AdminTenantDetailPage() {
                           step="0.01"
                           style={inputStyle}
                           value={assignMonthlyRent}
-                          onChange={(e) => setAssignMonthlyRent(e.target.value)}
+                          onChange={(e) => {
+                            assignRentUserEditedRef.current = true;
+                            setAssignMonthlyRent(e.target.value);
+                          }}
                           disabled={assignSaving}
-                          required
                         />
                       </div>
                       <div>

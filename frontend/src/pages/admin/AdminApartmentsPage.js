@@ -497,14 +497,8 @@ function AdminApartmentsPage() {
 
   const coLivingOccupiedClamped = useMemo(() => {
     if (!isCoLivingType) return 0;
-    const total = Math.max(0, parsedRoomsTotal);
-    let o = Number(formData.occupiedRooms);
-    if (Number.isNaN(o)) o = 0;
-    o = Math.floor(o);
-    o = Math.max(0, o);
-    if (total > 0) o = Math.min(o, total);
-    return o;
-  }, [isCoLivingType, parsedRoomsTotal, formData.occupiedRooms]);
+    return 0;
+  }, [isCoLivingType]);
 
   const coLivingFullOccupancyRevenue = useMemo(() => {
     if (!isCoLivingType) return 0;
@@ -664,6 +658,16 @@ function AdminApartmentsPage() {
         ...prev,
         type: value,
         occupiedRooms: 0,
+      }));
+      return;
+    }
+
+    if (name === "type" && value === "Co-Living") {
+      setFormData((prev) => ({
+        ...prev,
+        type: value,
+        occupiedRooms: 0,
+        status: "Frei",
       }));
       return;
     }
@@ -1209,40 +1213,32 @@ function AdminApartmentsPage() {
                     </div>
                   ))}
 
-                {isCoLivingType && (
+                {!isCoLivingType ? (
                   <div>
                     <label className="block text-sm text-slate-600 mb-2">
-                      Zimmer belegt (Übergang)
+                      Status
                     </label>
-                    <input
-                      type="number"
-                      name="occupiedRooms"
-                      value={formData.occupiedRooms}
+                    <select
+                      name="status"
+                      value={formData.status}
                       onChange={handleChange}
-                      min="0"
-                      max={parsedRoomsTotal}
                       className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                    >
+                      <option>Frei</option>
+                      <option>Belegt</option>
+                      <option>Reserviert</option>
+                      <option>Teilbelegt</option>
+                      <option>In Vorbereitung</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-slate-600 mb-1">Status (Einheit)</p>
+                    <p className="text-xs text-slate-500 border border-slate-200 bg-slate-50 rounded-lg px-4 py-3">
+                      Belegung und Status folgen aus Mietverhältnissen; Vorschau-KPI nutzt 0 belegte Zimmer.
+                    </p>
                   </div>
                 )}
-
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                  >
-                    <option>Frei</option>
-                    <option>Belegt</option>
-                    <option>Reserviert</option>
-                    <option>Teilbelegt</option>
-                    <option>In Vorbereitung</option>
-                  </select>
-                </div>
 
                 {!isCoLivingType ? (
                   <div>
