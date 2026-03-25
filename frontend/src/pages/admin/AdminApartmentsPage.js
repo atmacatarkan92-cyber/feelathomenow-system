@@ -41,13 +41,17 @@ function parseRoomsTotal(raw) {
 function ensureCoLivingRoomRows(n, prev) {
   const safe = Array.isArray(prev) ? prev : [];
   return Array.from({ length: n }, (_, i) => {
-    if (safe[i]) return safe[i];
+    if (safe[i]) {
+      const r = safe[i];
+      return { ...r, available_from: r.available_from ?? "" };
+    }
     return {
       name: `Zimmer ${i + 1}`,
       price: "",
       floor: "",
       size_m2: "",
       status: "Frei",
+      available_from: "",
     };
   });
 }
@@ -1135,6 +1139,23 @@ function AdminApartmentsPage() {
                             <option>Reserviert</option>
                           </select>
                         </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">
+                            Verfügbar ab
+                          </label>
+                          <input
+                            type="date"
+                            value={row.available_from ?? ""}
+                            onChange={(e) =>
+                              handleCoLivingRoomChange(
+                                idx,
+                                "available_from",
+                                e.target.value
+                              )
+                            }
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1174,19 +1195,21 @@ function AdminApartmentsPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">
-                    Verfügbar ab
-                  </label>
-                  <input
-                    type="date"
-                    name="availableFrom"
-                    value={formData.availableFrom}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
+                {!isCoLivingType ? (
+                  <div>
+                    <label className="block text-sm text-slate-600 mb-2">
+                      Verfügbar ab
+                    </label>
+                    <input
+                      type="date"
+                      name="availableFrom"
+                      value={formData.availableFrom}
+                      onChange={handleChange}
+                      required
+                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                ) : null}
 
                 <div>
                   <label className="block text-sm text-slate-600 mb-2">
