@@ -349,11 +349,19 @@ def admin_delete_unit(
     _room_count_row = session.exec(
         select(func.count()).select_from(Room).where(Room.unit_id == unit_id)
     ).one()
-    room_count = int(_room_count_row[0]) if _room_count_row is not None else 0
+    room_count = (
+        int(_room_count_row)
+        if isinstance(_room_count_row, int)
+        else int(_room_count_row[0])
+    )
     _tenancy_count_row = session.exec(
         select(func.count()).select_from(Tenancy).where(Tenancy.unit_id == unit_id)
     ).one()
-    tenancy_count = int(_tenancy_count_row[0]) if _tenancy_count_row is not None else 0
+    tenancy_count = (
+        int(_tenancy_count_row)
+        if isinstance(_tenancy_count_row, int)
+        else int(_tenancy_count_row[0])
+    )
     if room_count > 0 or tenancy_count > 0:
         raise HTTPException(
             status_code=400,
