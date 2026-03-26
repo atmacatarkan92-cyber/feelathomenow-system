@@ -346,22 +346,12 @@ def admin_delete_unit(
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
-    _room_count_row = session.exec(
+    room_count = session.execute(
         select(func.count()).select_from(Room).where(Room.unit_id == unit_id)
-    ).one()
-    room_count = (
-        int(_room_count_row)
-        if isinstance(_room_count_row, int)
-        else int(_room_count_row[0])
-    )
-    _tenancy_count_row = session.exec(
+    ).scalar() or 0
+    tenancy_count = session.execute(
         select(func.count()).select_from(Tenancy).where(Tenancy.unit_id == unit_id)
-    ).one()
-    tenancy_count = (
-        int(_tenancy_count_row)
-        if isinstance(_tenancy_count_row, int)
-        else int(_tenancy_count_row[0])
-    )
+    ).scalar() or 0
     if room_count > 0 or tenancy_count > 0:
         raise HTTPException(
             status_code=400,
