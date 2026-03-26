@@ -287,6 +287,7 @@ class Tenancy(SQLModel, table=True):
     tenant_deposit_type: Optional[str] = Field(default=None, max_length=32)
     tenant_deposit_amount: Optional[float] = Field(default=None)
     tenant_deposit_annual_premium: Optional[float] = Field(default=None)
+    tenant_deposit_provider: Optional[str] = Field(default=None, max_length=32)
     status: TenancyStatus = Field(default=TenancyStatus.active, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

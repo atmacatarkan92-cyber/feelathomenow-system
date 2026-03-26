@@ -77,6 +77,33 @@ function formatTenancyMoveIn(iso) {
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
 }
 
+const TENANT_DEPOSIT_TYPE_LABELS = {
+  bank: "Bank",
+  insurance: "Versicherung",
+  cash: "Bar",
+  none: "Keine",
+};
+
+const TENANT_DEPOSIT_PROVIDER_LABELS = {
+  swisscaution: "SwissCaution",
+  smartcaution: "SmartCaution",
+  firstcaution: "FirstCaution",
+  gocaution: "GoCaution",
+  other: "Sonstige",
+};
+
+function tenantDepositTypeLabel(raw) {
+  if (!raw || typeof raw !== "string") return "—";
+  const k = String(raw).toLowerCase();
+  return TENANT_DEPOSIT_TYPE_LABELS[k] || raw;
+}
+
+function tenantDepositProviderLabel(raw) {
+  if (!raw || typeof raw !== "string") return "—";
+  const k = String(raw).toLowerCase();
+  return TENANT_DEPOSIT_PROVIDER_LABELS[k] || raw;
+}
+
 function isUuidLike(s) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
     String(s || "").trim()
@@ -887,28 +914,45 @@ function AdminUnitDetailPage() {
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="py-2 pr-4 font-medium">Name</th>
                     <th className="py-2 pr-4 font-medium text-right">Monatsmiete</th>
+                    <th className="py-2 pr-4 font-medium">Kautionsart</th>
+                    <th className="py-2 pr-4 font-medium text-right">Kautionsbetrag</th>
+                    <th className="py-2 pr-4 font-medium">Anbieter</th>
                     <th className="py-2 pr-4 font-medium">Mietbeginn</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activeUnitTenancies.map((tn) => (
-                    <tr key={String(tn.id)} className="border-b border-slate-100">
-                      <td className="py-2 pr-4 font-medium">
-                        <Link
-                          to={`/admin/tenants/${String(tn.tenant_id)}`}
-                          className="text-orange-600 hover:text-orange-700 hover:underline"
-                        >
-                          {tenantNameMap[String(tn.tenant_id)] || "…"}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-4 text-right">
-                        {formatChfOrDash(tn.monthly_rent)}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-600">
-                        {formatTenancyMoveIn(tn.move_in_date)}
-                      </td>
-                    </tr>
-                  ))}
+                  {activeUnitTenancies.map((tn) => {
+                    const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
+                    return (
+                      <tr key={String(tn.id)} className="border-b border-slate-100">
+                        <td className="py-2 pr-4 font-medium">
+                          <Link
+                            to={`/admin/tenants/${String(tn.tenant_id)}`}
+                            className="text-orange-600 hover:text-orange-700 hover:underline"
+                          >
+                            {tenantNameMap[String(tn.tenant_id)] || "…"}
+                          </Link>
+                        </td>
+                        <td className="py-2 pr-4 text-right">
+                          {formatChfOrDash(tn.monthly_rent)}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-600">
+                          {tenantDepositTypeLabel(tn.tenant_deposit_type)}
+                        </td>
+                        <td className="py-2 pr-4 text-right text-slate-600">
+                          {formatChfOrDash(tn.tenant_deposit_amount)}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-600">
+                          {tdt === "insurance"
+                            ? tenantDepositProviderLabel(tn.tenant_deposit_provider)
+                            : "—"}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-600">
+                          {formatTenancyMoveIn(tn.move_in_date)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

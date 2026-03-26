@@ -22,6 +22,9 @@ from app.services.tenant_crm import record_tenant_event
 router = APIRouter(prefix="/api/admin", tags=["admin-tenancies"])
 
 ALLOWED_TENANT_DEPOSIT_TYPES = frozenset({"bank", "insurance", "cash", "none"})
+ALLOWED_TENANT_DEPOSIT_PROVIDERS = frozenset(
+    {"swisscaution", "smartcaution", "firstcaution", "gocaution", "other"}
+)
 
 
 def _tenancy_to_dict(t: Tenancy) -> dict:
@@ -45,6 +48,7 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
             if getattr(t, "tenant_deposit_annual_premium", None) is not None
             else None
         ),
+        "tenant_deposit_provider": getattr(t, "tenant_deposit_provider", None),
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "created_at": t.created_at.isoformat() if getattr(t, "created_at", None) else None,
     }
@@ -61,6 +65,7 @@ class TenancyCreate(BaseModel):
     tenant_deposit_type: Optional[str] = None
     tenant_deposit_amount: Optional[float] = Field(default=None, ge=0)
     tenant_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
+    tenant_deposit_provider: Optional[str] = None
     status: TenancyStatus = TenancyStatus.active
 
     @field_validator("tenant_deposit_type", mode="before")
@@ -72,6 +77,19 @@ class TenancyCreate(BaseModel):
         if s not in ALLOWED_TENANT_DEPOSIT_TYPES:
             raise ValueError(
                 "tenant_deposit_type must be one of: bank, insurance, cash, none"
+            )
+        return s
+
+    @field_validator("tenant_deposit_provider", mode="before")
+    @classmethod
+    def _normalize_tenant_deposit_provider_create(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_TENANT_DEPOSIT_PROVIDERS:
+            raise ValueError(
+                "tenant_deposit_provider must be one of: "
+                "swisscaution, smartcaution, firstcaution, gocaution, other"
             )
         return s
 
@@ -87,6 +105,13 @@ class TenancyCreate(BaseModel):
             raise ValueError("move_out_date must be on/after move_in_date")
         return self
 
+    @model_validator(mode="after")
+    def _clear_tenant_deposit_provider_if_not_insurance_create(self):
+        t = self.tenant_deposit_type
+        if t is None or str(t).lower() != "insurance":
+            self.tenant_deposit_provider = None
+        return self
+
 
 class TenancyPatch(BaseModel):
     move_in_date: Optional[date] = None
@@ -96,6 +121,7 @@ class TenancyPatch(BaseModel):
     tenant_deposit_type: Optional[str] = None
     tenant_deposit_amount: Optional[float] = Field(default=None, ge=0)
     tenant_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
+    tenant_deposit_provider: Optional[str] = None
     status: Optional[TenancyStatus] = None
 
     @field_validator("tenant_deposit_type", mode="before")
@@ -110,11 +136,32 @@ class TenancyPatch(BaseModel):
             )
         return s
 
+    @field_validator("tenant_deposit_provider", mode="before")
+    @classmethod
+    def _normalize_tenant_deposit_provider_patch(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_TENANT_DEPOSIT_PROVIDERS:
+            raise ValueError(
+                "tenant_deposit_provider must be one of: "
+                "swisscaution, smartcaution, firstcaution, gocaution, other"
+            )
+        return s
+
     @model_validator(mode="after")
     def _validate_dates_if_both_present(self):
         if self.move_in_date is not None and self.move_out_date is not None:
             if self.move_out_date < self.move_in_date:
                 raise ValueError("move_out_date must be on/after move_in_date")
+        return self
+
+    @model_validator(mode="after")
+    def _clear_tenant_deposit_provider_if_not_insurance_patch(self):
+        if self.tenant_deposit_type is None:
+            return self
+        if str(self.tenant_deposit_type).lower() != "insurance":
+            self.tenant_deposit_provider = None
         return self
 
 
@@ -260,6 +307,7 @@ def admin_create_tenancy(
         tenant_deposit_type=body.tenant_deposit_type,
         tenant_deposit_amount=body.tenant_deposit_amount,
         tenant_deposit_annual_premium=body.tenant_deposit_annual_premium,
+        tenant_deposit_provider=body.tenant_deposit_provider,
         status=status,
     )
     session.add(tenancy)
