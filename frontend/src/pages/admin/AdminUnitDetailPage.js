@@ -188,6 +188,7 @@ function getStatusTone(status) {
 
 function buildUnitWarnings(unit, rooms, metrics) {
   const warnings = [];
+  const isApartment = unit.type === "Apartment";
 
   if (!metrics.leaseStarted && metrics.currentRevenue <= 0) {
     warnings.push({
@@ -203,7 +204,17 @@ function buildUnitWarnings(unit, rooms, metrics) {
     });
   }
 
-  if (metrics.freeCount > 0) {
+  if (isApartment) {
+    if (
+      metrics.apartmentTenanciesLoaded &&
+      metrics.apartmentHasActiveTenancy === false
+    ) {
+      warnings.push({
+        tone: "amber",
+        text: "Wohnung leer",
+      });
+    }
+  } else if (metrics.freeCount > 0) {
     warnings.push({
       tone: "amber",
       text: `${metrics.freeCount} freie Rooms ohne aktuelle Belegung.`,
@@ -220,6 +231,10 @@ function buildUnitWarnings(unit, rooms, metrics) {
         Math.abs(metrics.currentProfit)
       )}.`,
     });
+  }
+
+  if (isApartment) {
+    return warnings.slice(0, 8);
   }
 
   rooms.forEach((room) => {
@@ -371,31 +386,70 @@ function AdminUnitDetailPage() {
     return rooms.filter((room) => room.unitId === safeUnit.unitId);
   }, [rooms, safeUnit.unitId]);
 
+  const activeUnitTenancies = useMemo(() => {
+    if (!unitTenancies) return [];
+    return unitTenancies.filter(isTenancyActive);
+  }, [unitTenancies]);
+
   const metrics = useMemo(() => {
     const base = getCoLivingMetrics(safeUnit, rooms);
+    const isApt = safeUnit.type === "Apartment";
+
     if (unitTenancies === null) {
+      if (isApt) {
+        return {
+          ...base,
+          apartmentTenanciesLoaded: false,
+          apartmentHasActiveTenancy: null,
+        };
+      }
       return base;
     }
-    const activeRentSum = unitTenancies
-      .filter(isTenancyActive)
-      .reduce((sum, t) => sum + Number(t.monthly_rent || 0), 0);
+
+    const activeRentSum = activeUnitTenancies.reduce(
+      (sum, t) => sum + Number(t.monthly_rent || 0),
+      0
+    );
     const runningCosts = getRunningMonthlyCosts(safeUnit);
-    const revenue = activeRentSum;
+
+    if (isApt) {
+      const occupied = activeUnitTenancies.length > 0;
+      const profit =
+        base.leaseStarted && runningCosts != null
+          ? activeRentSum - runningCosts
+          : base.currentProfit;
+      return {
+        ...base,
+        currentRevenue: activeRentSum,
+        runningCosts,
+        currentProfit: profit,
+        fullRevenue: activeRentSum,
+        occupiedCount: occupied ? 1 : 0,
+        freeCount: occupied ? 0 : 1,
+        reservedCount: 0,
+        totalRooms: 1,
+        vacancyLoss: 0,
+        apartmentTenanciesLoaded: true,
+        apartmentHasActiveTenancy: occupied,
+      };
+    }
+
     const profit =
       base.leaseStarted && runningCosts != null
-        ? revenue - runningCosts
+        ? activeRentSum - runningCosts
         : base.currentProfit;
     return {
       ...base,
-      currentRevenue: revenue,
+      currentRevenue: activeRentSum,
       runningCosts,
       currentProfit: profit,
       vacancyLoss:
         base.fullRevenue != null && base.leaseStarted
-          ? base.fullRevenue - revenue
+          ? base.fullRevenue - activeRentSum
           : base.vacancyLoss,
+      apartmentTenanciesLoaded: true,
     };
-  }, [safeUnit, rooms, unitTenancies]);
+  }, [safeUnit, rooms, unitTenancies, activeUnitTenancies]);
 
   const occupancyRate =
     metrics.totalRooms > 0
@@ -405,11 +459,6 @@ function AdminUnitDetailPage() {
   const unitWarnings = useMemo(() => {
     return buildUnitWarnings(safeUnit, unitRooms, metrics);
   }, [safeUnit, unitRooms, metrics]);
-
-  const activeUnitTenancies = useMemo(() => {
-    if (!unitTenancies) return [];
-    return unitTenancies.filter(isTenancyActive);
-  }, [unitTenancies]);
 
   const nextUnitForecast = {
     revenue: metrics.currentRevenue,
