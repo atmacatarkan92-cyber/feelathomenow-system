@@ -6,6 +6,7 @@ import {
   fetchAdminTenants,
   fetchAdminTenancies,
   fetchAdminInvoices,
+  deleteAdminTenant,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -221,6 +222,7 @@ function AdminTenantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   const reloadData = useCallback(() => {
     setLoadError(null);
@@ -322,6 +324,24 @@ function AdminTenantsPage() {
     };
   }, [rows]);
 
+  const handleDeleteTenant = useCallback(
+    (e, tenantId) => {
+      e.stopPropagation();
+      if (!window.confirm("Diesen Mieter wirklich unwiderruflich löschen?")) return;
+      setDeleteError(null);
+      deleteAdminTenant(tenantId)
+        .then(() => reloadData())
+        .catch((err) => {
+          setDeleteError(
+            (err && typeof err.message === "string" && err.message) ||
+              String(err || "") ||
+              "Löschen fehlgeschlagen."
+          );
+        });
+    },
+    [reloadData]
+  );
+
   if (loading) {
     return (
       <div style={{ padding: "24px", color: "#64748B" }}>
@@ -366,6 +386,22 @@ function AdminTenantsPage() {
         >
           FeelAtHomeNow Admin
         </div>
+
+        {deleteError ? (
+          <div
+            style={{
+              marginBottom: "16px",
+              padding: "12px 16px",
+              borderRadius: "12px",
+              border: "1px solid #FECACA",
+              background: "#FEF2F2",
+              color: "#B91C1C",
+              fontSize: "14px",
+            }}
+          >
+            {deleteError}
+          </div>
+        ) : null}
 
         <div
           style={{
@@ -564,7 +600,7 @@ function AdminTenantsPage() {
                 <th style={{ padding: "12px" }}>Rechnungen offen</th>
                 <th style={{ padding: "12px" }}>Offener Betrag</th>
                 <th style={{ padding: "12px" }}>Status</th>
-                <th style={{ padding: "12px", width: "100px" }}>Aktion</th>
+                <th style={{ padding: "12px", minWidth: "180px" }}>Aktion</th>
               </tr>
             </thead>
 
@@ -634,24 +670,42 @@ function AdminTenantsPage() {
                       </span>
                     </td>
                     <td style={{ padding: "12px" }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/tenants/${row.id}`);
-                        }}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid #E2E8F0",
-                          background: "#FFFFFF",
-                          fontWeight: 600,
-                          fontSize: "13px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Öffnen
-                      </button>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/tenants/${row.id}`);
+                          }}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #E2E8F0",
+                            background: "#FFFFFF",
+                            fontWeight: 600,
+                            fontSize: "13px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Öffnen
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteTenant(e, row.id)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #FECACA",
+                            background: "#FFFFFF",
+                            color: "#B91C1C",
+                            fontWeight: 600,
+                            fontSize: "13px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Löschen
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

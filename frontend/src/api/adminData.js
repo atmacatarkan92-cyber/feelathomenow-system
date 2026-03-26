@@ -120,11 +120,17 @@ export async function deleteAdminUnit(id) {
     `${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`,
     { method: "DELETE", headers: getApiHeaders() }
   );
+  const text = await res.text();
   if (!res.ok) {
-    throw new Error(await parseAdminErrorResponse(res));
+    let msg = parseAdminErrorBodyText(text).trim();
+    if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
+      msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    }
+    throw new Error(msg);
   }
+  if (!text || !text.trim()) return { status: "ok" };
   try {
-    return await res.json();
+    return JSON.parse(text);
   } catch {
     return { status: "ok" };
   }
@@ -201,6 +207,27 @@ export async function updateAdminTenant(tenantId, body) {
     throw new Error(await parseAdminErrorResponse(res));
   }
   return res.json();
+}
+
+export async function deleteAdminTenant(tenantId) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/tenants/${encodeURIComponent(tenantId)}`,
+    { method: "DELETE", headers: getApiHeaders() }
+  );
+  const text = await res.text();
+  if (!res.ok) {
+    let msg = parseAdminErrorBodyText(text).trim();
+    if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
+      msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    }
+    throw new Error(msg);
+  }
+  if (!text || !text.trim()) return { status: "ok" };
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { status: "ok" };
+  }
 }
 
 export function fetchAdminTenantNotes(tenantId) {

@@ -9,10 +9,11 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr, TypeAdapter, field_validator, model_validator
 from sqlalchemy import desc, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Tenant, TenantEvent, TenantNote, User, Room, Unit
+from db.models import Tenant, TenantEvent, TenantNote, Tenancy, User, Room, Unit
 from db.audit import create_audit_log, model_snapshot
 from app.services.tenant_crm import (
     append_tenant_updated_events_from_snapshots,
@@ -24,6 +25,13 @@ from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-tenants"])
+
+_TENANT_DELETE_BLOCKED_TENANCY = (
+    "Mieter kann nicht gelöscht werden, da noch Mietverhältnisse vorhanden sind."
+)
+_TENANT_DELETE_BLOCKED_LINKED = (
+    "Mieter kann nicht gelöscht werden, da noch verknüpfte Daten vorhanden sind."
+)
 
 # Allowed residence permit categories (free-text drift prevention).
 ALLOWED_RESIDENCE_PERMITS = frozenset({"B", "C", "L", "G", "Other"})
@@ -591,15 +599,21 @@ def admin_delete_tenant(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    """Delete a tenant."""
+    """Delete a tenant when no blocking tenancy / FK dependencies."""
     tenant = session.get(Tenant, tenant_id)
     if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
+    if session.exec(select(Tenancy.id).where(Tenancy.tenant_id == tenant_id).limit(1)).first():
+        raise HTTPException(status_code=400, detail=_TENANT_DELETE_BLOCKED_TENANCY)
     old_snapshot = model_snapshot(tenant)
-    session.delete(tenant)
-    create_audit_log(
-        session, str(current_user.id), "delete", "tenant", str(tenant_id),
-        old_values=old_snapshot, new_values=None,
-    )
-    session.commit()
+    try:
+        session.delete(tenant)
+        create_audit_log(
+            session, str(current_user.id), "delete", "tenant", str(tenant_id),
+            old_values=old_snapshot, new_values=None,
+        )
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail=_TENANT_DELETE_BLOCKED_LINKED) from None
     return {"status": "ok", "message": "Tenant deleted"}

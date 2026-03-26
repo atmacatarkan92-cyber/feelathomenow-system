@@ -10,6 +10,7 @@ import {
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
+import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 const emptyForm = {
   place: "",
@@ -79,28 +80,6 @@ function ensureCoLivingRoomRows(n, prev) {
       available_from: "",
     };
   });
-}
-
-/** Match backend `Co-Living` even when the select/copy uses Unicode hyphens or spacing variants. */
-/** Short display label for tables; real API/routing still uses UUID (`unit.unitId` / `unit.id`). */
-function getDisplayUnitId(unit, index) {
-  if (!unit) return "—";
-  const prefix = normalizeUnitTypeLabel(unit.type) === "Co-Living" ? "CL" : "APT";
-  return `${prefix}-${String(index + 1).padStart(3, "0")}`;
-}
-
-function normalizeUnitTypeLabel(raw) {
-  const t = String(raw ?? "").trim();
-  if (!t) return "";
-  const hyphenNorm = t
-    .replace(/\u2011/g, "-")
-    .replace(/\u2013/g, "-")
-    .replace(/\u2010/g, "-")
-    .replace(/\u2012/g, "-")
-    .replace(/\u2212/g, "-");
-  const compact = hyphenNorm.replace(/\s+/g, "");
-  if (/^co[-]?living$/i.test(compact) || /^coliving$/i.test(compact)) return "Co-Living";
-  return hyphenNorm;
 }
 
 function roundCurrency(value) {

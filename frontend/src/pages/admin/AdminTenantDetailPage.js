@@ -16,6 +16,7 @@ import {
 } from "../../api/adminData";
 import { API_BASE_URL, getApiHeaders } from "../../config";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
+import { getDisplayUnitId } from "../../utils/unitDisplayId";
 
 async function parseAdminErrorFromResponse(res) {
   const text = await res.text();
@@ -1399,11 +1400,17 @@ export default function AdminTenantDetailPage() {
                           <option value="">
                             {assignUnitsLoading ? "Lade Einheiten …" : "— Einheit wählen"}
                           </option>
-                          {assignUnits.map((u) => (
-                            <option key={String(u.id)} value={String(u.id)}>
-                              {(u.unitId ?? u.id) + (u.address || u.place ? ` — ${u.address || u.place}` : "")}
-                            </option>
-                          ))}
+                          {assignUnits.map((u, idx) => {
+                            const loc = String(u.address || u.place || "").trim();
+                            const label = loc
+                              ? `${getDisplayUnitId(u, idx)} — ${loc}`
+                              : getDisplayUnitId(u, idx);
+                            return (
+                              <option key={String(u.id)} value={String(u.id)}>
+                                {label}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                       <div>
