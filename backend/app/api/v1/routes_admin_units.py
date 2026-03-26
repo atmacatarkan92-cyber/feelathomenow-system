@@ -12,12 +12,16 @@ from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Unit, Room, Property, Landlord, User
+from db.models import Unit, Room, Property, Landlord, User, Tenancy
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
+
+_UNIT_DELETE_BLOCKED_MSG = (
+    "Unit kann nicht gelöscht werden, da noch Zimmer oder Mietverhältnisse vorhanden sind."
+)
 
 
 def _assert_property_and_landlord_in_org(session, property_id: Optional[str], org_id: str) -> None:
@@ -323,6 +327,10 @@ def admin_delete_unit(
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
+    if session.exec(select(Room.id).where(Room.unit_id == unit_id).limit(1)).first():
+        raise HTTPException(status_code=400, detail=_UNIT_DELETE_BLOCKED_MSG)
+    if session.exec(select(Tenancy.id).where(Tenancy.unit_id == unit_id).limit(1)).first():
+        raise HTTPException(status_code=400, detail=_UNIT_DELETE_BLOCKED_MSG)
     old_snapshot = model_snapshot(unit)
     try:
         session.delete(unit)
@@ -333,13 +341,7 @@ def admin_delete_unit(
         session.commit()
     except IntegrityError:
         session.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Diese Unit kann nicht gelöscht werden, weil noch abhängige Daten existieren "
-                "(z. B. Listings, Mietverträge oder Kosten)."
-            ),
-        ) from None
+        raise HTTPException(status_code=400, detail=_UNIT_DELETE_BLOCKED_MSG) from None
     return {"status": "ok", "message": "Unit deleted"}
 
 

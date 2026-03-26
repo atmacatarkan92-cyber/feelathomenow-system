@@ -82,6 +82,13 @@ function ensureCoLivingRoomRows(n, prev) {
 }
 
 /** Match backend `Co-Living` even when the select/copy uses Unicode hyphens or spacing variants. */
+/** Short display label for tables; real API/routing still uses UUID (`unit.unitId` / `unit.id`). */
+function getDisplayUnitId(unit, index) {
+  if (!unit) return "—";
+  const prefix = normalizeUnitTypeLabel(unit.type) === "Co-Living" ? "CL" : "APT";
+  return `${prefix}-${String(index + 1).padStart(3, "0")}`;
+}
+
 function normalizeUnitTypeLabel(raw) {
   const t = String(raw ?? "").trim();
   if (!t) return "";
@@ -239,7 +246,7 @@ function ApartmentTable({ items, onEdit, onDelete }) {
           </thead>
 
           <tbody>
-            {items.map((unit) => (
+            {items.map((unit, index) => (
               <tr
                 key={unit.id}
                 className="border-b border-slate-100 text-slate-700"
@@ -247,10 +254,13 @@ function ApartmentTable({ items, onEdit, onDelete }) {
                 <td className="py-4 pr-4 font-medium">
                   <Link
                     to={`/admin/units/${unit.unitId}`}
-                    className="text-orange-600 hover:text-orange-700 hover:underline"
+                    className="text-orange-600 hover:text-orange-700 hover:underline block"
                   >
-                    {unit.unitId}
+                    {getDisplayUnitId(unit, index)}
                   </Link>
+                  <span className="block text-[10px] text-slate-400 font-normal break-all mt-0.5">
+                    {unit.unitId}
+                  </span>
                 </td>
                 <td className="py-4 pr-4">{unit.place}</td>
                 <td className="py-4 pr-4">{unit.zip}</td>
@@ -334,7 +344,7 @@ function CoLivingTable({ items, rooms, onEdit, onDelete }) {
           </thead>
 
           <tbody>
-            {items.map((unit) => {
+            {items.map((unit, index) => {
               const metrics = getCoLivingMetrics(unit, rooms);
 
               return (
@@ -345,10 +355,13 @@ function CoLivingTable({ items, rooms, onEdit, onDelete }) {
                   <td className="py-4 pr-4 font-medium">
                     <Link
                       to={`/admin/units/${unit.unitId}`}
-                      className="text-orange-600 hover:text-orange-700 hover:underline"
+                      className="text-orange-600 hover:text-orange-700 hover:underline block"
                     >
-                      {unit.unitId}
+                      {getDisplayUnitId(unit, index)}
                     </Link>
+                    <span className="block text-[10px] text-slate-400 font-normal break-all mt-0.5">
+                      {unit.unitId}
+                    </span>
                   </td>
                   <td className="py-4 pr-4">{unit.place}</td>
                 <td className="py-4 pr-4">{unit.zip}</td>
@@ -795,9 +808,12 @@ function AdminApartmentsPage() {
   }
 
   function handleDelete(id) {
-    const confirmed = window.confirm(
-      "Möchtest du diese Unit wirklich löschen?"
-    );
+    const unitRooms = getRoomsForUnit(id, rooms);
+    const confirmMsg =
+      unitRooms.length > 0
+        ? "Diese Unit enthält noch Zimmer. Wirklich löschen?"
+        : "Möchtest du diese Unit wirklich löschen?";
+    const confirmed = window.confirm(confirmMsg);
 
     if (!confirmed) return;
 
@@ -828,7 +844,11 @@ function AdminApartmentsPage() {
           });
       })
       .catch((e) => {
-        setDeleteError(e?.message || "Löschen fehlgeschlagen.");
+        const msg =
+          (e && typeof e.message === "string" && e.message) ||
+          (e != null && String(e)) ||
+          "Löschen fehlgeschlagen.";
+        setDeleteError(msg);
       });
   }
 
