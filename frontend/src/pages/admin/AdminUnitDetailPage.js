@@ -3,7 +3,15 @@ import { Link, useParams } from "react-router-dom";
 import RoomMap from "../../components/RoomMap";
 import RoomCalendar from "../../components/RoomCalendar";
 import OccupancyMap from "../../components/OccupancyMap";
-import { fetchAdminUnit, fetchAdminRooms, fetchAdminOccupancyRooms, normalizeUnit, normalizeRoom } from "../../api/adminData";
+import {
+  fetchAdminUnit,
+  fetchAdminRooms,
+  fetchAdminOccupancyRooms,
+  fetchAdminTenancies,
+  fetchAdminTenant,
+  normalizeUnit,
+  normalizeRoom,
+} from "../../api/adminData";
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -31,6 +39,25 @@ function getTodayDateString() {
 function hasLeaseStarted(unit) {
   if (!unit.landlordLeaseStartDate) return true;
   return unit.landlordLeaseStartDate <= getTodayDateString();
+}
+
+function getRunningMonthlyCosts(unit) {
+  if (!hasLeaseStarted(unit)) return 0;
+  return (
+    Number(unit.landlordRentMonthly || 0) +
+    Number(unit.utilitiesMonthly || 0) +
+    Number(unit.cleaningCostMonthly || 0)
+  );
+}
+
+function isTenancyActive(t) {
+  return String(t.status || "").toLowerCase() === "active";
+}
+
+function formatTenancyMoveIn(iso) {
+  if (!iso) return "—";
+  const s = String(iso);
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
 }
 
 function getRoomsForUnit(unitId, allRooms) {
@@ -266,6 +293,45 @@ function AdminUnitDetailPage() {
       .catch(() => setOccupancyRoomsData(null));
   }, [unitId]);
 
+  const [unitTenancies, setUnitTenancies] = useState(null);
+  const [tenantNameMap, setTenantNameMap] = useState({});
+  useEffect(() => {
+    if (!unitId) return;
+    setUnitTenancies(null);
+    setTenantNameMap({});
+    fetchAdminTenancies({ unit_id: unitId, limit: 200 })
+      .then((items) => setUnitTenancies(Array.isArray(items) ? items : []))
+      .catch(() => setUnitTenancies([]));
+  }, [unitId]);
+
+  useEffect(() => {
+    if (!unitTenancies || !unitId) return;
+    const active = unitTenancies.filter(isTenancyActive);
+    const ids = [...new Set(active.map((t) => String(t.tenant_id)))];
+    if (ids.length === 0) {
+      setTenantNameMap({});
+      return;
+    }
+    let cancelled = false;
+    Promise.all(ids.map((id) => fetchAdminTenant(id))).then((rows) => {
+      if (cancelled) return;
+      const m = {};
+      ids.forEach((id, i) => {
+        const r = rows[i];
+        if (r) {
+          m[id] =
+            String(r.display_name || r.full_name || "").trim() ||
+            `${r.first_name || ""} ${r.last_name || ""}`.trim() ||
+            "—";
+        }
+      });
+      setTenantNameMap(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [unitTenancies, unitId]);
+
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [roomForm, setRoomForm] = useState({
@@ -306,8 +372,30 @@ function AdminUnitDetailPage() {
   }, [rooms, safeUnit.unitId]);
 
   const metrics = useMemo(() => {
-    return getCoLivingMetrics(safeUnit, rooms);
-  }, [safeUnit, rooms]);
+    const base = getCoLivingMetrics(safeUnit, rooms);
+    if (unitTenancies === null) {
+      return base;
+    }
+    const activeRentSum = unitTenancies
+      .filter(isTenancyActive)
+      .reduce((sum, t) => sum + Number(t.monthly_rent || 0), 0);
+    const runningCosts = getRunningMonthlyCosts(safeUnit);
+    const revenue = activeRentSum;
+    const profit =
+      base.leaseStarted && runningCosts != null
+        ? revenue - runningCosts
+        : base.currentProfit;
+    return {
+      ...base,
+      currentRevenue: revenue,
+      runningCosts,
+      currentProfit: profit,
+      vacancyLoss:
+        base.fullRevenue != null && base.leaseStarted
+          ? base.fullRevenue - revenue
+          : base.vacancyLoss,
+    };
+  }, [safeUnit, rooms, unitTenancies]);
 
   const occupancyRate =
     metrics.totalRooms > 0
@@ -317,6 +405,11 @@ function AdminUnitDetailPage() {
   const unitWarnings = useMemo(() => {
     return buildUnitWarnings(safeUnit, unitRooms, metrics);
   }, [safeUnit, unitRooms, metrics]);
+
+  const activeUnitTenancies = useMemo(() => {
+    if (!unitTenancies) return [];
+    return unitTenancies.filter(isTenancyActive);
+  }, [unitTenancies]);
 
   const nextUnitForecast = {
     revenue: metrics.currentRevenue,
@@ -623,7 +716,7 @@ function AdminUnitDetailPage() {
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(metrics.currentRevenue)}
-                hint="Nur belegte Rooms werden gerechnet"
+                hint="Summe Monatsmiete aktiver Mietverhältnisse"
                 accent="green"
               />
               <SmallStatCard
@@ -641,6 +734,49 @@ function AdminUnitDetailPage() {
             </div>
           </SectionCard>
         </div>
+
+        <SectionCard
+          title="Mieter"
+          subtitle="Aktive Mietverhältnisse für diese Unit (Status: active)"
+        >
+          {unitTenancies === null ? (
+            <p className="text-sm text-slate-500">Lade Mietverhältnisse …</p>
+          ) : activeUnitTenancies.length === 0 ? (
+            <p className="text-sm text-slate-500">Keine aktiven Mieter.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-700">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="py-2 pr-4 font-medium">Name</th>
+                    <th className="py-2 pr-4 font-medium text-right">Monatsmiete</th>
+                    <th className="py-2 pr-4 font-medium">Mietbeginn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeUnitTenancies.map((tn) => (
+                    <tr key={String(tn.id)} className="border-b border-slate-100">
+                      <td className="py-2 pr-4 font-medium">
+                        <Link
+                          to={`/admin/tenants/${String(tn.tenant_id)}`}
+                          className="text-orange-600 hover:text-orange-700 hover:underline"
+                        >
+                          {tenantNameMap[String(tn.tenant_id)] || "…"}
+                        </Link>
+                      </td>
+                      <td className="py-2 pr-4 text-right">
+                        {formatChfOrDash(tn.monthly_rent)}
+                      </td>
+                      <td className="py-2 pr-4 text-slate-600">
+                        {formatTenancyMoveIn(tn.move_in_date)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </SectionCard>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
           <SmallStatCard
