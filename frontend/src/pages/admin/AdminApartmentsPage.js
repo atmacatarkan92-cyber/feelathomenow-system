@@ -1,5 +1,5 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -491,6 +491,8 @@ function AdminApartmentsPage() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [coLivingRoomRows, setCoLivingRoomRows] = useState([]);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const normalizedUnitType = normalizeUnitTypeLabel(formData.type);
   const isCoLivingType = normalizedUnitType === "Co-Living";
@@ -608,7 +610,7 @@ function AdminApartmentsPage() {
     setIsModalOpen(true);
   }
 
-  function handleOpenEditModal(unit) {
+  const handleOpenEditModal = useCallback((unit) => {
     setEditingId(unit.id);
     setFormData({
       place: unit.place,
@@ -628,7 +630,21 @@ function AdminApartmentsPage() {
     });
     setSaveError("");
     setIsModalOpen(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    const raw = location.state?.editUnitId;
+    if (raw == null || raw === "") return;
+    if (units.length === 0) return;
+    const id = String(raw);
+    const unit = units.find(
+      (u) => String(u.id) === id || String(u.unitId) === id
+    );
+    if (unit) {
+      handleOpenEditModal(unit);
+    }
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [units, location.state, location.pathname, navigate, handleOpenEditModal]);
 
   function handleCloseModal() {
     setIsModalOpen(false);

@@ -1260,23 +1260,47 @@ export default function AdminTenantDetailPage() {
                                 <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
                                   {formatChfRent(tn.monthly_rent)}
                                 </td>
-                                <td style={{ ...tdCell, textAlign: "right" }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => startTenancyEdit(tn)}
-                                    disabled={tenancyEditSaving}
-                                    style={{
-                                      padding: "4px 10px",
-                                      borderRadius: "8px",
-                                      border: "1px solid #E2E8F0",
-                                      background: "#FFF",
-                                      fontSize: "12px",
-                                      fontWeight: 600,
-                                      cursor: tenancyEditSaving ? "default" : "pointer",
-                                    }}
-                                  >
-                                    Bearbeiten
-                                  </button>
+                                <td style={{ ...tdCell, textAlign: "right", whiteSpace: "nowrap" }}>
+                                  <div style={{ display: "inline-flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => startTenancyEdit(tn)}
+                                      disabled={tenancyEditSaving}
+                                      style={{
+                                        padding: "4px 10px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #E2E8F0",
+                                        background: "#FFF",
+                                        fontSize: "12px",
+                                        fontWeight: 600,
+                                        cursor: tenancyEditSaving ? "default" : "pointer",
+                                      }}
+                                    >
+                                      Bearbeiten
+                                    </button>
+                                    {tn.unit_id ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          navigate("/admin/apartments", {
+                                            state: { editUnitId: String(tn.unit_id) },
+                                          })
+                                        }
+                                        disabled={tenancyEditSaving}
+                                        style={{
+                                          padding: "4px 10px",
+                                          borderRadius: "8px",
+                                          border: "1px solid #E2E8F0",
+                                          background: "#FFF",
+                                          fontSize: "12px",
+                                          fontWeight: 600,
+                                          cursor: tenancyEditSaving ? "default" : "pointer",
+                                        }}
+                                      >
+                                        Zur Einheit
+                                      </button>
+                                    ) : null}
+                                  </div>
                                 </td>
                               </tr>
                               {String(tenancyEditingId) === String(tn.id) ? (
