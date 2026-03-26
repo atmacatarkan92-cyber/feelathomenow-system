@@ -129,16 +129,23 @@ export async function deleteAdminUnit(id) {
     `${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`,
     { method: "DELETE", headers: getApiHeaders() }
   );
+  let text = "";
+  try {
+    text = await res.text();
+    // Response genau 1x lesen
+  } catch {
+    text = "";
+  }
   if (!res.ok) {
-    const text = await res.text();
     let msg = parseAdminErrorBodyText(text).trim();
     if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
       msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
     }
     throw new Error(msg);
   }
+  if (!text || !text.trim()) return { status: "ok" };
   try {
-    return await res.json();
+    return JSON.parse(text);
   } catch {
     return { status: "ok" };
   }
