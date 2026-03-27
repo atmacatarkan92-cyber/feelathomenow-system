@@ -1,4 +1,8 @@
 import React from "react";
+import {
+  getRoomOccupancyStatus,
+  formatOccupancyStatusDe,
+} from "../utils/unitOccupancyStatus";
 
 function getStatusStyle(status) {
   if (status === "Belegt") {
@@ -16,19 +20,43 @@ function getStatusStyle(status) {
   return "bg-slate-100 border-slate-300 text-slate-700";
 }
 
-function getStatusLabel(status) {
-  if (status === "Belegt") return "🟢 Belegt";
-  if (status === "Reserviert") return "🟡 Reserviert";
-  if (status === "Frei") return "🔴 Frei";
-  return status || "Unbekannt";
+function getStatusLabelFromOcc(occ) {
+  if (occ == null) return "—";
+  const de = formatOccupancyStatusDe(occ);
+  if (occ === "belegt") return `🟢 ${de}`;
+  if (occ === "reserviert") return `🟡 ${de}`;
+  if (occ === "frei") return `🔴 ${de}`;
+  return de;
 }
 
-function RoomMap({ unit, rooms: allRooms = [] }) {
+function getStatusStyleFromOcc(occ) {
+  if (occ === "belegt") return getStatusStyle("Belegt");
+  if (occ === "reserviert") return getStatusStyle("Reserviert");
+  if (occ === "frei") return getStatusStyle("Frei");
+  return getStatusStyle("Frei");
+}
+
+function RoomMap({ unit, rooms: allRooms = [], tenancies = null }) {
   const unitRooms = allRooms.filter((room) => (room.unitId || room.unit_id) === (unit.unitId || unit.id));
 
-  const occupiedCount = unitRooms.filter((room) => room.status === "Belegt").length;
-  const reservedCount = unitRooms.filter((room) => room.status === "Reserviert").length;
-  const freeCount = unitRooms.filter((room) => room.status === "Frei").length;
+  const occupiedCount =
+    tenancies == null
+      ? 0
+      : unitRooms.filter(
+          (room) => getRoomOccupancyStatus(room, tenancies) === "belegt"
+        ).length;
+  const reservedCount =
+    tenancies == null
+      ? 0
+      : unitRooms.filter(
+          (room) => getRoomOccupancyStatus(room, tenancies) === "reserviert"
+        ).length;
+  const freeCount =
+    tenancies == null
+      ? unitRooms.length
+      : unitRooms.filter(
+          (room) => getRoomOccupancyStatus(room, tenancies) === "frei"
+        ).length;
 
   if (unitRooms.length === 0) {
     return (
@@ -71,17 +99,20 @@ function RoomMap({ unit, rooms: allRooms = [] }) {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-        {unitRooms.map((room, index) => (
+        {unitRooms.map((room, index) => {
+          const occ =
+            tenancies != null ? getRoomOccupancyStatus(room, tenancies) : null;
+          return (
           <div
             key={room.roomId || index}
-            className={`rounded-xl border p-4 ${getStatusStyle(room.status)}`}
+            className={`rounded-xl border p-4 ${getStatusStyleFromOcc(occ)}`}
           >
             <p className="font-semibold">
               {room.roomName || room.name || `Zimmer ${index + 1}`}
             </p>
 
             <p className="text-xs mt-2 opacity-80">
-              {getStatusLabel(room.status)}
+              {getStatusLabelFromOcc(occ)}
             </p>
 
             {room.priceMonthly ? (
@@ -90,7 +121,8 @@ function RoomMap({ unit, rooms: allRooms = [] }) {
               </p>
             ) : null}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

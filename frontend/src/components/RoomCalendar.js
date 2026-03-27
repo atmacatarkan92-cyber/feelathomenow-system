@@ -1,4 +1,12 @@
 import React from "react";
+import {
+  getRoomOccupancyStatus,
+  getTodayIsoForOccupancy,
+  isTenancyActiveByDates,
+  isTenancyFuture,
+  parseIsoDate,
+  formatOccupancyStatusDe,
+} from "../utils/unitOccupancyStatus";
 
 const DEFAULT_MIN_STAY_MONTHS = 3;
 const DEFAULT_NOTICE_PERIOD_MONTHS = 3;
@@ -48,11 +56,35 @@ function getLegendText(type) {
   return "Frei";
 }
 
-function getRoomMonthlyTimeline(room) {
-  const today = new Date();
-  const currentMonthStart = startOfMonth(today);
+function tenanciesForRoom(room, tenancies) {
+  if (!tenancies) return [];
+  const rid = String(room.room_id || room.roomId || room.id || "");
+  return tenancies.filter(
+    (t) => String(t.room_id || t.roomId || "") === rid
+  );
+}
 
-  const moveInDate = room.moveInDate ? new Date(room.moveInDate) : null;
+function parseMoveInDate(room, roomT, todayIso) {
+  const active = roomT.find((t) => isTenancyActiveByDates(t, todayIso));
+  const future = roomT.find((t) => isTenancyFuture(t, todayIso));
+  const raw =
+    active?.move_in_date ||
+    future?.move_in_date ||
+    (room.moveInDate && room.moveInDate !== "-" ? room.moveInDate : null);
+  if (!raw) return null;
+  const p = parseIsoDate(raw);
+  if (!p) return null;
+  const [y, m, d] = p.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function getRoomMonthlyTimeline(room, tenancies) {
+  const today = getTodayIsoForOccupancy();
+  const occ =
+    tenancies == null ? null : getRoomOccupancyStatus(room, tenancies);
+  const roomT = tenanciesForRoom(room, tenancies || []);
+  const moveInDate = parseMoveInDate(room, roomT, today);
+
   const minimumStayMonths = Number(
     room.minimumStayMonths || DEFAULT_MIN_STAY_MONTHS
   );
@@ -62,24 +94,26 @@ function getRoomMonthlyTimeline(room) {
 
   const secureMonths = minimumStayMonths + noticePeriodMonths;
 
+  const currentMonthStart = startOfMonth(new Date());
+
   return Array.from({ length: MONTH_PREVIEW_COUNT }, (_, index) => {
     const monthDate = addMonths(currentMonthStart, index);
 
-    if (room.status === "Frei") {
+    if (occ === null || occ === "frei") {
       return {
         label: formatMonthLabel(monthDate),
         type: "free",
       };
     }
 
-    if (room.status === "Reserviert") {
+    if (occ === "reserviert") {
       return {
         label: formatMonthLabel(monthDate),
         type: index === 0 ? "reserved" : "free",
       };
     }
 
-    if (room.status === "Belegt") {
+    if (occ === "belegt") {
       if (moveInDate && !Number.isNaN(moveInDate.getTime())) {
         const secureUntilDate = addMonths(moveInDate, secureMonths);
         const riskUntilDate = addMonths(secureUntilDate, 1);
@@ -149,8 +183,10 @@ function getEstimatedLostRevenue(room, timeline) {
   return freeMonths * monthly + riskMonths * (monthly * 0.5);
 }
 
-function RoomCalendar({ unit, rooms: allRooms = [] }) {
-  const unitRooms = allRooms.filter((room) => (room.unitId || room.unit_id) === (unit.unitId || unit.id));
+function RoomCalendar({ unit, rooms: allRooms = [], tenancies = null }) {
+  const unitRooms = allRooms.filter(
+    (room) => (room.unitId || room.unit_id) === (unit.unitId || unit.id)
+  );
 
   if (unitRooms.length === 0) {
     return (
@@ -166,17 +202,17 @@ function RoomCalendar({ unit, rooms: allRooms = [] }) {
   }
 
   const unitFreeMonths = unitRooms.reduce((sum, room) => {
-    const timeline = getRoomMonthlyTimeline(room);
+    const timeline = getRoomMonthlyTimeline(room, tenancies);
     return sum + getFreeMonthsCount(timeline);
   }, 0);
 
   const unitRiskMonths = unitRooms.reduce((sum, room) => {
-    const timeline = getRoomMonthlyTimeline(room);
+    const timeline = getRoomMonthlyTimeline(room, tenancies);
     return sum + getRiskMonthsCount(timeline);
   }, 0);
 
   const unitEstimatedLostRevenue = unitRooms.reduce((sum, room) => {
-    const timeline = getRoomMonthlyTimeline(room);
+    const timeline = getRoomMonthlyTimeline(room, tenancies);
     return sum + getEstimatedLostRevenue(room, timeline);
   }, 0);
 
@@ -212,10 +248,12 @@ function RoomCalendar({ unit, rooms: allRooms = [] }) {
 
       <div className="space-y-4">
         {unitRooms.map((room, index) => {
-          const timeline = getRoomMonthlyTimeline(room);
+          const timeline = getRoomMonthlyTimeline(room, tenancies);
           const freeMonths = getFreeMonthsCount(timeline);
           const riskMonths = getRiskMonthsCount(timeline);
           const estimatedLostRevenue = getEstimatedLostRevenue(room, timeline);
+          const occ =
+            tenancies != null ? getRoomOccupancyStatus(room, tenancies) : null;
 
           return (
             <div
@@ -229,7 +267,7 @@ function RoomCalendar({ unit, rooms: allRooms = [] }) {
                   </p>
 
                   <p className="text-xs text-slate-500 mt-1">
-                    {room.status || "Unbekannt"}
+                    {occ != null ? formatOccupancyStatusDe(occ) : "—"}
                     {room.priceMonthly
                       ? ` · CHF ${Number(room.priceMonthly).toLocaleString("de-CH")}`
                       : ""}

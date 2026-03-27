@@ -1,7 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import RoomMap from "../../components/RoomMap";
 import RoomCalendar from "../../components/RoomCalendar";
-import { fetchAdminUnits, fetchAdminRooms, normalizeUnit, normalizeRoom } from "../../api/adminData";
+import {
+  fetchAdminUnits,
+  fetchAdminRooms,
+  fetchAdminTenanciesAll,
+  normalizeUnit,
+  normalizeRoom,
+} from "../../api/adminData";
+import { getRoomOccupancyStatus } from "../../utils/unitOccupancyStatus";
 
 function StatCard({ label, value, hint, color = "slate" }) {
   const styles = {
@@ -35,6 +42,7 @@ function SectionCard({ title, subtitle, children }) {
 function AdminRoomsPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [tenancies, setTenancies] = useState([]);
 
   useEffect(() => {
     fetchAdminUnits()
@@ -43,6 +51,9 @@ function AdminRoomsPage() {
     fetchAdminRooms()
       .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
       .catch(() => setRooms([]));
+    fetchAdminTenanciesAll()
+      .then((r) => setTenancies(Array.isArray(r) ? r : []))
+      .catch(() => setTenancies([]));
   }, []);
 
   const coLivingUnits = useMemo(() => {
@@ -50,9 +61,15 @@ function AdminRoomsPage() {
   }, [units]);
 
   const roomStats = useMemo(() => {
-    const occupied = rooms.filter((room) => room.status === "Belegt").length;
-    const reserved = rooms.filter((room) => room.status === "Reserviert").length;
-    const free = rooms.filter((room) => room.status === "Frei").length;
+    const occupied = rooms.filter(
+      (room) => getRoomOccupancyStatus(room, tenancies) === "belegt"
+    ).length;
+    const reserved = rooms.filter(
+      (room) => getRoomOccupancyStatus(room, tenancies) === "reserviert"
+    ).length;
+    const free = rooms.filter(
+      (room) => getRoomOccupancyStatus(room, tenancies) === "frei"
+    ).length;
 
     return {
       total: rooms.length,
@@ -60,7 +77,7 @@ function AdminRoomsPage() {
       reserved,
       free,
     };
-  }, [rooms]);
+  }, [rooms, tenancies]);
 
   return (
     <div className="space-y-6">
@@ -104,7 +121,12 @@ function AdminRoomsPage() {
       >
         <div className="space-y-6">
           {coLivingUnits.map((unit) => (
-            <RoomMap key={unit.unitId || unit.id} unit={unit} rooms={rooms} />
+            <RoomMap
+              key={unit.unitId || unit.id}
+              unit={unit}
+              rooms={rooms}
+              tenancies={tenancies}
+            />
           ))}
 
           {coLivingUnits.length === 0 && (
@@ -119,7 +141,12 @@ function AdminRoomsPage() {
       >
         <div className="space-y-6">
           {coLivingUnits.map((unit) => (
-            <RoomCalendar key={unit.unitId || unit.id} unit={unit} rooms={rooms} />
+            <RoomCalendar
+              key={unit.unitId || unit.id}
+              unit={unit}
+              rooms={rooms}
+              tenancies={tenancies}
+            />
           ))}
 
           {coLivingUnits.length === 0 && (

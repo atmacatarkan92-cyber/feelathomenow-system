@@ -21,6 +21,7 @@ import {
 } from "../../api/adminData";
 import {
   getUnitOccupancyStatus,
+  getRoomOccupancyStatus,
   formatOccupancyStatusDe,
   occupancyStatusBadgeTone,
   isLandlordContractLeaseStarted,
@@ -400,7 +401,7 @@ function getRoomsForUnit(unitId, allRooms) {
   return allRooms.filter((room) => room.unitId === unitId);
 }
 
-function getCoLivingMetrics(unit, allRooms) {
+function getCoLivingMetrics(unit, allRooms, tenancies) {
   const leaseStarted = isLandlordContractLeaseStarted(unit);
   const rooms = getRoomsForUnit(unit.unitId, allRooms);
 
@@ -421,9 +422,24 @@ function getCoLivingMetrics(unit, allRooms) {
     };
   }
 
-  const occupiedRooms = rooms.filter((room) => room.status === "Belegt");
-  const reservedRooms = rooms.filter((room) => room.status === "Reserviert");
-  const freeRooms = rooms.filter((room) => room.status === "Frei");
+  let occupiedRooms;
+  let reservedRooms;
+  let freeRooms;
+  if (tenancies == null) {
+    occupiedRooms = [];
+    reservedRooms = [];
+    freeRooms = rooms;
+  } else {
+    occupiedRooms = rooms.filter(
+      (room) => getRoomOccupancyStatus(room, tenancies) === "belegt"
+    );
+    reservedRooms = rooms.filter(
+      (room) => getRoomOccupancyStatus(room, tenancies) === "reserviert"
+    );
+    freeRooms = rooms.filter(
+      (room) => getRoomOccupancyStatus(room, tenancies) === "frei"
+    );
+  }
 
   const fullRevenue = rooms.reduce(
     (sum, room) => sum + Number(room.priceMonthly || 0),
@@ -569,6 +585,14 @@ function getStatusTone(status) {
   return "slate";
 }
 
+/** Badge tone for getRoomOccupancyStatus keys (frei | reserviert | belegt). */
+function getRoomOccBadgeTone(occ) {
+  if (occ === "belegt") return "green";
+  if (occ === "reserviert") return "amber";
+  if (occ === "frei") return "rose";
+  return "slate";
+}
+
 function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
   const warnings = [];
   const isApartment = unit.type === "Apartment";
@@ -699,10 +723,12 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
   }
 
   rooms.forEach((room) => {
+    if (unitTenancies == null) return;
     const roomLabel = room.roomName || room.name || room.roomId || "Room";
+    const rocc = getRoomOccupancyStatus(room, unitTenancies);
 
     if (
-      room.status === "Reserviert" &&
+      rocc === "reserviert" &&
       (!room.reservedUntil || room.reservedUntil === "-")
     ) {
       warnings.push({
@@ -712,7 +738,7 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
     }
 
     if (
-      room.status === "Belegt" &&
+      rocc === "belegt" &&
       (!room.moveInDate || room.moveInDate === "-")
     ) {
       warnings.push({
@@ -722,7 +748,7 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
     }
 
     if (
-      room.status === "Frei" &&
+      rocc === "frei" &&
       (!room.freeFromDate || room.freeFromDate === "-")
     ) {
       warnings.push({
@@ -960,7 +986,7 @@ function AdminUnitDetailPage() {
   }, [unitTenancies]);
 
   const metrics = useMemo(() => {
-    const base = getCoLivingMetrics(safeUnit, rooms);
+    const base = getCoLivingMetrics(safeUnit, rooms, unitTenancies);
     const isApt = safeUnit.type === "Apartment";
 
     if (unitTenancies === null) {
@@ -1856,7 +1882,12 @@ function AdminUnitDetailPage() {
             subtitle="Schneller Blick auf alle Zimmer"
           >
             <div className="space-y-3">
-              {unitRooms.map((room) => (
+              {unitRooms.map((room) => {
+                const roomOcc =
+                  unitTenancies != null
+                    ? getRoomOccupancyStatus(room, unitTenancies)
+                    : null;
+                return (
                 <div
                   key={room.id}
                   className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4"
@@ -1873,9 +1904,12 @@ function AdminUnitDetailPage() {
                     </p>
                   </div>
 
-                  <Badge tone={getStatusTone(room.status)}>{room.status}</Badge>
+                  <Badge tone={getRoomOccBadgeTone(roomOcc)}>
+                    {roomOcc != null ? formatOccupancyStatusDe(roomOcc) : "—"}
+                  </Badge>
                 </div>
-              ))}
+                );
+              })}
 
               {unitRooms.length === 0 && (
                 <p className="text-sm text-slate-500">
@@ -1962,7 +1996,12 @@ function AdminUnitDetailPage() {
                 </thead>
 
                 <tbody>
-                  {unitRooms.map((room) => (
+                  {unitRooms.map((room) => {
+                    const roomOcc =
+                      unitTenancies != null
+                        ? getRoomOccupancyStatus(room, unitTenancies)
+                        : null;
+                    return (
                     <tr
                       key={room.id}
                       className="border-b border-slate-100 text-slate-700"
@@ -1972,8 +2011,10 @@ function AdminUnitDetailPage() {
                       </td>
                       <td className="py-4 pr-4">{room.roomName}</td>
                       <td className="py-4 pr-4">
-                        <Badge tone={getStatusTone(room.status)}>
-                          {room.status}
+                        <Badge tone={getRoomOccBadgeTone(roomOcc)}>
+                          {roomOcc != null
+                            ? formatOccupancyStatusDe(roomOcc)
+                            : "—"}
                         </Badge>
                       </td>
                       <td className="py-4 pr-4">{room.tenant}</td>
@@ -2005,7 +2046,8 @@ function AdminUnitDetailPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
 
                   {unitRooms.length === 0 && (
                     <tr>
@@ -2041,7 +2083,7 @@ function AdminUnitDetailPage() {
             title="Room Map"
             subtitle="Visuelle Übersicht aller Rooms dieser Unit"
           >
-            <RoomMap unit={unit} rooms={unitRooms} />
+            <RoomMap unit={unit} rooms={unitRooms} tenancies={unitTenancies} />
           </SectionCard>
         )}
 
@@ -2050,7 +2092,7 @@ function AdminUnitDetailPage() {
             title="Belegungskalender"
             subtitle="Monatskalender nur für diese Unit"
           >
-            <RoomCalendar unit={unit} rooms={unitRooms} />
+            <RoomCalendar unit={unit} rooms={unitRooms} tenancies={unitTenancies} />
           </SectionCard>
         )}
 

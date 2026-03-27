@@ -28,6 +28,25 @@ export function isTenancyFuture(t, todayIso) {
 }
 
 /**
+ * Per-room occupancy from tenancies (Co-Living). Matches getUnitOccupancyStatus room loop.
+ * @param {object} room
+ * @param {object[]|null|undefined} tenancies
+ * @returns {null | 'frei' | 'reserviert' | 'belegt'}
+ */
+export function getRoomOccupancyStatus(room, tenancies) {
+  if (!room) return null;
+  if (tenancies == null) return null;
+  const today = getTodayIsoForOccupancy();
+  const rid = String(room.room_id || room.roomId || room.id || "");
+  const roomT = tenancies.filter(
+    (t) => String(t.room_id || t.roomId || "") === rid
+  );
+  if (roomT.some((t) => isTenancyActiveByDates(t, today))) return "belegt";
+  if (roomT.some((t) => isTenancyFuture(t, today))) return "reserviert";
+  return "frei";
+}
+
+/**
  * @param {object} unit
  * @param {object[]|null|undefined} rooms
  * @param {object[]|null|undefined} tenancies — null/undefined = data not available
@@ -67,14 +86,9 @@ export function getUnitOccupancyStatus(unit, rooms, tenancies) {
   let occupiedRooms = 0;
   let futureRooms = 0;
   for (const room of unitRooms) {
-    const rid = String(room.room_id || room.roomId || room.id || "");
-    const roomT = unitTenancies.filter(
-      (t) => String(t.room_id || t.roomId || "") === rid
-    );
-    const hasActive = roomT.some((tt) => isTenancyActiveByDates(tt, today));
-    const hasFuture = roomT.some((tt) => isTenancyFuture(tt, today));
-    if (hasActive) occupiedRooms++;
-    else if (hasFuture) futureRooms++;
+    const occ = getRoomOccupancyStatus(room, unitTenancies);
+    if (occ === "belegt") occupiedRooms++;
+    else if (occ === "reserviert") futureRooms++;
   }
 
   if (occupiedRooms === 0 && futureRooms === 0) return "frei";
