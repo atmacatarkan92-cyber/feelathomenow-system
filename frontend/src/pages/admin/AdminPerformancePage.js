@@ -29,6 +29,18 @@ function compareWorst(a, b) {
   return a.revenue - b.revenue;
 }
 
+function getUnitLabel(unit) {
+  if (!unit) return "—";
+  const city = unit.city ?? unit.place;
+  if (unit.unitId && city) {
+    return `${unit.unitId} · ${city}`;
+  }
+  if (unit.address && city) {
+    return `${unit.address} · ${city}`;
+  }
+  return unit.id;
+}
+
 function AdminPerformancePage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -74,6 +86,7 @@ function AdminPerformancePage() {
       const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
       return {
         id: unit.unitId,
+        unit,
         city: unit.place ?? "—",
         revenue,
         costs,
@@ -160,13 +173,13 @@ function AdminPerformancePage() {
 
         <div className="card">
           <h4>Beste Unit</h4>
-          <h3>{stats.best?.id ?? "—"}</h3>
+          <h3>{getUnitLabel(stats.best?.unit)}</h3>
           <p>{formatCurrency(stats.best?.profit)}</p>
         </div>
 
         <div className="card">
           <h4>Schwächste Unit</h4>
-          <h3>{stats.worst?.id ?? "—"}</h3>
+          <h3>{getUnitLabel(stats.worst?.unit)}</h3>
           <p>{formatCurrency(stats.worst?.profit)}</p>
         </div>
       </div>
@@ -203,8 +216,13 @@ function AdminPerformancePage() {
 
           <tbody>
             {stats.results.map((row) => (
-              <tr key={row.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                <td style={{ padding: "10px", fontWeight: 700 }}>{row.id}</td>
+              <tr
+                key={row.unit?.id ?? row.id}
+                style={{ borderBottom: "1px solid #F1F5F9" }}
+              >
+                <td style={{ padding: "10px", fontWeight: 700 }}>
+                  {getUnitLabel(row.unit)}
+                </td>
 
                 <td style={{ padding: "10px" }}>{row.city}</td>
 
