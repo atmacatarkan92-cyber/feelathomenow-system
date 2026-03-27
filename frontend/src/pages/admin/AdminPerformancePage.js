@@ -13,6 +13,7 @@ import {
   formatOccupancyStatusDe,
   getTodayIsoForOccupancy,
 } from "../../utils/unitOccupancyStatus";
+import { getDisplayUnitId } from "../../utils/unitDisplayId";
 
 function formatCurrency(value) {
   const amount = Number(value || 0);
@@ -29,15 +30,35 @@ function compareWorst(a, b) {
   return a.revenue - b.revenue;
 }
 
-function getUnitLabel(unit) {
+/** listIndex aligns labels with AdminApartmentsPage (APT-xxx / CL-xxx). */
+function getUnitLabel(unit, listIndex) {
   if (!unit) return "—";
-  const city = unit.city ?? unit.place;
+
+  const city = unit.city ?? unit.place ?? "";
+
+  if (typeof listIndex === "number" && listIndex >= 0 && city) {
+    const rid = getDisplayUnitId(unit, listIndex);
+    if (rid && rid !== "—") {
+      return `${rid} · ${city}`;
+    }
+  }
+
   if (unit.unitId && city) {
     return `${unit.unitId} · ${city}`;
   }
+
   if (unit.address && city) {
     return `${unit.address} · ${city}`;
   }
+
+  if (unit.label) {
+    return unit.label;
+  }
+
+  if (unit.name) {
+    return unit.name;
+  }
+
   return unit.id;
 }
 
@@ -75,7 +96,7 @@ function AdminPerformancePage() {
 
   const stats = useMemo(() => {
     const todayIso = getTodayIsoForOccupancy();
-    const results = units.map((unit) => {
+    const results = units.map((unit, listIndex) => {
       const revenue = sumActiveTenancyMonthlyRentForUnit(
         unit,
         tenancies,
@@ -85,7 +106,8 @@ function AdminPerformancePage() {
       const profit = revenue - costs;
       const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
       return {
-        id: unit.unitId,
+        id: unit.id ?? unit.unitId,
+        listIndex,
         unit,
         city: unit.place ?? "—",
         revenue,
@@ -173,13 +195,17 @@ function AdminPerformancePage() {
 
         <div className="card">
           <h4>Beste Unit</h4>
-          <h3>{getUnitLabel(stats.best?.unit)}</h3>
+          <h3>
+            {getUnitLabel(stats.best?.unit, stats.best?.listIndex)}
+          </h3>
           <p>{formatCurrency(stats.best?.profit)}</p>
         </div>
 
         <div className="card">
           <h4>Schwächste Unit</h4>
-          <h3>{getUnitLabel(stats.worst?.unit)}</h3>
+          <h3>
+            {getUnitLabel(stats.worst?.unit, stats.worst?.listIndex)}
+          </h3>
           <p>{formatCurrency(stats.worst?.profit)}</p>
         </div>
       </div>
@@ -221,7 +247,7 @@ function AdminPerformancePage() {
                 style={{ borderBottom: "1px solid #F1F5F9" }}
               >
                 <td style={{ padding: "10px", fontWeight: 700 }}>
-                  {getUnitLabel(row.unit)}
+                  {getUnitLabel(row.unit, row.listIndex)}
                 </td>
 
                 <td style={{ padding: "10px" }}>{row.city}</td>
