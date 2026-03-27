@@ -15,5 +15,15 @@ export function getApiHeaders() {
   return headers;
 }
 
+/** For multipart/form-data (no Content-Type; browser sets boundary). */
+export function getApiHeadersMultipart() {
+  const headers = {};
+  const token = getAccessToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export { API_BASE_URL };
 export default API_BASE_URL;

@@ -125,6 +125,22 @@ class Unit(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class UnitDocument(SQLModel, table=True):
+    """File metadata for unit attachments; binary stored in R2 (S3-compatible)."""
+
+    __tablename__ = "unit_documents"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    unit_id: str = Field(foreign_key="unit.id", index=True)
+    file_name: Optional[str] = Field(default=None)
+    file_url: str = Field(default="")
+    file_size: Optional[int] = Field(default=None)
+    mime_type: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    uploaded_by: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+
+
 class Room(SQLModel, table=True):
     __tablename__ = "room"
 

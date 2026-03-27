@@ -6,7 +6,7 @@
  * to a plain array of items so consumers never guess response shape. Invalid
  * shapes throw instead of returning [] to avoid fake-stability masking.
  */
-import { API_BASE_URL, getApiHeaders } from "../config";
+import { API_BASE_URL, getApiHeaders, getApiHeadersMultipart } from "../config";
 
 /**
  * Normalize paginated API response to items array. Throws if shape is invalid.
@@ -680,4 +680,36 @@ export function updateAdminProperty(id, body) {
     if (!res.ok) throw new Error("Liegenschaft konnte nicht gespeichert werden.");
     return res.json();
   });
+}
+
+export function fetchAdminUnitDocuments(unitId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/unit-documents?unit_id=${encodeURIComponent(unitId)}`,
+    { headers: getApiHeaders() }
+  )
+    .then((res) => {
+      if (!res.ok) throw new Error("Dokumente konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => {
+      if (data != null && typeof data === "object" && Array.isArray(data.items)) {
+        return data.items;
+      }
+      throw new Error('Ungültige Antwort: erwartet { items: [] }.');
+    });
+}
+
+export async function uploadAdminUnitDocument(unitId, file) {
+  const fd = new FormData();
+  fd.append("unit_id", unitId);
+  fd.append("file", file);
+  const res = await fetch(`${API_BASE_URL}/api/admin/unit-documents`, {
+    method: "POST",
+    headers: getApiHeadersMultipart(),
+    body: fd,
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
 }

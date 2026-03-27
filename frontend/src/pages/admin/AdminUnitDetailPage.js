@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import RoomMap from "../../components/RoomMap";
 import RoomCalendar from "../../components/RoomCalendar";
@@ -12,6 +12,8 @@ import {
   fetchAdminLandlord,
   fetchAdminPropertyManagers,
   fetchAdminAuditLogs,
+  fetchAdminUnitDocuments,
+  uploadAdminUnitDocument,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -369,6 +371,17 @@ function getCoLivingMetrics(unit, allRooms) {
   };
 }
 
+function formatUnitDocumentDate(iso) {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+}
+
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
@@ -536,6 +549,12 @@ function AdminUnitDetailPage() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLogLoading, setAuditLogLoading] = useState(true);
   const [auditLogError, setAuditLogError] = useState("");
+  const [unitDocuments, setUnitDocuments] = useState([]);
+  const [unitDocumentsLoading, setUnitDocumentsLoading] = useState(true);
+  const [unitDocumentsError, setUnitDocumentsError] = useState("");
+  const [unitDocUploading, setUnitDocUploading] = useState(false);
+  const [unitDocUploadError, setUnitDocUploadError] = useState("");
+  const unitDocFileInputRef = useRef(null);
   const [verwaltungLabel, setVerwaltungLabel] = useState("");
   const [bewirtschafterLabel, setBewirtschafterLabel] = useState("");
   const [linksResolving, setLinksResolving] = useState(false);
@@ -619,6 +638,22 @@ function AdminUnitDetailPage() {
         setAuditLogs([]);
       })
       .finally(() => setAuditLogLoading(false));
+  }, [unitId]);
+
+  useEffect(() => {
+    if (!unitId) {
+      setUnitDocumentsLoading(false);
+      return;
+    }
+    setUnitDocumentsLoading(true);
+    setUnitDocumentsError("");
+    fetchAdminUnitDocuments(unitId)
+      .then(setUnitDocuments)
+      .catch((e) => {
+        setUnitDocumentsError(e.message || "Fehler beim Laden der Dokumente.");
+        setUnitDocuments([]);
+      })
+      .finally(() => setUnitDocumentsLoading(false));
   }, [unitId]);
 
   const auditResolvers = useMemo(() => {
@@ -1008,6 +1043,26 @@ function AdminUnitDetailPage() {
     setRooms((prev) => prev.filter((room) => String(room.id) !== String(id)));
   }
 
+  function handleUnitDocumentPick() {
+    unitDocFileInputRef.current?.click();
+  }
+
+  async function handleUnitDocumentSelected(e) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !unitId) return;
+    setUnitDocUploading(true);
+    setUnitDocUploadError("");
+    try {
+      const rec = await uploadAdminUnitDocument(unitId, f);
+      setUnitDocuments((prev) => [rec, ...prev]);
+    } catch (err) {
+      setUnitDocUploadError(err.message || "Upload fehlgeschlagen.");
+    } finally {
+      setUnitDocUploading(false);
+    }
+  }
+
   const landlordDepositTypeKey = String(unit.landlordDepositType || "")
     .trim()
     .toLowerCase();
@@ -1203,6 +1258,76 @@ function AdminUnitDetailPage() {
                   </p>
                 </div>
               ) : null}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Dokumente"
+          subtitle="Dateien zu dieser Unit"
+          rightSlot={
+            <div className="flex flex-col items-end gap-1">
+              <input
+                ref={unitDocFileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleUnitDocumentSelected}
+              />
+              <button
+                type="button"
+                onClick={handleUnitDocumentPick}
+                disabled={unitDocUploading || !unitId}
+                className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg font-medium disabled:opacity-50"
+              >
+                {unitDocUploading ? "Wird hochgeladen …" : "Hochladen"}
+              </button>
+            </div>
+          }
+        >
+          {unitDocUploadError ? (
+            <p className="text-sm text-red-600 mb-2">{unitDocUploadError}</p>
+          ) : null}
+          {unitDocumentsLoading ? (
+            <p className="text-sm text-slate-500">Lade Dokumente …</p>
+          ) : unitDocumentsError ? (
+            <p className="text-sm text-red-600">{unitDocumentsError}</p>
+          ) : unitDocuments.length === 0 ? (
+            <p className="text-sm text-slate-500">Keine Dokumente vorhanden</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-700">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="py-2 pr-4 font-medium">Datei</th>
+                    <th className="py-2 pr-4 font-medium">Datum</th>
+                    <th className="py-2 pr-4 font-medium">Download</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unitDocuments.map((doc) => (
+                    <tr key={String(doc.id)} className="border-b border-slate-100">
+                      <td className="py-2 pr-4 font-medium">{doc.file_name || "—"}</td>
+                      <td className="py-2 pr-4 text-slate-600">
+                        {formatUnitDocumentDate(doc.created_at)}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {doc.file_url ? (
+                          <a
+                            href={doc.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-orange-600 hover:underline"
+                          >
+                            Öffnen
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </SectionCard>
