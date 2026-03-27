@@ -45,29 +45,6 @@ function auditValuesEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function summarizeUnitAuditEntry(entry) {
-  const action = String(entry.action || "").toLowerCase();
-  if (action === "create") return "Unit erstellt";
-  if (action === "delete") return "Unit gelöscht";
-  const oldV = entry.old_values;
-  const newV = entry.new_values;
-  if (!oldV || !newV) return "Unit bearbeitet";
-  const keys = new Set([...Object.keys(oldV), ...Object.keys(newV)]);
-  const changedLabels = [];
-  for (const k of keys) {
-    if (!auditValuesEqual(oldV[k], newV[k])) {
-      const lbl = UNIT_AUDIT_FIELD_LABELS[k];
-      if (lbl) changedLabels.push(lbl);
-    }
-  }
-  if (changedLabels.length === 0) return "Unit bearbeitet";
-  if (changedLabels.length === 1) return `${changedLabels[0]} geändert`;
-  if (changedLabels.length <= 3) {
-    return changedLabels.map((l) => `${l} geändert`).join(", ");
-  }
-  return `${changedLabels.length} Felder geändert`;
-}
-
 function formatAuditTimestamp(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -129,6 +106,80 @@ const LANDLORD_DEPOSIT_TYPE_LABELS = {
   cash: "Bareinzahlung",
   none: "Keine",
 };
+
+const AUDIT_CHF_KEYS = new Set([
+  "tenant_price_monthly_chf",
+  "landlord_rent_monthly_chf",
+  "utilities_monthly_chf",
+  "cleaning_cost_monthly_chf",
+  "landlord_deposit_amount",
+  "landlord_deposit_annual_premium",
+]);
+
+const AUDIT_DATE_KEYS = new Set(["landlord_lease_start_date", "available_from"]);
+
+function formatAuditFieldValue(key, value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (AUDIT_CHF_KEYS.has(key)) {
+    const n = Number(value);
+    if (Number.isNaN(n)) return String(value);
+    return `CHF ${Math.round(n).toLocaleString("de-CH")}`;
+  }
+  if (AUDIT_DATE_KEYS.has(key)) {
+    const s = String(value);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString("de-CH");
+    return s;
+  }
+  if (key === "landlord_deposit_type") {
+    const k = String(value).toLowerCase();
+    return LANDLORD_DEPOSIT_TYPE_LABELS[k] || String(value);
+  }
+  if (
+    key === "landlord_id" ||
+    key === "property_manager_id" ||
+    key === "property_id" ||
+    key === "city_id"
+  ) {
+    const s = String(value);
+    if (s.length > 24) return `${s.slice(0, 8)}…${s.slice(-4)}`;
+    return s;
+  }
+  if (key === "rooms" || key === "occupied_rooms") {
+    const n = Number(value);
+    if (Number.isNaN(n)) return String(value);
+    return String(Math.round(n));
+  }
+  return String(value);
+}
+
+function buildAuditUpdateLines(entry) {
+  const oldV = entry.old_values;
+  const newV = entry.new_values;
+  if (!oldV || !newV) return ["Unit bearbeitet"];
+  const keys = new Set([...Object.keys(oldV), ...Object.keys(newV)]);
+  const lines = [];
+  for (const k of keys) {
+    if (auditValuesEqual(oldV[k], newV[k])) continue;
+    const lbl = UNIT_AUDIT_FIELD_LABELS[k];
+    if (!lbl) continue;
+    const oldStr = formatAuditFieldValue(k, oldV[k]);
+    const newStr = formatAuditFieldValue(k, newV[k]);
+    lines.push(`${lbl} geändert: ${oldStr} → ${newStr}`);
+  }
+  if (lines.length === 0) return ["Unit bearbeitet"];
+  if (lines.length <= 3) return lines;
+  return [...lines.slice(0, 3), "Weitere Änderungen"];
+}
+
+function getAuditEntryDisplayLines(entry) {
+  const action = String(entry.action || "").toLowerCase();
+  if (action === "create") return ["Unit erstellt"];
+  if (action === "delete") return ["Unit gelöscht"];
+  if (action === "update") return buildAuditUpdateLines(entry);
+  return ["Unit bearbeitet"];
+}
 
 function getRunningMonthlyCosts(unit) {
   if (!hasLeaseStarted(unit)) return 0;
@@ -1492,9 +1543,11 @@ function AdminUnitDetailPage() {
                   <p className="text-xs text-slate-500">
                     {formatAuditTimestamp(entry.created_at)}
                   </p>
-                  <p className="font-medium text-slate-800 mt-0.5">
-                    {summarizeUnitAuditEntry(entry)}
-                  </p>
+                  <div className="font-medium text-slate-800 mt-0.5 space-y-1">
+                    {getAuditEntryDisplayLines(entry).map((line, idx) => (
+                      <p key={idx}>{line}</p>
+                    ))}
+                  </div>
                   <p className="text-sm text-slate-600 mt-1">
                     {auditActionLabel(entry.action)}
                     {" · "}
