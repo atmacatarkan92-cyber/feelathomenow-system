@@ -65,14 +65,43 @@ export function sumActiveTenancyMonthlyRentForUnit(
  * @param {object[]|null|undefined} tenancies
  * @returns {null | 'frei' | 'reserviert' | 'belegt'}
  */
+function tenanciesForRoom(room, tenancies) {
+  if (!room || !Array.isArray(tenancies)) return [];
+  const rid = String(room.room_id || room.roomId || room.id || "");
+  return tenancies.filter(
+    (t) => String(t.room_id || t.roomId || "") === rid
+  );
+}
+
+export function getActiveTenancyForRoom(
+  room,
+  tenancies,
+  todayIso = getTodayIsoForOccupancy()
+) {
+  return (
+    tenanciesForRoom(room, tenancies).find((t) =>
+      isTenancyActiveByDates(t, todayIso)
+    ) || null
+  );
+}
+
+export function getFutureTenancyForRoom(
+  room,
+  tenancies,
+  todayIso = getTodayIsoForOccupancy()
+) {
+  return (
+    tenanciesForRoom(room, tenancies).find((t) =>
+      isTenancyFuture(t, todayIso)
+    ) || null
+  );
+}
+
 export function getRoomOccupancyStatus(room, tenancies) {
   if (!room) return null;
   if (tenancies == null) return null;
   const today = getTodayIsoForOccupancy();
-  const rid = String(room.room_id || room.roomId || room.id || "");
-  const roomT = tenancies.filter(
-    (t) => String(t.room_id || t.roomId || "") === rid
-  );
+  const roomT = tenanciesForRoom(room, tenancies);
   if (roomT.some((t) => isTenancyActiveByDates(t, today))) return "belegt";
   if (roomT.some((t) => isTenancyFuture(t, today))) return "reserviert";
   return "frei";

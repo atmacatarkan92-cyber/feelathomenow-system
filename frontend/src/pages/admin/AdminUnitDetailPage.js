@@ -22,6 +22,8 @@ import {
 import {
   getUnitOccupancyStatus,
   getRoomOccupancyStatus,
+  getActiveTenancyForRoom,
+  getFutureTenancyForRoom,
   formatOccupancyStatusDe,
   occupancyStatusBadgeTone,
   isLandlordContractLeaseStarted,
@@ -29,6 +31,7 @@ import {
   getTodayIsoForOccupancy,
   parseIsoDate,
   isTenancyActiveByDates,
+  isTenancyFuture,
   sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
@@ -522,6 +525,54 @@ function getRoomOccBadgeTone(occ) {
   return "slate";
 }
 
+function roomDisplayMoveIn(room, unitTenancies) {
+  if (!unitTenancies) {
+    const m = room.moveInDate;
+    return m && m !== "-" ? String(m) : null;
+  }
+  const today = getTodayIsoForOccupancy();
+  const active = getActiveTenancyForRoom(room, unitTenancies, today);
+  const future = getFutureTenancyForRoom(room, unitTenancies, today);
+  const fromT = active?.move_in_date ?? future?.move_in_date;
+  const d = parseIsoDate(fromT);
+  if (d) return d;
+  const m = room.moveInDate;
+  return m && m !== "-" ? String(m) : null;
+}
+
+function roomDisplayMoveOut(room, unitTenancies) {
+  if (!unitTenancies) {
+    const m = room.freeFromDate;
+    return m && m !== "-" ? String(m) : null;
+  }
+  const today = getTodayIsoForOccupancy();
+  const active = getActiveTenancyForRoom(room, unitTenancies, today);
+  const fromT = active?.move_out_date;
+  const d = parseIsoDate(fromT);
+  if (d) return d;
+  const m = room.freeFromDate;
+  return m && m !== "-" ? String(m) : null;
+}
+
+function roomDisplayTenantName(room, unitTenancies, tenantNameMap) {
+  if (!unitTenancies) {
+    const r = room.tenant;
+    return r && r !== "-" ? String(r) : "—";
+  }
+  const today = getTodayIsoForOccupancy();
+  const active = getActiveTenancyForRoom(room, unitTenancies, today);
+  const future = getFutureTenancyForRoom(room, unitTenancies, today);
+  const tn = active || future;
+  if (!tn) {
+    const r = room.tenant;
+    return r && r !== "-" ? String(r) : "—";
+  }
+  const name = tenantNameMap[String(tn.tenant_id)];
+  if (name && String(name).trim() !== "" && name !== "—") return name;
+  const r = room.tenant;
+  return r && r !== "-" ? String(r) : "—";
+}
+
 function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
   const warnings = [];
   const isApartment = unit.type === "Apartment";
@@ -655,10 +706,15 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
     if (unitTenancies == null) return;
     const roomLabel = room.roomName || room.name || room.roomId || "Room";
     const rocc = getRoomOccupancyStatus(room, unitTenancies);
+    const activeT = getActiveTenancyForRoom(room, unitTenancies, todayIso);
+    const futureT = getFutureTenancyForRoom(room, unitTenancies, todayIso);
+    const activeMoveIn = activeT ? parseIsoDate(activeT.move_in_date) : null;
+    const futureMoveIn = futureT ? parseIsoDate(futureT.move_in_date) : null;
 
     if (
       rocc === "reserviert" &&
-      (!room.reservedUntil || room.reservedUntil === "-")
+      (!room.reservedUntil || room.reservedUntil === "-") &&
+      !futureMoveIn
     ) {
       warnings.push({
         tone: "amber",
@@ -668,7 +724,8 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
 
     if (
       rocc === "belegt" &&
-      (!room.moveInDate || room.moveInDate === "-")
+      (!room.moveInDate || room.moveInDate === "-") &&
+      !activeMoveIn
     ) {
       warnings.push({
         tone: "amber",
@@ -849,7 +906,13 @@ function AdminUnitDetailPage() {
     const active = unitTenancies.filter((t) =>
       isTenancyActiveByDates(t, today)
     );
-    const ids = [...new Set(active.map((t) => String(t.tenant_id)))];
+    const future = unitTenancies.filter((t) => isTenancyFuture(t, today));
+    const ids = [
+      ...new Set([
+        ...active.map((t) => String(t.tenant_id)),
+        ...future.map((t) => String(t.tenant_id)),
+      ]),
+    ].filter((id) => id && id !== "undefined");
     if (ids.length === 0) {
       setTenantNameMap({});
       return;
@@ -1821,6 +1884,12 @@ function AdminUnitDetailPage() {
                   unitTenancies != null
                     ? getRoomOccupancyStatus(room, unitTenancies)
                     : null;
+                const rn = roomDisplayTenantName(
+                  room,
+                  unitTenancies,
+                  tenantNameMap
+                );
+                const rmi = roomDisplayMoveIn(room, unitTenancies);
                 return (
                 <div
                   key={room.id}
@@ -1831,10 +1900,11 @@ function AdminUnitDetailPage() {
                       {room.roomName}
                     </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      {formatChfOrDash(room.priceMonthly)} ·{" "}
-                      {room.moveInDate && room.moveInDate !== "-"
-                        ? `Einzug ${room.moveInDate}`
-                        : "Kein Einzug erfasst"}
+                      {formatChfOrDash(room.priceMonthly)}
+                      {rn !== "—" ? ` · ${rn}` : ""}
+                      {rmi
+                        ? ` · Einzug ${rmi}`
+                        : ` · Kein Einzug erfasst`}
                     </p>
                   </div>
 
@@ -1935,6 +2005,13 @@ function AdminUnitDetailPage() {
                       unitTenancies != null
                         ? getRoomOccupancyStatus(room, unitTenancies)
                         : null;
+                    const rTenant = roomDisplayTenantName(
+                      room,
+                      unitTenancies,
+                      tenantNameMap
+                    );
+                    const rIn = roomDisplayMoveIn(room, unitTenancies);
+                    const rOut = roomDisplayMoveOut(room, unitTenancies);
                     return (
                     <tr
                       key={room.id}
@@ -1951,12 +2028,12 @@ function AdminUnitDetailPage() {
                             : "—"}
                         </Badge>
                       </td>
-                      <td className="py-4 pr-4">{room.tenant}</td>
+                      <td className="py-4 pr-4">{rTenant}</td>
                       <td className="py-4 pr-4">
                         {formatChfOrDash(room.priceMonthly)}
                       </td>
-                      <td className="py-4 pr-4">{room.moveInDate || "-"}</td>
-                      <td className="py-4 pr-4">{room.freeFromDate || "-"}</td>
+                      <td className="py-4 pr-4">{rIn || "-"}</td>
+                      <td className="py-4 pr-4">{rOut || "-"}</td>
                       <td className="py-4 pr-4">
                         {room.minimumStayMonths || 3} M
                       </td>
