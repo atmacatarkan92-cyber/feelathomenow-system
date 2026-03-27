@@ -95,7 +95,8 @@ def admin_unit_document_download(
     if not key:
         raise HTTPException(status_code=404, detail="Object key not available for this document")
     try:
-        url = generate_presigned_url(key, expires_in=3600)
+        fn = (doc.file_name or "").strip() or None
+        url = generate_presigned_url(key, expires_in=3600, download_filename=fn)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:

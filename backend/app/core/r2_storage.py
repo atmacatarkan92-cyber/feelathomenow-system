@@ -87,13 +87,37 @@ def upload_bytes(object_key: str, body: bytes, content_type: str | None) -> str:
     return object_key
 
 
-def generate_presigned_url(object_key: str, expires_in: int = 3600) -> str:
+def _inline_content_disposition_for_filename(original: str) -> str:
+    """RFC 5987-friendly inline disposition so browsers show/save with a sensible filename."""
+    base = os.path.basename((original or "").strip()) or "download"
+    safe = "".join(c for c in base if c not in '\r\n"\\')
+    if len(safe) > 200:
+        safe = safe[:200]
+    if not safe:
+        safe = "download"
+    try:
+        safe.encode("ascii")
+        return f'inline; filename="{safe}"'
+    except UnicodeEncodeError:
+        return f"inline; filename*=UTF-8''{quote(safe, safe='')}"
+
+
+def generate_presigned_url(
+    object_key: str,
+    expires_in: int = 3600,
+    download_filename: str | None = None,
+) -> str:
     """Temporary signed GET URL for private R2 objects."""
     _, _, bucket, _ = _require_r2_config()
     client = _s3_client()
+    params: dict = {"Bucket": bucket, "Key": object_key}
+    if download_filename is not None and str(download_filename).strip():
+        params["ResponseContentDisposition"] = _inline_content_disposition_for_filename(
+            download_filename
+        )
     return client.generate_presigned_url(
         "get_object",
-        Params={"Bucket": bucket, "Key": object_key},
+        Params=params,
         ExpiresIn=expires_in,
     )
 

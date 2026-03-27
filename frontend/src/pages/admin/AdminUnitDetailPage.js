@@ -384,6 +384,28 @@ function formatUnitDocumentDate(iso) {
   }
 }
 
+function formatUnitDocumentType(doc) {
+  const mime = String(doc.mime_type || "").toLowerCase();
+  const name = String(doc.file_name || "");
+  const ext = name.includes(".")
+    ? (name.split(".").pop() || "").toLowerCase()
+    : "";
+
+  if (mime.includes("pdf") || ext === "pdf") return "PDF";
+  if (mime.includes("jpeg") || mime.includes("jpg") || ext === "jpg" || ext === "jpeg") return "JPG";
+  if (mime.includes("png") || ext === "png") return "PNG";
+  if (
+    mime.includes("wordprocessingml") ||
+    mime.includes("msword") ||
+    ext === "docx" ||
+    ext === "doc"
+  ) {
+    return "DOCX";
+  }
+  if (ext && /^[a-z0-9]+$/i.test(ext)) return ext.toUpperCase();
+  return "Datei";
+}
+
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
@@ -1077,7 +1099,7 @@ function AdminUnitDetailPage() {
   }
 
   async function handleDeleteUnitDocument(docId) {
-    const ok = window.confirm("Dieses Dokument wirklich löschen?");
+    const ok = window.confirm("Dokument wirklich löschen?");
     if (!ok) return;
     try {
       await deleteAdminUnitDocument(docId);
@@ -1324,6 +1346,7 @@ function AdminUnitDetailPage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="py-2 pr-4 font-medium">Datei</th>
+                    <th className="py-2 pr-4 font-medium">Typ</th>
                     <th className="py-2 pr-4 font-medium">Datum</th>
                     <th className="py-2 pr-4 font-medium">Aktionen</th>
                   </tr>
@@ -1332,6 +1355,7 @@ function AdminUnitDetailPage() {
                   {unitDocuments.map((doc) => (
                     <tr key={String(doc.id)} className="border-b border-slate-100">
                       <td className="py-2 pr-4 font-medium">{doc.file_name || "—"}</td>
+                      <td className="py-2 pr-4 text-slate-600">{formatUnitDocumentType(doc)}</td>
                       <td className="py-2 pr-4 text-slate-600">
                         {formatUnitDocumentDate(doc.created_at)}
                       </td>
