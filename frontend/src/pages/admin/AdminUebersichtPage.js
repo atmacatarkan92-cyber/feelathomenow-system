@@ -518,6 +518,21 @@ export default function AdminUebersichtPage() {
     [units, rooms, tenancies]
   );
 
+  const weakestUnitDisplayLabel = useMemo(() => {
+    const wu = operationsStats.weakestUnit;
+    if (!wu) return "";
+    const idx = units.findIndex(
+      (u) =>
+        String(u.id) === String(wu.unitId) ||
+        String(u.unitId) === String(wu.unitId)
+    );
+    if (idx >= 0) return getPortfolioUnitLabel(units[idx], idx);
+    return getPortfolioUnitLabel(
+      { unitId: wu.unitId, place: wu.place, city: wu.place },
+      -1
+    );
+  }, [operationsStats.weakestUnit, units]);
+
   const systemWarnings = useMemo(() => {
     const warnings = [];
     if (operationsStats.freeRooms > 0) {
@@ -545,7 +560,7 @@ export default function AdminUebersichtPage() {
       warnings.push({
         level: "danger",
         title: "Schwächste Unit",
-        text: `${operationsStats.weakestUnit.unitId} macht aktuell Verlust.`,
+        text: `${weakestUnitDisplayLabel || operationsStats.weakestUnit.unitId} macht aktuell Verlust.`,
       });
     }
     if (warnings.length === 0) {
@@ -556,7 +571,7 @@ export default function AdminUebersichtPage() {
       });
     }
     return warnings.slice(0, 4);
-  }, [operationsStats, invoiceStats]);
+  }, [operationsStats, invoiceStats, weakestUnitDisplayLabel]);
 
   return (
     <div data-testid="admin-dashboard-page" style={{ display: "grid", gap: "24px" }}>
@@ -807,22 +822,6 @@ export default function AdminUebersichtPage() {
               badge={kpis.availability?.profit === "exact" ? "Exakt" : "Geschätzt"}
             />
             <KpiKarte
-              titel="Beste Unit"
-              wert={kpis.summary_cards.best_unit ? `${kpis.summary_cards.best_unit.unit_title || kpis.summary_cards.best_unit.unit_id}` : "—"}
-              hinweis={kpis.summary_cards.best_unit ? `${formatCurrency(kpis.summary_cards.best_unit.value)} Gewinn` : "Keine Daten"}
-              farbe="#2563EB"
-              akzent="#93C5FD"
-              badge="Live"
-            />
-            <KpiKarte
-              titel="Schwächste Unit"
-              wert={kpis.summary_cards.weakest_unit ? `${kpis.summary_cards.weakest_unit.unit_title || kpis.summary_cards.weakest_unit.unit_id}` : "—"}
-              hinweis={kpis.summary_cards.weakest_unit ? `${formatCurrency(kpis.summary_cards.weakest_unit.value)} Gewinn` : "Keine Daten"}
-              farbe="#7C3AED"
-              akzent="#C4B5FD"
-              badge="Live"
-            />
-            <KpiKarte
               titel="Leerstand (Room-Tage)"
               wert={kpis.summary_cards.vacant_days_this_month?.value ?? "—"}
               hinweis={kpis.summary_cards.vacant_days_this_month?.note === "estimated" ? "Geschätzt (free_rooms × Tage)" : kpis.summary_cards.vacant_days_this_month?.note}
@@ -1069,7 +1068,7 @@ export default function AdminUebersichtPage() {
           wert={operationsStats.criticalUnits}
           hinweis={
             operationsStats.weakestUnit
-              ? `Schwächste Unit: ${operationsStats.weakestUnit.unitId}`
+              ? `Schwächste Unit: ${weakestUnitDisplayLabel || operationsStats.weakestUnit.unitId}`
               : "Keine kritischen Units erkannt"
           }
           farbe="#7C3AED"
