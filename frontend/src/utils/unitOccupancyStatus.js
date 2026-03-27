@@ -67,8 +67,10 @@ export function getUnitOccupancyStatus(unit, rooms, tenancies) {
   let occupiedRooms = 0;
   let futureRooms = 0;
   for (const room of unitRooms) {
-    const rid = String(room.roomId || room.id || "");
-    const roomT = unitTenancies.filter((t) => String(t.room_id) === rid);
+    const rid = String(room.room_id || room.roomId || room.id || "");
+    const roomT = unitTenancies.filter(
+      (t) => String(t.room_id || t.roomId || "") === rid
+    );
     const hasActive = roomT.some((tt) => isTenancyActiveByDates(tt, today));
     const hasFuture = roomT.some((tt) => isTenancyFuture(tt, today));
     if (hasActive) occupiedRooms++;
