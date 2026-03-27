@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from sqlmodel import Session, select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
+from db.audit import create_audit_log
 from db.models import Unit, UnitDocument, User
 from app.core.rate_limit import limiter
 from app.core.r2_storage import (
@@ -23,7 +24,23 @@ from app.core.r2_storage import (
 router = APIRouter(prefix="/api/admin", tags=["admin-unit-documents"])
 
 
-def _doc_to_dict(d: UnitDocument) -> dict[str, Any]:
+def _user_display_name(u: Optional[User]) -> str:
+    if not u:
+        return "—"
+    fn = (getattr(u, "first_name", None) or "").strip()
+    ln = (getattr(u, "last_name", None) or "").strip()
+    if fn and ln:
+        return f"{fn} {ln}"
+    full = (getattr(u, "full_name", None) or "").strip()
+    if full:
+        return full
+    em = (getattr(u, "email", None) or "").strip()
+    if em:
+        return em
+    return "—"
+
+
+def _doc_to_dict(d: UnitDocument, uploaded_by_name: Optional[str] = None) -> dict[str, Any]:
     return {
         "id": str(d.id),
         "organization_id": str(d.organization_id),
@@ -34,6 +51,7 @@ def _doc_to_dict(d: UnitDocument) -> dict[str, Any]:
         "mime_type": d.mime_type,
         "created_at": d.created_at.isoformat() if d.created_at else None,
         "uploaded_by": str(d.uploaded_by) if d.uploaded_by else None,
+        "uploaded_by_name": uploaded_by_name if uploaded_by_name is not None else "—",
     }
 
 
@@ -80,7 +98,20 @@ def admin_list_unit_documents(
             .order_by(UnitDocument.created_at.desc())
         ).all()
     )
-    return {"items": [_doc_to_dict(r) for r in rows]}
+    uploaded_ids = {str(r.uploaded_by) for r in rows if r.uploaded_by}
+    users_by_id: dict[str, User] = {}
+    if uploaded_ids:
+        id_list = list(uploaded_ids)
+        users = session.exec(select(User).where(User.id.in_(id_list))).all()
+        for u in users:
+            users_by_id[str(u.id)] = u
+
+    def name_for(doc: UnitDocument) -> str:
+        if not doc.uploaded_by:
+            return "—"
+        return _user_display_name(users_by_id.get(str(doc.uploaded_by)))
+
+    return {"items": [_doc_to_dict(r, name_for(r)) for r in rows]}
 
 
 @router.get("/unit-documents/{document_id}/download")
@@ -108,10 +139,12 @@ def admin_unit_document_download(
 def admin_delete_unit_document(
     document_id: str,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session: Session = Depends(get_db_session),
 ):
     doc = _get_document_for_org(session, document_id, org_id)
+    unit_id = str(doc.unit_id)
+    deleted_name = doc.file_name or ""
     key = _resolve_object_key(doc)
     if key:
         try:
@@ -120,6 +153,15 @@ def admin_delete_unit_document(
             pass
         except Exception as e:
             raise HTTPException(status_code=502, detail="Could not delete file from storage") from e
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "update",
+        "unit",
+        unit_id,
+        old_values={"document_deleted": deleted_name},
+        new_values=None,
+    )
     session.delete(doc)
     session.commit()
     return {"ok": True}
@@ -164,6 +206,15 @@ def admin_create_unit_document(
         uploaded_by=str(current_user.id),
     )
     session.add(doc)
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "update",
+        "unit",
+        str(unit_id),
+        old_values=None,
+        new_values={"document_uploaded": raw_name},
+    )
     session.commit()
     session.refresh(doc)
-    return _doc_to_dict(doc)
+    return _doc_to_dict(doc, _user_display_name(current_user))

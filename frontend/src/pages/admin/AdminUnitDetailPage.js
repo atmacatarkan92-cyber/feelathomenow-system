@@ -194,17 +194,38 @@ function formatAuditFieldValue(key, value, resolvers) {
 }
 
 function buildAuditUpdateLines(entry, resolvers) {
-  const oldV = entry.old_values;
-  const newV = entry.new_values;
-  if (!oldV || !newV) return ["Unit bearbeitet"];
+  const rawOld = entry.old_values;
+  const rawNew = entry.new_values;
+  const oldV =
+    rawOld != null && typeof rawOld === "object" && !Array.isArray(rawOld) ? rawOld : {};
+  const newV =
+    rawNew != null && typeof rawNew === "object" && !Array.isArray(rawNew) ? rawNew : {};
+
+  const docExtraLines = [];
+  if (newV.document_uploaded != null && String(newV.document_uploaded).trim() !== "") {
+    docExtraLines.push(`Dokument hochgeladen: ${String(newV.document_uploaded)}`);
+  }
+  if (oldV.document_deleted != null && String(oldV.document_deleted).trim() !== "") {
+    docExtraLines.push(`Dokument gelöscht: ${String(oldV.document_deleted)}`);
+  }
+
+  const hasOld = rawOld != null && typeof rawOld === "object" && !Array.isArray(rawOld);
+  const hasNew = rawNew != null && typeof rawNew === "object" && !Array.isArray(rawNew);
+  if (!hasOld || !hasNew) {
+    return docExtraLines.length ? ["Unit bearbeitet", ...docExtraLines] : ["Unit bearbeitet"];
+  }
+
   const keys = new Set([...Object.keys(oldV), ...Object.keys(newV)]);
   const changedKeys = [];
   for (const k of keys) {
+    if (k === "document_uploaded" || k === "document_deleted") continue;
     if (auditValuesEqual(oldV[k], newV[k])) continue;
     if (!UNIT_AUDIT_FIELD_LABELS[k]) continue;
     changedKeys.push(k);
   }
-  if (changedKeys.length === 0) return ["Unit bearbeitet"];
+  if (changedKeys.length === 0) {
+    return docExtraLines.length ? ["Unit bearbeitet", ...docExtraLines] : ["Unit bearbeitet"];
+  }
   const sorted = sortAuditChangedFieldKeys(changedKeys);
   const detailLines = sorted.map((k) => {
     const lbl = UNIT_AUDIT_FIELD_LABELS[k];
@@ -216,7 +237,7 @@ function buildAuditUpdateLines(entry, resolvers) {
     detailLines.length <= 3
       ? detailLines
       : [...detailLines.slice(0, 3), "Weitere Änderungen"];
-  return ["Unit bearbeitet", ...limited];
+  return ["Unit bearbeitet", ...docExtraLines, ...limited];
 }
 
 function getAuditEntryDisplayLines(entry, resolvers) {
@@ -1348,6 +1369,7 @@ function AdminUnitDetailPage() {
                     <th className="py-2 pr-4 font-medium">Datei</th>
                     <th className="py-2 pr-4 font-medium">Typ</th>
                     <th className="py-2 pr-4 font-medium">Datum</th>
+                    <th className="py-2 pr-4 font-medium">Von</th>
                     <th className="py-2 pr-4 font-medium">Aktionen</th>
                   </tr>
                 </thead>
@@ -1358,6 +1380,11 @@ function AdminUnitDetailPage() {
                       <td className="py-2 pr-4 text-slate-600">{formatUnitDocumentType(doc)}</td>
                       <td className="py-2 pr-4 text-slate-600">
                         {formatUnitDocumentDate(doc.created_at)}
+                      </td>
+                      <td className="py-2 pr-4 text-slate-600">
+                        {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
+                          ? doc.uploaded_by_name
+                          : "—"}
                       </td>
                       <td className="py-2 pr-4">
                         <div className="flex flex-wrap items-center gap-3">
