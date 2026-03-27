@@ -11,9 +11,80 @@ import {
   fetchAdminTenant,
   fetchAdminLandlord,
   fetchAdminPropertyManagers,
+  fetchAdminAuditLogs,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
+
+const UNIT_AUDIT_FIELD_LABELS = {
+  landlord_id: "Verwaltung",
+  property_manager_id: "Bewirtschafter",
+  property_id: "Liegenschaft",
+  title: "Titel",
+  address: "Adresse",
+  city: "Ort",
+  postal_code: "PLZ",
+  rooms: "Zimmeranzahl",
+  type: "Typ",
+  tenant_price_monthly_chf: "Mieterpreis",
+  landlord_rent_monthly_chf: "Mietkosten Vermieter",
+  utilities_monthly_chf: "Nebenkosten",
+  cleaning_cost_monthly_chf: "Reinigung",
+  occupancy_status: "Belegungsstatus",
+  occupied_rooms: "belegte Zimmer",
+  landlord_lease_start_date: "Mietstart Vermieter",
+  available_from: "Verfügbar ab",
+  landlord_deposit_type: "Kautionsart Vermieter",
+  landlord_deposit_amount: "Kaution Vermieter",
+  landlord_deposit_annual_premium: "Kautionsprämie",
+};
+
+function auditValuesEqual(a, b) {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function summarizeUnitAuditEntry(entry) {
+  const action = String(entry.action || "").toLowerCase();
+  if (action === "create") return "Unit erstellt";
+  if (action === "delete") return "Unit gelöscht";
+  const oldV = entry.old_values;
+  const newV = entry.new_values;
+  if (!oldV || !newV) return "Unit bearbeitet";
+  const keys = new Set([...Object.keys(oldV), ...Object.keys(newV)]);
+  const changedLabels = [];
+  for (const k of keys) {
+    if (!auditValuesEqual(oldV[k], newV[k])) {
+      const lbl = UNIT_AUDIT_FIELD_LABELS[k];
+      if (lbl) changedLabels.push(lbl);
+    }
+  }
+  if (changedLabels.length === 0) return "Unit bearbeitet";
+  if (changedLabels.length === 1) return `${changedLabels[0]} geändert`;
+  if (changedLabels.length <= 3) {
+    return changedLabels.map((l) => `${l} geändert`).join(", ");
+  }
+  return `${changedLabels.length} Felder geändert`;
+}
+
+function formatAuditTimestamp(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  return d.toLocaleString("de-CH", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+function auditActionLabel(action) {
+  const a = String(action || "").toLowerCase();
+  if (a === "create") return "Erstellt";
+  if (a === "delete") return "Gelöscht";
+  if (a === "update") return "Bearbeitet";
+  return action || "—";
+}
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -369,6 +440,9 @@ function AdminUnitDetailPage() {
   const [unit, setUnit] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogLoading, setAuditLogLoading] = useState(true);
+  const [auditLogError, setAuditLogError] = useState("");
   const [verwaltungLabel, setVerwaltungLabel] = useState("");
   const [bewirtschafterLabel, setBewirtschafterLabel] = useState("");
   const [linksResolving, setLinksResolving] = useState(false);
@@ -439,6 +513,19 @@ function AdminUnitDetailPage() {
     fetchAdminRooms(unitId)
       .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
       .catch(() => setRooms([]));
+  }, [unitId]);
+
+  useEffect(() => {
+    if (!unitId) return;
+    setAuditLogLoading(true);
+    setAuditLogError("");
+    fetchAdminAuditLogs({ entity_type: "unit", entity_id: unitId })
+      .then((data) => setAuditLogs(Array.isArray(data.items) ? data.items : []))
+      .catch((e) => {
+        setAuditLogError(e.message || "Fehler beim Laden des Verlaufs.");
+        setAuditLogs([]);
+      })
+      .finally(() => setAuditLogLoading(false));
   }, [unitId]);
 
   const [occupancyRoomsData, setOccupancyRoomsData] = useState(null);
@@ -1380,6 +1467,47 @@ function AdminUnitDetailPage() {
             <RoomCalendar unit={unit} rooms={unitRooms} />
           </SectionCard>
         )}
+
+        <SectionCard
+          title="Verlauf"
+          subtitle="Änderungen an dieser Unit (Audit-Log, neueste zuerst)"
+        >
+          {auditLogLoading ? (
+            <p className="text-sm text-slate-500">Lade Verlauf …</p>
+          ) : auditLogError ? (
+            <p className="text-sm text-red-600">{auditLogError}</p>
+          ) : auditLogs.length === 0 ? (
+            <p className="text-sm text-slate-500">Keine Aktivitäten vorhanden</p>
+          ) : (
+            <ul className="space-y-0 border-l border-slate-200 pl-4 ml-1">
+              {auditLogs.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="relative pb-4 last:pb-0 pl-2 -ml-px border-l border-transparent"
+                >
+                  <span
+                    className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-orange-500"
+                    aria-hidden
+                  />
+                  <p className="text-xs text-slate-500">
+                    {formatAuditTimestamp(entry.created_at)}
+                  </p>
+                  <p className="font-medium text-slate-800 mt-0.5">
+                    {summarizeUnitAuditEntry(entry)}
+                  </p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    {auditActionLabel(entry.action)}
+                    {" · "}
+                    {entry.actor_name ||
+                      entry.actor_email ||
+                      entry.actor_user_id ||
+                      "—"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
 
         {isRoomModalOpen && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">

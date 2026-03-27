@@ -100,6 +100,20 @@ export function fetchAdminUnit(id) {
   });
 }
 
+/**
+ * Audit log entries for an entity (e.g. unit). GET /api/admin/audit-logs
+ */
+export function fetchAdminAuditLogs(params) {
+  const sp = new URLSearchParams();
+  sp.set("entity_type", params.entity_type);
+  sp.set("entity_id", params.entity_id);
+  const url = `${API_BASE_URL}/api/admin/audit-logs?${sp.toString()}`;
+  return fetch(url, { headers: getApiHeaders() }).then((res) => {
+    if (!res.ok) throw new Error("Verlauf konnte nicht geladen werden.");
+    return res.json();
+  });
+}
+
 export async function createAdminUnit(body) {
   const res = await fetch(`${API_BASE_URL}/api/admin/units`, {
     method: "POST",
