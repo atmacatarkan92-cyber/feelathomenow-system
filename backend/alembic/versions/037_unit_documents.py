@@ -16,11 +16,33 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _organization_id_column_sa_type(conn) -> sa.types.TypeEngine:
+    """Match unit_documents.organization_id to live organization.id (UUID vs varchar drift)."""
+    r = conn.execute(
+        text(
+            """
+            SELECT data_type FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'organization'
+              AND column_name = 'id'
+            """
+        )
+    ).scalar()
+    if not r:
+        return sa.String()
+    dtl = str(r).lower()
+    if "uuid" in dtl:
+        return sa.UUID()
+    return sa.String()
+
+
 def upgrade() -> None:
+    conn = op.get_bind()
+    org_id_type = _organization_id_column_sa_type(conn)
     op.create_table(
         "unit_documents",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("organization_id", sa.UUID(), nullable=False),
+        sa.Column("organization_id", org_id_type, nullable=False),
         sa.Column("unit_id", sa.String(), nullable=False),
         sa.Column("file_name", sa.String(), nullable=True),
         sa.Column("file_url", sa.String(), nullable=False, server_default=""),
@@ -37,7 +59,6 @@ def upgrade() -> None:
     op.create_index("ix_unit_documents_unit_id", "unit_documents", ["unit_id"])
     op.create_index("ix_unit_documents_uploaded_by", "unit_documents", ["uploaded_by"])
 
-    conn = op.get_bind()
     conn.execute(text("ALTER TABLE unit_documents ENABLE ROW LEVEL SECURITY"))
     conn.execute(text("DROP POLICY IF EXISTS org_isolation_unit_documents ON unit_documents"))
     conn.execute(
