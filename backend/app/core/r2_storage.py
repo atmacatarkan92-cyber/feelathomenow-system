@@ -52,10 +52,13 @@ def build_object_key(unit_id: str, original_name: str) -> str:
 
 
 def public_object_url(object_key: str) -> str:
-    """Path-style URL for the object (R2 S3 API endpoint + bucket + key)."""
-    _, _, bucket, endpoint = _require_r2_config()
-    base = endpoint.rstrip("/")
-    return f"{base}/{bucket}/{object_key}"
+    """Public HTTPS URL for the object (R2_PUBLIC_URL, e.g. r2.dev or custom domain)."""
+    base = os.environ.get("R2_PUBLIC_URL", "").strip().rstrip("/")
+    if not base:
+        raise RuntimeError(
+            "R2_PUBLIC_URL is not set (required for public download links)"
+        )
+    return f"{base}/{object_key}"
 
 
 def upload_bytes(object_key: str, body: bytes, content_type: str | None) -> str:
