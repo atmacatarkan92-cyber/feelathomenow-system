@@ -3,8 +3,13 @@
  * Single source of truth for occupancy labels used in admin UI.
  */
 
+/** Calendar "today" in local timezone (YYYY-MM-DD), for date-only API fields. */
 export function getTodayIsoForOccupancy() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function parseIsoDate(raw) {
@@ -25,6 +30,33 @@ export function isTenancyActiveByDates(t, todayIso) {
 export function isTenancyFuture(t, todayIso) {
   const moveIn = parseIsoDate(t?.move_in_date);
   return moveIn != null && moveIn > todayIso;
+}
+
+/** Monthly rent from tenancy row (frontend field variants). */
+export function getTenancyMonthlyRentValue(t) {
+  const v = t?.monthly_rent ?? t?.rent_chf ?? t?.monthlyRent;
+  if (v == null || v === "") return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Sum of monthly rent for tenancies that are active on todayIso for this unit.
+ */
+export function sumActiveTenancyMonthlyRentForUnit(
+  unit,
+  tenancies,
+  todayIso = getTodayIsoForOccupancy()
+) {
+  if (!unit || !Array.isArray(tenancies)) return 0;
+  const uid = String(unit.unitId || unit.id || "");
+  let sum = 0;
+  for (const t of tenancies) {
+    if (String(t.unit_id || t.unitId) !== uid) continue;
+    if (!isTenancyActiveByDates(t, todayIso)) continue;
+    sum += getTenancyMonthlyRentValue(t);
+  }
+  return sum;
 }
 
 /**

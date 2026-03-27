@@ -28,6 +28,8 @@ import {
   getUnitContractState,
   getTodayIsoForOccupancy,
   parseIsoDate,
+  isTenancyActiveByDates,
+  sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
 
 const UNIT_AUDIT_FIELD_LABELS = {
@@ -316,10 +318,6 @@ function getRunningMonthlyCosts(unit) {
   );
 }
 
-function isTenancyActive(t) {
-  return String(t.status || "").toLowerCase() === "active";
-}
-
 function formatTenancyMoveIn(iso) {
   if (!iso) return "—";
   const s = String(iso);
@@ -446,12 +444,15 @@ function getCoLivingMetrics(unit, allRooms, tenancies) {
     0
   );
 
-  const currentRevenue = leaseStarted
-    ? occupiedRooms.reduce(
-        (sum, room) => sum + Number(room.priceMonthly || 0),
-        0
-      )
-    : 0;
+  const activeRentFromTenancies =
+    tenancies == null
+      ? 0
+      : sumActiveTenancyMonthlyRentForUnit(unit, tenancies);
+  const currentRevenue = activeRentFromTenancies;
+  const vacancyLoss =
+    fullRevenue != null
+      ? Math.max(0, Number(fullRevenue) - activeRentFromTenancies)
+      : 0;
 
   return {
     occupiedCount: occupiedRooms.length,
@@ -460,7 +461,7 @@ function getCoLivingMetrics(unit, allRooms, tenancies) {
     totalRooms: rooms.length,
     fullRevenue,
     currentRevenue,
-    vacancyLoss: leaseStarted ? fullRevenue - currentRevenue : 0,
+    vacancyLoss,
     currentProfit: null,
     runningCosts: null,
     leaseStarted,
@@ -897,7 +898,7 @@ function AdminUnitDetailPage() {
   const [occupancyRoomsData, setOccupancyRoomsData] = useState(null);
   useEffect(() => {
     if (!unitId) return;
-    const onDate = new Date().toISOString().slice(0, 10);
+    const onDate = getTodayIsoForOccupancy();
     fetchAdminOccupancyRooms({ unit_id: unitId, on_date: onDate })
       .then((data) => setOccupancyRoomsData(data))
       .catch(() => setOccupancyRoomsData(null));
@@ -916,7 +917,10 @@ function AdminUnitDetailPage() {
 
   useEffect(() => {
     if (!unitTenancies || !unitId) return;
-    const active = unitTenancies.filter(isTenancyActive);
+    const today = getTodayIsoForOccupancy();
+    const active = unitTenancies.filter((t) =>
+      isTenancyActiveByDates(t, today)
+    );
     const ids = [...new Set(active.map((t) => String(t.tenant_id)))];
     if (ids.length === 0) {
       setTenantNameMap({});
@@ -982,8 +986,14 @@ function AdminUnitDetailPage() {
 
   const activeUnitTenancies = useMemo(() => {
     if (!unitTenancies) return [];
-    return unitTenancies.filter(isTenancyActive);
-  }, [unitTenancies]);
+    const today = getTodayIsoForOccupancy();
+    const uid = String(safeUnit.unitId || safeUnit.id || "");
+    return unitTenancies.filter(
+      (t) =>
+        String(t.unit_id || t.unitId) === uid &&
+        isTenancyActiveByDates(t, today)
+    );
+  }, [unitTenancies, safeUnit.unitId, safeUnit.id]);
 
   const metrics = useMemo(() => {
     const base = getCoLivingMetrics(safeUnit, rooms, unitTenancies);
@@ -1000,19 +1010,17 @@ function AdminUnitDetailPage() {
       return base;
     }
 
-    const activeRentSum = activeUnitTenancies.reduce(
-      (sum, t) => sum + Number(t.monthly_rent || 0),
-      0
+    const activeRentSum = sumActiveTenancyMonthlyRentForUnit(
+      safeUnit,
+      unitTenancies
     );
-    const tenancyRevenueKpi = base.leaseStarted ? activeRentSum : 0;
+    const tenancyRevenueKpi = activeRentSum;
     const runningCosts = getRunningMonthlyCosts(safeUnit);
 
     if (isApt) {
       const occupied = activeUnitTenancies.length > 0;
       const profit =
-        base.leaseStarted && runningCosts != null
-          ? activeRentSum - runningCosts
-          : base.currentProfit;
+        runningCosts != null ? activeRentSum - runningCosts : null;
       return {
         ...base,
         currentRevenue: tenancyRevenueKpi,
@@ -1030,17 +1038,15 @@ function AdminUnitDetailPage() {
     }
 
     const profit =
-      base.leaseStarted && runningCosts != null
-        ? activeRentSum - runningCosts
-        : base.currentProfit;
+      runningCosts != null ? activeRentSum - runningCosts : null;
     return {
       ...base,
       currentRevenue: tenancyRevenueKpi,
       runningCosts,
       currentProfit: profit,
       vacancyLoss:
-        base.fullRevenue != null && base.leaseStarted
-          ? base.fullRevenue - activeRentSum
+        base.fullRevenue != null
+          ? Math.max(0, Number(base.fullRevenue) - activeRentSum)
           : base.vacancyLoss,
       apartmentTenanciesLoaded: true,
     };
