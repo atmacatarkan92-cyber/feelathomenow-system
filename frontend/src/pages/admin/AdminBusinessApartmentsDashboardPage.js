@@ -21,7 +21,10 @@ import {
   normalizeRoom,
   sanitizeClientErrorMessage,
 } from "../../api/adminData";
-import { getUnitOccupancyStatus } from "../../utils/unitOccupancyStatus";
+import {
+  getUnitOccupancyStatus,
+  isLandlordContractLeaseStarted,
+} from "../../utils/unitOccupancyStatus";
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -363,12 +366,15 @@ function AdminBusinessApartmentsDashboardPage() {
     const performance = filteredUnits.map((unit) => {
       const uid = String(unit.id ?? "");
       const uAlt = String(unit.unitId ?? "");
-      const fin =
+      const finRaw =
         latestUnitProfit[uid] || latestUnitProfit[uAlt] || {
           revenue: null,
           costs: null,
           profit: null,
         };
+      const fin = !isLandlordContractLeaseStarted(unit)
+        ? { revenue: null, costs: null, profit: null }
+        : finRaw;
 
       const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
       const occupied = occ === "belegt";

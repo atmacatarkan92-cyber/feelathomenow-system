@@ -24,6 +24,9 @@ import {
   formatOccupancyStatusDe,
   occupancyStatusBadgeTone,
   isLandlordContractLeaseStarted,
+  getUnitContractState,
+  getTodayIsoForOccupancy,
+  parseIsoDate,
 } from "../../utils/unitOccupancyStatus";
 
 const UNIT_AUDIT_FIELD_LABELS = {
@@ -566,25 +569,55 @@ function getStatusTone(status) {
   return "slate";
 }
 
-function buildUnitWarnings(unit, rooms, metrics) {
+function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
   const warnings = [];
   const isApartment = unit.type === "Apartment";
 
-  const lt = String(unit.leaseType ?? unit.lease_type ?? "").trim();
-  const ls = String(unit.leaseStatus ?? unit.lease_status ?? "").trim();
+  const contractState = getUnitContractState(unit);
+  const occ =
+    unitTenancies != null
+      ? getUnitOccupancyStatus(unit, rooms, unitTenancies)
+      : null;
   const led = unit.leaseEndDate ?? unit.lease_end_date;
+
+  if (
+    contractState === "expiring_soon" &&
+    occ != null &&
+    (occ === "belegt" || occ === "teilbelegt")
+  ) {
+    const x = calendarDaysUntil(led);
+    const days = x != null && x >= 0 ? x : 0;
+    warnings.push({
+      tone: "amber",
+      text: `Einheit ist belegt, aber Vertrag endet in ${days} Tagen`,
+    });
+  }
+
+  if (contractState === "ended" && occ != null && occ !== "frei") {
+    warnings.push({
+      tone: "rose",
+      text: "Vertrag beendet, aber Einheit ist noch belegt",
+    });
+  }
+
+  if (contractState === "expired") {
+    warnings.push({
+      tone: "amber",
+      text: "Vertrag ist abgelaufen, aber noch nicht beendet",
+    });
+  }
+
+  if (contractState === "unknown") {
+    warnings.push({
+      tone: "slate",
+      text: "Kein Mietbeginn für Vermieter gesetzt",
+    });
+  }
+
+  const ls = String(unit.leaseStatus ?? unit.lease_status ?? "").trim();
   const ted = unit.terminationEffectiveDate ?? unit.termination_effective_date;
   const rtd = unit.returnedToLandlordDate ?? unit.returned_to_landlord_date;
 
-  if (lt === "fixed_term" && led) {
-    const d = calendarDaysUntil(led);
-    if (d != null && d >= 0 && d <= 90) {
-      warnings.push({
-        tone: "amber",
-        text: `Befristeter Vertrag läuft in ${d} Tagen ab`,
-      });
-    }
-  }
   if (ls === "notice_given") {
     warnings.push({ tone: "amber", text: "Unit ist gekündigt" });
   }
@@ -604,14 +637,28 @@ function buildUnitWarnings(unit, rooms, metrics) {
     });
   }
 
-  if (!metrics.leaseStarted && metrics.currentRevenue <= 0) {
+  const leaseStartIso = parseIsoDate(
+    unit?.leaseStartDate ?? unit?.lease_start_date
+  );
+  const todayIso = getTodayIsoForOccupancy();
+  if (
+    contractState !== "unknown" &&
+    !metrics.leaseStarted &&
+    metrics.currentRevenue <= 0 &&
+    leaseStartIso != null &&
+    leaseStartIso > todayIso
+  ) {
     warnings.push({
       tone: "rose",
       text: "Mietbeginn (Vertrag Vermieter) liegt in der Zukunft und aktuell ist noch kein Umsatz gesichert.",
     });
   }
 
-  if (metrics.currentRevenue != null && metrics.currentRevenue <= 0) {
+  if (
+    contractState !== "unknown" &&
+    metrics.currentRevenue != null &&
+    metrics.currentRevenue <= 0
+  ) {
     warnings.push({
       tone: "rose",
       text: "Keine aktuellen Einnahmen vorhanden.",
@@ -931,6 +978,7 @@ function AdminUnitDetailPage() {
       (sum, t) => sum + Number(t.monthly_rent || 0),
       0
     );
+    const tenancyRevenueKpi = base.leaseStarted ? activeRentSum : 0;
     const runningCosts = getRunningMonthlyCosts(safeUnit);
 
     if (isApt) {
@@ -941,10 +989,10 @@ function AdminUnitDetailPage() {
           : base.currentProfit;
       return {
         ...base,
-        currentRevenue: activeRentSum,
+        currentRevenue: tenancyRevenueKpi,
         runningCosts,
         currentProfit: profit,
-        fullRevenue: activeRentSum,
+        fullRevenue: tenancyRevenueKpi,
         occupiedCount: occupied ? 1 : 0,
         freeCount: occupied ? 0 : 1,
         reservedCount: 0,
@@ -961,7 +1009,7 @@ function AdminUnitDetailPage() {
         : base.currentProfit;
     return {
       ...base,
-      currentRevenue: activeRentSum,
+      currentRevenue: tenancyRevenueKpi,
       runningCosts,
       currentProfit: profit,
       vacancyLoss:
@@ -978,8 +1026,13 @@ function AdminUnitDetailPage() {
       : 0;
 
   const unitWarnings = useMemo(() => {
-    return buildUnitWarnings(safeUnit, unitRooms, metrics);
-  }, [safeUnit, unitRooms, metrics]);
+    return buildUnitWarnings(safeUnit, unitRooms, metrics, unitTenancies);
+  }, [safeUnit, unitRooms, metrics, unitTenancies]);
+
+  const unitContractState = useMemo(
+    () => getUnitContractState(safeUnit),
+    [safeUnit]
+  );
 
   const derivedUnitOccupancy = useMemo(
     () => getUnitOccupancyStatus(unit, rooms, unitTenancies),
@@ -1271,6 +1324,19 @@ function AdminUnitDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {unitContractState === "expiring_soon" ? (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">
+                Vertrag endet bald
+              </span>
+            ) : unitContractState === "expired" ? (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-800">
+                Vertrag abgelaufen
+              </span>
+            ) : unitContractState === "unknown" ? (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+                Mietbeginn offen
+              </span>
+            ) : null}
             {derivedUnitOccupancy == null ? (
               <span className="text-slate-400 text-sm">—</span>
             ) : (
@@ -1723,14 +1789,18 @@ function AdminUnitDetailPage() {
                 className={`rounded-2xl border p-4 ${
                   warning.tone === "rose"
                     ? "border-rose-200 bg-rose-50"
-                    : "border-amber-200 bg-amber-50"
+                    : warning.tone === "slate"
+                      ? "border-slate-200 bg-slate-50"
+                      : "border-amber-200 bg-amber-50"
                 }`}
               >
                 <p
                   className={`text-sm font-medium ${
                     warning.tone === "rose"
                       ? "text-rose-700"
-                      : "text-amber-700"
+                      : warning.tone === "slate"
+                        ? "text-slate-700"
+                        : "text-amber-700"
                   }`}
                 >
                   {warning.text}

@@ -719,6 +719,7 @@ function AdminApartmentsPage() {
 
     const currentRevenue = filteredUnits.reduce((sum, unit) => {
       if (unit.type === "Apartment") {
+        if (!isLandlordContractLeaseStarted(unit)) return sum;
         return sum + Number(unit.tenantPriceMonthly || 0);
       }
 

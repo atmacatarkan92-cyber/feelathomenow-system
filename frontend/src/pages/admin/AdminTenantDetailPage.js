@@ -22,6 +22,7 @@ import {
 import { API_BASE_URL, getApiHeaders } from "../../config";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
 import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
+import { UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE } from "../../utils/unitOccupancyStatus";
 
 async function parseAdminErrorFromResponse(res) {
   const text = await res.text();
@@ -899,6 +900,14 @@ export default function AdminTenantDetailPage() {
     const rent = Number(String(assignMonthlyRent).replace(",", "."));
     if (Number.isNaN(rent) || rent < 0) {
       setAssignErr("Bitte eine gültige Monatsmiete angeben.");
+      return;
+    }
+    const assignUnit = assignUnits.find((x) => String(x.id) === String(assignUnitId));
+    if (
+      assignUnit &&
+      String(assignUnit.leaseStatus ?? assignUnit.lease_status ?? "").trim() === "ended"
+    ) {
+      setAssignErr(UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE);
       return;
     }
     const apiStatus = assignStatus === "upcoming" ? "reserved" : assignStatus;

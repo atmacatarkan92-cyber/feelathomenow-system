@@ -115,13 +115,52 @@ export function occupancyStatusBadgeClassName(statusKey) {
 }
 
 /**
- * Landlord contract lease start (Vertrag Vermieter). Empty / missing → treated as “started” for KPIs.
+ * Landlord contract lease start (Vertrag Vermieter).
+ * Missing lease_start_date → not started (exclude from revenue / active KPIs).
  */
 export function isLandlordContractLeaseStarted(
   unit,
   todayIso = getTodayIsoForOccupancy()
 ) {
   const d = parseIsoDate(unit?.leaseStartDate ?? unit?.lease_start_date);
-  if (d == null) return true;
+  if (d == null) return false;
   return d <= todayIso;
 }
+
+function isoDateAddDays(iso, days) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
+  const y = Number(iso.slice(0, 4));
+  const m = Number(iso.slice(5, 7)) - 1;
+  const day = Number(iso.slice(8, 10));
+  const dt = new Date(Date.UTC(y, m, day));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+/**
+ * Single contract state for Vertrag Vermieter (deterministic order).
+ * @returns {"active"|"expiring_soon"|"expired"|"ended"|"unknown"}
+ */
+export function getUnitContractState(unit) {
+  if (!unit) return "unknown";
+  const ls = String(unit.leaseStatus ?? unit.lease_status ?? "").trim();
+  if (ls === "ended") return "ended";
+
+  const start = parseIsoDate(unit?.leaseStartDate ?? unit?.lease_start_date);
+  if (start == null) return "unknown";
+
+  const today = getTodayIsoForOccupancy();
+  const end = parseIsoDate(unit?.leaseEndDate ?? unit?.lease_end_date);
+  if (end != null && end < today) return "expired";
+
+  if (end != null) {
+    const limit = isoDateAddDays(today, 60);
+    if (limit != null && end <= limit) return "expiring_soon";
+  }
+
+  return "active";
+}
+
+/** Block new tenancies when landlord lease contract is ended (frontend-only). */
+export const UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE =
+  "Diese Einheit ist beendet (Vertrag Vermieter). Es können keine neuen Mietverhältnisse erstellt werden.";
