@@ -385,6 +385,8 @@ export function normalizeUnit(u) {
       u.landlordDepositAmount ?? u.landlord_deposit_amount ?? "",
     landlordDepositAnnualPremium:
       u.landlordDepositAnnualPremium ?? u.landlord_deposit_annual_premium ?? "",
+    landlord_id: u.landlord_id ?? null,
+    property_manager_id: u.property_manager_id ?? null,
   };
 }
 
@@ -584,6 +586,42 @@ export function updateAdminLandlord(id, body) {
     if (!res.ok) throw new Error("Verwaltung konnte nicht gespeichert werden.");
     return res.json();
   });
+}
+
+/**
+ * Property managers (Bewirtschafter). List; create/update for admin page.
+ */
+export function fetchAdminPropertyManagers() {
+  return fetch(`${API_BASE_URL}/api/admin/property-managers`, {
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) throw new Error("Bewirtschafter konnten nicht geladen werden.");
+    return res.json();
+  });
+}
+
+export async function createAdminPropertyManager(body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/property-managers`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export async function patchAdminPropertyManager(id, body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
 }
 
 /**

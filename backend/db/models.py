@@ -54,6 +54,22 @@ class Landlord(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
 
 
+class PropertyManager(SQLModel, table=True):
+    """
+    Bewirtschafter (property manager contact). Org-scoped; optional link to a Verwaltung (Landlord).
+    """
+
+    __tablename__ = "property_managers"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    landlord_id: Optional[str] = Field(default=None, foreign_key="landlords.id", index=True)
+    name: str = Field(default="")
+    email: Optional[str] = Field(default=None)
+    phone: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Property(SQLModel, table=True):
     __tablename__ = "properties"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
@@ -90,6 +106,10 @@ class Unit(SQLModel, table=True):
     type: Optional[str] = Field(default=None, max_length=50)
     city_id: Optional[str] = Field(default=None, foreign_key="cities.id", index=True)
     property_id: Optional[str] = Field(default=None, foreign_key="properties.id", index=True)
+    landlord_id: Optional[str] = Field(default=None, foreign_key="landlords.id", index=True)
+    property_manager_id: Optional[str] = Field(
+        default=None, foreign_key="property_managers.id", index=True
+    )
     tenant_price_monthly_chf: float = Field(default=0)
     landlord_rent_monthly_chf: float = Field(default=0)
     utilities_monthly_chf: float = Field(default=0)

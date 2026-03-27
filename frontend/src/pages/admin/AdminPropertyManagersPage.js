@@ -1,68 +1,13 @@
-import React, { useMemo, useState } from "react";
-
-function getFallbackPropertyManagers() {
-  return [
-    {
-      id: 1,
-      salutation: "Herr",
-      first_name: "Marco",
-      last_name: "Keller",
-      email: "marco.keller@abc-immobilien.ch",
-      phone: "+41 44 111 22 33",
-      management_company: "ABC Immobilien AG",
-      city: "Zürich",
-      status: "aktiv",
-      units_count: 18,
-      last_contact: "2026-03-10",
-      notes: "Hauptansprechpartner für Zürich.",
-    },
-    {
-      id: 2,
-      salutation: "Frau",
-      first_name: "Selin",
-      last_name: "Aydin",
-      email: "selin.aydin@urbanliving.ch",
-      phone: "+41 61 222 33 44",
-      management_company: "Urban Living Verwaltung GmbH",
-      city: "Basel",
-      status: "in Verhandlung",
-      units_count: 9,
-      last_contact: "2026-03-08",
-      notes: "Interesse an Co-Living Konzept.",
-    },
-    {
-      id: 3,
-      salutation: "Herr",
-      first_name: "David",
-      last_name: "Meier",
-      email: "d.meier@swisspm.ch",
-      phone: "+41 31 555 66 77",
-      management_company: "Swiss Property Management",
-      city: "Bern",
-      status: "Lead",
-      units_count: 6,
-      last_contact: "2026-02-27",
-      notes: "Follow-up offen.",
-    },
-    {
-      id: 4,
-      salutation: "Frau",
-      first_name: "Petra",
-      last_name: "Baumann",
-      email: "petra.baumann@immocenter.ch",
-      phone: "+41 41 777 88 99",
-      management_company: "ImmoCenter Schötz",
-      city: "Schötz",
-      status: "aktiv",
-      units_count: 14,
-      last_contact: "2026-03-05",
-      notes: "Bestehende Zusammenarbeit.",
-    },
-  ];
-}
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  fetchAdminPropertyManagers,
+  fetchAdminLandlords,
+  createAdminPropertyManager,
+  patchAdminPropertyManager,
+} from "../../api/adminData";
 
 function formatDate(dateString) {
-  if (!dateString) return "-";
+  if (!dateString) return "—";
 
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
@@ -74,55 +19,11 @@ function formatDate(dateString) {
   });
 }
 
-function getStatusMeta(status) {
-  const normalized = String(status || "").toLowerCase();
-
-  if (normalized === "aktiv" || normalized === "active") {
-    return {
-      label: "Aktiv",
-      bg: "#DCFCE7",
-      color: "#166534",
-      border: "#86EFAC",
-    };
-  }
-
-  if (
-    normalized === "in verhandlung" ||
-    normalized === "verhandlung" ||
-    normalized === "negotiation"
-  ) {
-    return {
-      label: "In Verhandlung",
-      bg: "#FEF3C7",
-      color: "#92400E",
-      border: "#FCD34D",
-    };
-  }
-
-  if (normalized === "lead") {
-    return {
-      label: "Lead",
-      bg: "#DBEAFE",
-      color: "#1D4ED8",
-      border: "#93C5FD",
-    };
-  }
-
-  if (normalized === "inaktiv" || normalized === "inactive") {
-    return {
-      label: "Inaktiv",
-      bg: "#E5E7EB",
-      color: "#374151",
-      border: "#D1D5DB",
-    };
-  }
-
-  return {
-    label: status || "Offen",
-    bg: "#F1F5F9",
-    color: "#475569",
-    border: "#CBD5E1",
-  };
+function landlordLabel(l) {
+  const c = String(l.company_name || "").trim();
+  const n = String(l.contact_name || "").trim();
+  if (c && n) return `${c} — ${n}`;
+  return c || n || String(l.email || "").trim() || l.id;
 }
 
 function getCardStyle(accentColor) {
@@ -136,103 +37,123 @@ function getCardStyle(accentColor) {
   };
 }
 
-function buildRows(propertyManagers) {
-  return propertyManagers.map((item) => {
-    const fullName = [item.salutation, item.first_name, item.last_name]
-      .filter(Boolean)
-      .join(" ");
-
-    return {
-      ...item,
-      fullName,
-    };
-  });
-}
-
 function AdminPropertyManagersPage() {
+  const [items, setItems] = useState([]);
+  const [landlords, setLandlords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [cityFilter, setCityFilter] = useState("all");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    landlord_id: "",
+  });
+  const [saving, setSaving] = useState(false);
 
-  const propertyManagers = useMemo(() => {
-    const saved = localStorage.getItem("fah_property_managers");
-    return saved ? JSON.parse(saved) : getFallbackPropertyManagers();
+  const landlordById = useMemo(() => {
+    const m = new Map();
+    landlords.forEach((l) => m.set(l.id, l));
+    return m;
+  }, [landlords]);
+
+  const load = (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
+    setError("");
+    Promise.all([fetchAdminPropertyManagers(), fetchAdminLandlords()])
+      .then(([pms, lls]) => {
+        setItems(Array.isArray(pms) ? pms : []);
+        setLandlords(Array.isArray(lls) ? lls : []);
+      })
+      .catch((e) => {
+        setError(e.message || "Fehler beim Laden.");
+        setItems([]);
+        setLandlords([]);
+      })
+      .finally(() => {
+        if (showSpinner) setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    load(true);
   }, []);
 
-  const rows = useMemo(() => buildRows(propertyManagers), [propertyManagers]);
+  const openCreate = () => {
+    setError("");
+    setEditingId(null);
+    setForm({
+      name: "",
+      email: "",
+      phone: "",
+      landlord_id: "",
+    });
+    setFormOpen(true);
+  };
 
-  const cityOptions = useMemo(() => {
-    const cities = [...new Set(rows.map((item) => item.city).filter(Boolean))];
-    return cities.sort((a, b) => a.localeCompare(b));
-  }, [rows]);
+  const openEdit = (row) => {
+    setError("");
+    setEditingId(row.id);
+    setForm({
+      name: row.name || "",
+      email: row.email || "",
+      phone: row.phone || "",
+      landlord_id: row.landlord_id || "",
+    });
+    setFormOpen(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    const body = {
+      name: form.name.trim(),
+      email: form.email.trim() || null,
+      phone: form.phone.trim() || null,
+      landlord_id: form.landlord_id.trim() || null,
+    };
+    const promise = editingId
+      ? patchAdminPropertyManager(editingId, body)
+      : createAdminPropertyManager(body);
+    promise
+      .then(() => {
+        setFormOpen(false);
+        load(false);
+      })
+      .catch((err) => setError(err.message || "Speichern fehlgeschlagen."))
+      .finally(() => setSaving(false));
+  };
 
   const filteredRows = useMemo(() => {
-    let result = [...rows];
-
-    if (statusFilter !== "all") {
-      result = result.filter(
-        (item) => String(item.status || "").toLowerCase() === statusFilter
-      );
-    }
-
-    if (cityFilter !== "all") {
-      result = result.filter(
-        (item) => String(item.city || "").toLowerCase() === cityFilter
-      );
-    }
-
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-
-      result = result.filter((item) => {
-        return (
-          String(item.fullName || "").toLowerCase().includes(term) ||
-          String(item.first_name || "").toLowerCase().includes(term) ||
-          String(item.last_name || "").toLowerCase().includes(term) ||
-          String(item.email || "").toLowerCase().includes(term) ||
-          String(item.phone || "").toLowerCase().includes(term) ||
-          String(item.management_company || "").toLowerCase().includes(term) ||
-          String(item.city || "").toLowerCase().includes(term)
-        );
-      });
-    }
-
-    return result;
-  }, [rows, searchTerm, statusFilter, cityFilter]);
+    let result = [...items];
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return result;
+    return result.filter((item) => {
+      const ll = item.landlord_id ? landlordById.get(item.landlord_id) : null;
+      const landlordStr = ll ? landlordLabel(ll) : "";
+      const blob = `${item.name || ""} ${item.email || ""} ${item.phone || ""} ${landlordStr}`.toLowerCase();
+      return blob.includes(term);
+    });
+  }, [items, searchTerm, landlordById]);
 
   const summary = useMemo(() => {
-    const activeCount = rows.filter((item) => {
-      const status = String(item.status || "").toLowerCase();
-      return status === "aktiv" || status === "active";
-    }).length;
+    const totalCount = items.length;
+    const withLandlord = items.filter((i) => i.landlord_id).length;
+    const withEmail = items.filter((i) => String(i.email || "").trim()).length;
+    const withoutLandlord = totalCount - withLandlord;
+    return { totalCount, withLandlord, withEmail, withoutLandlord };
+  }, [items]);
 
-    const negotiationCount = rows.filter((item) => {
-      const status = String(item.status || "").toLowerCase();
-      return (
-        status === "in verhandlung" ||
-        status === "verhandlung" ||
-        status === "negotiation"
-      );
-    }).length;
-
-    const leadCount = rows.filter((item) => {
-      const status = String(item.status || "").toLowerCase();
-      return status === "lead";
-    }).length;
-
-    const totalUnits = rows.reduce(
-      (sum, item) => sum + Number(item.units_count || 0),
-      0
+  if (loading) {
+    return (
+      <div style={{ padding: "24px" }}>
+        <p style={{ color: "#64748B" }}>Lade Bewirtschafter …</p>
+      </div>
     );
-
-    return {
-      totalCount: rows.length,
-      activeCount,
-      negotiationCount,
-      leadCount,
-      totalUnits,
-    };
-  }, [rows]);
+  }
 
   return (
     <div style={{ display: "grid", gap: "24px" }}>
@@ -253,10 +174,24 @@ function AdminPropertyManagersPage() {
         </h2>
 
         <p style={{ color: "#64748B", marginTop: "10px" }}>
-          Übersicht über Bewirtschafter, Ansprechpartner, Städte und zugeordnete
-          Units.
+          Verwaltung von Bewirtschafter-Kontakten (PostgreSQL).
         </p>
       </div>
+
+      {error && (
+        <div
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            borderRadius: "12px",
+            padding: "12px 16px",
+            color: "#B91C1C",
+            fontSize: "14px",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       <div
         style={{
@@ -279,37 +214,37 @@ function AdminPropertyManagersPage() {
 
         <div style={getCardStyle("#16A34A")}>
           <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Aktiv
+            Mit Verwaltung
           </div>
           <div style={{ fontSize: "34px", fontWeight: 800, color: "#166534" }}>
-            {summary.activeCount}
+            {summary.withLandlord}
           </div>
           <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Laufende Kontakte
+            Verwaltung verknüpft
           </div>
         </div>
 
         <div style={getCardStyle("#F59E0B")}>
           <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            In Verhandlung
+            Ohne Verwaltung
           </div>
           <div style={{ fontSize: "34px", fontWeight: 800, color: "#92400E" }}>
-            {summary.negotiationCount}
+            {summary.withoutLandlord}
           </div>
           <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Potenzielle Partner
+            Noch keine Verwaltung
           </div>
         </div>
 
         <div style={getCardStyle("#2563EB")}>
           <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Zugeordnete Units
+            Mit E-Mail
           </div>
           <div style={{ fontSize: "34px", fontWeight: 800, color: "#1D4ED8" }}>
-            {summary.totalUnits}
+            {summary.withEmail}
           </div>
           <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Gesamt über alle Bewirtschafter
+            E-Mail hinterlegt
           </div>
         </div>
       </div>
@@ -325,12 +260,14 @@ function AdminPropertyManagersPage() {
       >
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr",
+            display: "flex",
+            flexWrap: "wrap",
             gap: "16px",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
           }}
         >
-          <div>
+          <div style={{ flex: "1 1 280px", minWidth: 0 }}>
             <label
               style={{
                 display: "block",
@@ -344,7 +281,7 @@ function AdminPropertyManagersPage() {
             </label>
             <input
               type="text"
-              placeholder="Nach Name, Verwaltung, E-Mail, Telefon oder Stadt suchen"
+              placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -357,73 +294,23 @@ function AdminPropertyManagersPage() {
               }}
             />
           </div>
-
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "12px",
-                color: "#64748B",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
-            >
-              Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                width: "100%",
-                height: "44px",
-                borderRadius: "12px",
-                border: "1px solid #D1D5DB",
-                padding: "0 14px",
-                fontSize: "14px",
-                background: "#fff",
-              }}
-            >
-              <option value="all">Alle Status</option>
-              <option value="aktiv">Aktiv</option>
-              <option value="in verhandlung">In Verhandlung</option>
-              <option value="lead">Lead</option>
-              <option value="inaktiv">Inaktiv</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "12px",
-                color: "#64748B",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
-            >
-              Ort
-            </label>
-            <select
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-              style={{
-                width: "100%",
-                height: "44px",
-                borderRadius: "12px",
-                border: "1px solid #D1D5DB",
-                padding: "0 14px",
-                fontSize: "14px",
-                background: "#fff",
-              }}
-            >
-              <option value="all">Alle Orte</option>
-              {cityOptions.map((city) => (
-                <option key={city} value={city.toLowerCase()}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            style={{
+              height: "44px",
+              padding: "0 18px",
+              borderRadius: "12px",
+              border: "none",
+              background: "#0F172A",
+              color: "#FFF",
+              fontWeight: 600,
+              fontSize: "14px",
+              cursor: "pointer",
+            }}
+          >
+            + Neuer Bewirtschafter
+          </button>
         </div>
       </div>
 
@@ -455,7 +342,7 @@ function AdminPropertyManagersPage() {
         </div>
 
         {filteredRows.length === 0 ? (
-          <p>Keine Bewirtschafter gefunden.</p>
+          <p style={{ color: "#64748B" }}>Keine Bewirtschafter gefunden.</p>
         ) : (
           <table
             style={{
@@ -472,76 +359,44 @@ function AdminPropertyManagersPage() {
                   color: "#64748B",
                 }}
               >
-                <th style={{ padding: "12px" }}>Bewirtschafter</th>
+                <th style={{ padding: "12px" }}>Name</th>
+                <th style={{ padding: "12px" }}>E-Mail</th>
+                <th style={{ padding: "12px" }}>Telefon</th>
                 <th style={{ padding: "12px" }}>Verwaltung</th>
-                <th style={{ padding: "12px" }}>Kontakt</th>
-                <th style={{ padding: "12px" }}>Ort</th>
-                <th style={{ padding: "12px" }}>Units</th>
-                <th style={{ padding: "12px" }}>Letzter Kontakt</th>
-                <th style={{ padding: "12px" }}>Status</th>
+                <th style={{ padding: "12px" }}>Erstellt</th>
+                <th style={{ padding: "12px" }}></th>
               </tr>
             </thead>
 
             <tbody>
               {filteredRows.map((item) => {
-                const statusMeta = getStatusMeta(item.status);
-
+                const ll = item.landlord_id ? landlordById.get(item.landlord_id) : null;
                 return (
                   <tr key={item.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                    <td style={{ padding: "12px" }}>
-                      <div style={{ fontWeight: 700, color: "#0F172A" }}>
-                        {item.fullName}
-                      </div>
-                      {item.notes ? (
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            color: "#64748B",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {item.notes}
-                        </div>
-                      ) : null}
+                    <td style={{ padding: "12px", fontWeight: 700, color: "#0F172A" }}>
+                      {item.name || "—"}
                     </td>
-
+                    <td style={{ padding: "12px" }}>{item.email || "—"}</td>
+                    <td style={{ padding: "12px" }}>{item.phone || "—"}</td>
                     <td style={{ padding: "12px", fontWeight: 600 }}>
-                      {item.management_company || "-"}
+                      {ll ? landlordLabel(ll) : "—"}
                     </td>
-
+                    <td style={{ padding: "12px" }}>{formatDate(item.created_at)}</td>
                     <td style={{ padding: "12px" }}>
-                      <div>{item.email || "-"}</div>
-                      <div
+                      <button
+                        type="button"
+                        onClick={() => openEdit(item)}
                         style={{
-                          fontSize: "12px",
-                          color: "#64748B",
-                          marginTop: "4px",
+                          padding: "6px 12px",
+                          background: "#F1F5F9",
+                          border: "1px solid #E2E8F0",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontSize: "13px",
                         }}
                       >
-                        {item.phone || "-"}
-                      </div>
-                    </td>
-
-                    <td style={{ padding: "12px" }}>{item.city || "-"}</td>
-                    <td style={{ padding: "12px" }}>{item.units_count || 0}</td>
-                    <td style={{ padding: "12px" }}>{formatDate(item.last_contact)}</td>
-
-                    <td style={{ padding: "12px" }}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          padding: "6px 10px",
-                          borderRadius: "999px",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          background: statusMeta.bg,
-                          color: statusMeta.color,
-                          border: `1px solid ${statusMeta.border}`,
-                        }}
-                      >
-                        {statusMeta.label}
-                      </span>
+                        Bearbeiten
+                      </button>
                     </td>
                   </tr>
                 );
@@ -551,20 +406,181 @@ function AdminPropertyManagersPage() {
         )}
       </div>
 
-      <div
-        style={{
-          background: "#FFFBEB",
-          border: "1px solid #FDE68A",
-          borderRadius: "18px",
-          padding: "18px 20px",
-          color: "#92400E",
-          fontSize: "14px",
-          fontWeight: 500,
-        }}
-      >
-        Diese Seite ist bereits so aufgebaut, dass später die PostgreSQL-Tabelle
-        <strong> property_managers </strong> direkt angebunden werden kann.
-      </div>
+      {formOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+          onClick={() => !saving && setFormOpen(false)}
+        >
+          <div
+            style={{
+              background: "#FFF",
+              padding: "24px",
+              borderRadius: "18px",
+              maxWidth: "440px",
+              width: "100%",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+              border: "1px solid #E5E7EB",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginBottom: "16px", fontSize: "20px", fontWeight: 700 }}>
+              {editingId ? "Bewirtschafter bearbeiten" : "Neuer Bewirtschafter"}
+            </h3>
+            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "14px" }}>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "6px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#475569",
+                  }}
+                >
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "12px",
+                    border: "1px solid #D1D5DB",
+                    fontSize: "14px",
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "6px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#475569",
+                  }}
+                >
+                  E-Mail (optional)
+                </label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "12px",
+                    border: "1px solid #D1D5DB",
+                    fontSize: "14px",
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "6px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#475569",
+                  }}
+                >
+                  Telefon (optional)
+                </label>
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "12px",
+                    border: "1px solid #D1D5DB",
+                    fontSize: "14px",
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "6px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#475569",
+                  }}
+                >
+                  Verwaltung (optional)
+                </label>
+                <select
+                  value={form.landlord_id}
+                  onChange={(e) => setForm((f) => ({ ...f, landlord_id: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "12px",
+                    border: "1px solid #D1D5DB",
+                    fontSize: "14px",
+                    background: "#fff",
+                  }}
+                >
+                  <option value="">— Keine Auswahl</option>
+                  {landlords.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {landlordLabel(l)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: "12px",
+                    border: "none",
+                    background: "#EA580C",
+                    color: "#FFF",
+                    fontWeight: 600,
+                    cursor: saving ? "wait" : "pointer",
+                  }}
+                >
+                  {saving ? "Speichern…" : "Speichern"}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setFormOpen(false)}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "12px",
+                    border: "1px solid #E2E8F0",
+                    background: "#F8FAFC",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

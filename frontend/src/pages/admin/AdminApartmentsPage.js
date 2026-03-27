@@ -4,6 +4,8 @@ import {
   fetchAdminUnits,
   fetchAdminRooms,
   fetchAdminProperties,
+  fetchAdminLandlords,
+  fetchAdminPropertyManagers,
   createAdminUnit,
   updateAdminUnit,
   deleteAdminUnit,
@@ -11,6 +13,21 @@ import {
   normalizeRoom,
 } from "../../api/adminData";
 import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
+
+function landlordSelectLabel(l) {
+  const c = String(l.company_name || "").trim();
+  const n = String(l.contact_name || "").trim();
+  if (c && n) return `${c} — ${n}`;
+  return c || n || String(l.email || "").trim() || l.id;
+}
+
+function propertyManagerSelectLabel(pm) {
+  const n = String(pm.name || "").trim();
+  if (n) return n;
+  const e = String(pm.email || "").trim();
+  if (e) return e;
+  return pm.id;
+}
 
 const emptyForm = {
   place: "",
@@ -21,6 +38,8 @@ const emptyForm = {
   occupiedRooms: 0,
   status: "Frei",
   property_id: "",
+  landlord_id: "",
+  property_manager_id: "",
   tenantPriceMonthly: "",
   landlordRentMonthly: "",
   utilitiesMonthly: "",
@@ -439,6 +458,10 @@ function AdminApartmentsPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [landlords, setLandlords] = useState([]);
+  const [propertyManagers, setPropertyManagers] = useState([]);
+  const [landlordFilter, setLandlordFilter] = useState("");
+  const [propertyManagerFilter, setPropertyManagerFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -454,10 +477,12 @@ function AdminApartmentsPage() {
       fetchAdminUnits(),
       fetchAdminRooms(),
       fetchAdminProperties(),
+      fetchAdminLandlords(),
+      fetchAdminPropertyManagers(),
     ]).then((results) => {
       if (cancelled) return;
 
-      const [unitsRes, roomsRes, propsRes] = results;
+      const [unitsRes, roomsRes, propsRes, landlordsRes, pmRes] = results;
 
       if (unitsRes.status === "fulfilled") {
         const data = unitsRes.value;
@@ -484,6 +509,22 @@ function AdminApartmentsPage() {
       } else {
         console.error(propsRes.reason);
         setProperties([]);
+      }
+
+      if (landlordsRes.status === "fulfilled") {
+        const data = landlordsRes.value;
+        setLandlords(Array.isArray(data) ? data : []);
+      } else {
+        console.error(landlordsRes.reason);
+        setLandlords([]);
+      }
+
+      if (pmRes.status === "fulfilled") {
+        const data = pmRes.value;
+        setPropertyManagers(Array.isArray(data) ? data : []);
+      } else {
+        console.error(pmRes.reason);
+        setPropertyManagers([]);
       }
 
       setLoading(false);
@@ -580,6 +621,24 @@ function AdminApartmentsPage() {
     return result;
   }, [units, searchTerm, propertyFilter]);
 
+  const filteredLandlordsForSelect = useMemo(() => {
+    const q = landlordFilter.toLowerCase().trim();
+    if (!q) return landlords;
+    return landlords.filter((l) => {
+      const blob = `${l.company_name || ""} ${l.contact_name || ""} ${l.email || ""}`.toLowerCase();
+      return blob.includes(q);
+    });
+  }, [landlords, landlordFilter]);
+
+  const filteredPropertyManagersForSelect = useMemo(() => {
+    const q = propertyManagerFilter.toLowerCase().trim();
+    if (!q) return propertyManagers;
+    return propertyManagers.filter((p) => {
+      const blob = `${p.name || ""} ${p.email || ""} ${p.phone || ""}`.toLowerCase();
+      return blob.includes(q);
+    });
+  }, [propertyManagers, propertyManagerFilter]);
+
   const apartmentUnits = filteredUnits.filter((item) => item.type === "Apartment");
   const coLivingUnits = filteredUnits.filter((item) => item.type === "Co-Living");
 
@@ -616,11 +675,15 @@ function AdminApartmentsPage() {
     setEditingId(null);
     setFormData(emptyForm);
     setCoLivingRoomRows([]);
+    setLandlordFilter("");
+    setPropertyManagerFilter("");
     setIsModalOpen(true);
   }
 
   const handleOpenEditModal = useCallback((unit) => {
     setEditingId(unit.id);
+    setLandlordFilter("");
+    setPropertyManagerFilter("");
     setFormData({
       place: unit.place,
       zip: unit.zip != null && unit.zip !== "" ? String(unit.zip) : "",
@@ -630,6 +693,14 @@ function AdminApartmentsPage() {
       occupiedRooms: unit.occupiedRooms || 0,
       status: unit.status,
       property_id: unit.property_id || "",
+      landlord_id:
+        unit.landlord_id != null && unit.landlord_id !== ""
+          ? String(unit.landlord_id)
+          : "",
+      property_manager_id:
+        unit.property_manager_id != null && unit.property_manager_id !== ""
+          ? String(unit.property_manager_id)
+          : "",
       tenantPriceMonthly: numFieldStr(unit.tenantPriceMonthly),
       landlordRentMonthly: numFieldStr(unit.landlordRentMonthly),
       utilitiesMonthly: numFieldStr(unit.utilitiesMonthly),
@@ -663,6 +734,8 @@ function AdminApartmentsPage() {
     setEditingId(null);
     setFormData(emptyForm);
     setCoLivingRoomRows([]);
+    setLandlordFilter("");
+    setPropertyManagerFilter("");
   }
 
   function handleCoLivingRoomChange(index, field, rawValue) {
@@ -808,6 +881,8 @@ function AdminApartmentsPage() {
       type: normalizedUnitType || null,
       rooms: parsedRoomsTotal,
       property_id: (formData.property_id || "").trim() || null,
+      landlord_id: (formData.landlord_id || "").trim() || null,
+      property_manager_id: (formData.property_manager_id || "").trim() || null,
     };
 
     const apiPayload = {
@@ -1166,6 +1241,60 @@ function AdminApartmentsPage() {
                     {properties.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.title || p.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Verwaltung (optional)
+                  </label>
+                  <input
+                    type="search"
+                    value={landlordFilter}
+                    onChange={(e) => setLandlordFilter(e.target.value)}
+                    placeholder="Suchen…"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 mb-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    autoComplete="off"
+                  />
+                  <select
+                    name="landlord_id"
+                    value={formData.landlord_id}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">— Keine Auswahl</option>
+                    {filteredLandlordsForSelect.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {landlordSelectLabel(l)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Bewirtschafter (optional)
+                  </label>
+                  <input
+                    type="search"
+                    value={propertyManagerFilter}
+                    onChange={(e) => setPropertyManagerFilter(e.target.value)}
+                    placeholder="Suchen…"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 mb-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    autoComplete="off"
+                  />
+                  <select
+                    name="property_manager_id"
+                    value={formData.property_manager_id}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">— Keine Auswahl</option>
+                    {filteredPropertyManagersForSelect.map((pm) => (
+                      <option key={pm.id} value={pm.id}>
+                        {propertyManagerSelectLabel(pm)}
                       </option>
                     ))}
                   </select>

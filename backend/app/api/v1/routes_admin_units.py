@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Unit, Room, Property, Landlord, User, Tenancy
+from db.models import Unit, Room, Property, Landlord, PropertyManager, User, Tenancy
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
 
@@ -57,6 +57,22 @@ def _assert_property_and_landlord_in_org(session, property_id: Optional[str], or
             raise HTTPException(status_code=400, detail="Invalid landlord reference for property")
 
 
+def _assert_landlord_in_org(session, landlord_id: Optional[str], org_id: str) -> None:
+    if not landlord_id:
+        return
+    ll = session.get(Landlord, landlord_id)
+    if not ll or str(getattr(ll, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Landlord not found")
+
+
+def _assert_property_manager_in_org(session, property_manager_id: Optional[str], org_id: str) -> None:
+    if not property_manager_id:
+        return
+    pm = session.get(PropertyManager, property_manager_id)
+    if not pm or str(getattr(pm, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Property manager not found")
+
+
 def _iso_date(d: Optional[date]) -> str:
     if d is None:
         return ""
@@ -84,6 +100,8 @@ def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
         "type": getattr(u, "type", None),
         "rooms": getattr(u, "rooms", 0),
         "property_id": getattr(u, "property_id", None),
+        "landlord_id": getattr(u, "landlord_id", None),
+        "property_manager_id": getattr(u, "property_manager_id", None),
         "property_title": property_title,
         "created_at": u.created_at.isoformat() if getattr(u, "created_at", None) else None,
         "tenantPriceMonthly": tp,
@@ -159,6 +177,8 @@ class UnitCreate(BaseModel):
     type: Optional[str] = None
     rooms: int = Field(default=0, ge=0)
     property_id: Optional[str] = None
+    landlord_id: Optional[str] = None
+    property_manager_id: Optional[str] = None
     co_living_rooms: Optional[List[CoLivingRoomInput]] = None
     tenant_price_monthly_chf: float = Field(default=0, ge=0)
     landlord_rent_monthly_chf: float = Field(default=0, ge=0)
@@ -208,6 +228,8 @@ class UnitPatch(BaseModel):
     type: Optional[str] = None
     rooms: Optional[int] = Field(default=None, ge=0)
     property_id: Optional[str] = None
+    landlord_id: Optional[str] = None
+    property_manager_id: Optional[str] = None
     tenant_price_monthly_chf: Optional[float] = Field(default=None, ge=0)
     landlord_rent_monthly_chf: Optional[float] = Field(default=None, ge=0)
     utilities_monthly_chf: Optional[float] = Field(default=None, ge=0)
@@ -352,6 +374,8 @@ def admin_create_unit(
 ):
     """Create a new unit."""
     _assert_property_and_landlord_in_org(session, body.property_id, org_id)
+    _assert_landlord_in_org(session, body.landlord_id, org_id)
+    _assert_property_manager_in_org(session, body.property_manager_id, org_id)
     title = (body.title or body.name or "").strip() or "New Unit"
     unit = Unit(
         organization_id=org_id,
@@ -362,6 +386,8 @@ def admin_create_unit(
         type=body.type,
         city_id=body.city_id,
         property_id=body.property_id,
+        landlord_id=body.landlord_id,
+        property_manager_id=body.property_manager_id,
         tenant_price_monthly_chf=body.tenant_price_monthly_chf,
         landlord_rent_monthly_chf=body.landlord_rent_monthly_chf,
         utilities_monthly_chf=body.utilities_monthly_chf,
@@ -406,6 +432,12 @@ def admin_patch_unit(
     if "property_id" in data:
         pid = data["property_id"] if data["property_id"] else None
         _assert_property_and_landlord_in_org(session, pid, org_id)
+    if "landlord_id" in data:
+        lid = data["landlord_id"] if data["landlord_id"] else None
+        _assert_landlord_in_org(session, lid, org_id)
+    if "property_manager_id" in data:
+        pmid = data["property_manager_id"] if data["property_manager_id"] else None
+        _assert_property_manager_in_org(session, pmid, org_id)
     if "name" in data and "title" not in data:
         data["title"] = data.pop("name")
     elif "title" in data:
@@ -415,6 +447,10 @@ def admin_patch_unit(
             setattr(unit, k, v)
     if "property_id" in data and data["property_id"] == "":
         unit.property_id = None
+    if "landlord_id" in data and data["landlord_id"] == "":
+        unit.landlord_id = None
+    if "property_manager_id" in data and data["property_manager_id"] == "":
+        unit.property_manager_id = None
     if "postal_code" in data and data["postal_code"] == "":
         unit.postal_code = None
     session.add(unit)
