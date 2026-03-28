@@ -106,12 +106,17 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
             detail="Invalid credentials",
         )
 
+    # Capture ids before commit() — commit expires ORM instances; touching user.id after
+    # commit can lazy-load under wrong/missing RLS context and raise ObjectDeletedError.
+    user_id = str(user.id)
+    organization_id = str(user.organization_id)
+
     session.info.pop("rls_auth_unscoped", None)
     session.commit()
 
-    apply_pg_user_context(session, str(user.id))
-    apply_pg_organization_context(session, str(user.organization_id))
-    user = session.get(User, str(user.id))
+    apply_pg_user_context(session, user_id)
+    apply_pg_organization_context(session, organization_id)
+    user = session.get(User, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
