@@ -78,10 +78,12 @@ def cleanup_reset_tables(reset_db_session: Session):
     reset_db_session.exec(RefreshToken.__table__.delete())
     reset_db_session.exec(UserCredentials.__table__.delete())
     # users: RLS requires app.current_organization_id; delete per org (same pattern as test_rls.py)
-    for row in reset_db_session.exec(select(Organization.id)).all():
-        oid = row[0] if hasattr(row, "__getitem__") else row
-        apply_pg_organization_context(reset_db_session, str(oid))
-        reset_db_session.execute(delete(User).where(User.organization_id == str(oid)))
+    # Use scalars() so each id is a full string — exec().all() can yield plain str rows, and
+    # row[0] on a str is only the first character, so deletes would silently match nothing.
+    for oid in reset_db_session.scalars(select(Organization.id)).all():
+        oid_s = str(oid)
+        apply_pg_organization_context(reset_db_session, oid_s)
+        reset_db_session.execute(delete(User).where(User.organization_id == oid_s))
     reset_db_session.exec(Organization.__table__.delete())
     reset_db_session.commit()
 
