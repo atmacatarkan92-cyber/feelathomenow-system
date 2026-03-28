@@ -26,12 +26,32 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # --- audit_logs: organization_id ---
+    # --- audit_logs: organization_id (UUID — must match organization.id on PostgreSQL) ---
     conn.execute(
         text(
             """
             ALTER TABLE audit_logs
-            ADD COLUMN IF NOT EXISTS organization_id VARCHAR
+            ADD COLUMN IF NOT EXISTS organization_id UUID
+            """
+        )
+    )
+    # Partial failed run may have created VARCHAR; normalize before FK.
+    conn.execute(
+        text(
+            """
+            DO $$
+            BEGIN
+              IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'audit_logs'
+                  AND column_name = 'organization_id'
+                  AND data_type = 'character varying'
+              ) THEN
+                ALTER TABLE audit_logs
+                  ALTER COLUMN organization_id TYPE uuid USING (organization_id::uuid);
+              END IF;
+            END $$;
             """
         )
     )
@@ -39,7 +59,7 @@ def upgrade() -> None:
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = u.organization_id
+            SET organization_id = u.organization_id::uuid
             FROM users u
             WHERE a.actor_user_id = u.id
               AND a.organization_id IS NULL
@@ -50,7 +70,7 @@ def upgrade() -> None:
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = u.organization_id
+            SET organization_id = u.organization_id::uuid
             FROM unit u
             WHERE a.entity_type = 'unit'
               AND a.entity_id = u.id
@@ -62,7 +82,7 @@ def upgrade() -> None:
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = t.organization_id
+            SET organization_id = t.organization_id::uuid
             FROM tenant t
             WHERE a.entity_type = 'tenant'
               AND a.entity_id = t.id
@@ -74,7 +94,7 @@ def upgrade() -> None:
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = t.organization_id
+            SET organization_id = t.organization_id::uuid
             FROM tenancies t
             WHERE a.entity_type = 'tenancy'
               AND a.entity_id = t.id
