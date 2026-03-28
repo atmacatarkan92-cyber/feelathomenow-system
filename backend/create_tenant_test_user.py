@@ -15,6 +15,7 @@ from getpass import getpass
 from sqlmodel import select
 
 from db.database import get_session
+from db.rls import apply_pg_organization_context
 from db.models import (
     User,
     UserCredentials,
@@ -43,6 +44,7 @@ def main() -> None:
     try:
         org = get_or_create_default_organization(session)
         org_id = str(org.id)
+        apply_pg_organization_context(session, org_id)
         # 1. Resolve or create user (do not overwrite existing)
         existing_user = session.exec(
             select(User).where(

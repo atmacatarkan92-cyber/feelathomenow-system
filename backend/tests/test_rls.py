@@ -16,6 +16,7 @@ from sqlalchemy import text, update
 from sqlmodel import Session, select
 
 from db.models import (
+    AuditLog,
     Invoice,
     Landlord,
     Organization,
@@ -26,8 +27,10 @@ from db.models import (
     Tenant,
     Unit,
     UnitCost,
+    User,
+    UserRole,
 )
-from db.rls import apply_pg_organization_context
+from db.rls import apply_pg_organization_context, apply_pg_user_context
 
 
 def _require_engine():
@@ -49,6 +52,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
     are missing. CI must connect as a dedicated app role; Alembic runs as the migration role.
     """
     expected_policies = {
+        ("audit_logs", "org_isolation_audit_logs"),
         ("unit", "org_isolation_unit"),
         ("tenant", "org_isolation_tenant"),
         ("room", "org_isolation_room"),
@@ -59,6 +63,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ("unit_costs", "org_isolation_unit_costs"),
         ("tenant_notes", "org_isolation_tenant_notes"),
         ("tenant_events", "org_isolation_tenant_events"),
+        ("users", "org_isolation_users"),
     }
     with Session(engine) as session:
         cu, su = session.execute(text("SELECT current_user, session_user")).one()
@@ -89,14 +94,14 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         rls_rows = session.execute(
             text(
                 """
-                SELECT c.relname, c.relrowsecurity
+                SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
                 FROM pg_class c
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
                   AND c.relname IN (
-                    'invoices', 'landlords', 'properties', 'room',
+                    'audit_logs', 'invoices', 'landlords', 'properties', 'room',
                     'tenancies', 'tenant', 'tenant_events', 'tenant_notes',
-                    'unit', 'unit_costs'
+                    'unit', 'unit_costs', 'users'
                   )
                 ORDER BY c.relname
                 """
@@ -104,6 +109,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ).all()
         names = [r[0] for r in rls_rows]
         assert names == [
+            "audit_logs",
             "invoices",
             "landlords",
             "properties",
@@ -114,11 +120,16 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "tenant_notes",
             "unit",
             "unit_costs",
+            "users",
         ], (
-            f"expected RLS tables from migrations 023/025/030; got {names}"
+            f"expected RLS tables from migrations 023/025/030/042; got {names}"
         )
-        for relname, relrowsecurity in rls_rows:
+        for relname, relrowsecurity, relforcerowsecurity in rls_rows:
             assert relrowsecurity is True, f"RLS not enabled on {relname}"
+            if relname in ("audit_logs", "users"):
+                assert relforcerowsecurity is True, (
+                    f"FORCE ROW LEVEL SECURITY expected on {relname}"
+                )
 
         pols = session.execute(
             text(
@@ -126,9 +137,9 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 SELECT tablename, policyname
                 FROM pg_policies
                 WHERE tablename IN (
-                    'unit', 'tenant', 'room', 'tenancies', 'invoices',
+                    'audit_logs', 'unit', 'tenant', 'room', 'tenancies', 'invoices',
                     'properties', 'landlords', 'unit_costs',
-                    'tenant_notes', 'tenant_events'
+                    'tenant_notes', 'tenant_events', 'users'
                 )
                 """
             )
@@ -136,7 +147,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         got = {(r[0], r[1]) for r in pols}
         assert got == expected_policies, (
             f"expected policies {expected_policies}; got {got}. "
-            "Apply migrations 023_rls_unit_tenant_room, 025_rls_core_tables, and 030_rls_tenant_crm."
+            "Apply migrations 023_rls_unit_tenant_room, 025_rls_core_tables, 030_rls_tenant_crm, "
+            "042_rls_users_audit_logs."
         )
 
 
@@ -553,6 +565,122 @@ def test_rls_org_b_sees_no_extended_rows(engine, seeded_rls_extended_rows):
                     select(UnitCost).where(UnitCost.id == ids["unit_cost_a"])
                 ).all()
             )
+            == 0
+        )
+
+
+@pytest.fixture
+def seeded_users_audit_rows(engine, seeded_tenant_rows):
+    """Org-scoped users + one audit row under org A; teardown before base tenant fixture org delete."""
+    ids = dict(seeded_tenant_rows)
+    org_a = ids["org_a"]
+    org_b = ids["org_b"]
+    tag = uuid.uuid4().hex[:8]
+    ids["user_a"] = f"rls-u-a-{tag}"
+    ids["user_b"] = f"rls-u-b-{tag}"
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            User(
+                id=ids["user_a"],
+                organization_id=org_a,
+                email=f"rls-{tag}-a@example.test",
+                full_name="RLS User A",
+                role=UserRole.admin,
+            )
+        )
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        session.add(
+            User(
+                id=ids["user_b"],
+                organization_id=org_b,
+                email=f"rls-{tag}-b@example.test",
+                full_name="RLS User B",
+                role=UserRole.admin,
+            )
+        )
+        session.commit()
+
+    aid = uuid.uuid4().hex
+    ids["audit_a"] = aid
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            AuditLog(
+                id=aid,
+                organization_id=org_a,
+                actor_user_id=ids["user_a"],
+                action="create",
+                entity_type="unit",
+                entity_id="e1",
+            )
+        )
+        session.commit()
+
+    yield ids
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(text("DELETE FROM audit_logs WHERE id = :id"), {"id": aid})
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(text("DELETE FROM users WHERE id = :id"), {"id": ids["user_a"]})
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        session.execute(text("DELETE FROM users WHERE id = :id"), {"id": ids["user_b"]})
+        session.commit()
+
+
+def test_rls_org_a_sees_own_user_and_audit_rows(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    org_a = ids["org_a"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        assert (
+            len(session.exec(select(User).where(User.id == ids["user_a"])).all()) == 1
+        )
+        assert (
+            len(session.exec(select(AuditLog).where(AuditLog.id == ids["audit_a"])).all())
+            == 1
+        )
+
+
+def test_rls_org_b_cannot_see_org_a_users_or_audit(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    org_b = ids["org_b"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        assert len(session.exec(select(User).where(User.id == ids["user_a"])).all()) == 0
+        assert (
+            len(session.exec(select(AuditLog).where(AuditLog.id == ids["audit_a"])).all())
+            == 0
+        )
+
+
+def test_rls_users_missing_org_context_sees_nothing(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    with Session(engine) as session:
+        assert len(session.exec(select(User).where(User.id == ids["user_a"])).all()) == 0
+
+
+def test_rls_users_self_visible_via_current_user_id_guc(engine, seeded_users_audit_rows):
+    """Bootstrap path: app.current_user_id without org GUC must still read own row."""
+    ids = seeded_users_audit_rows
+    with Session(engine) as session:
+        apply_pg_user_context(session, ids["user_a"])
+        assert len(session.exec(select(User).where(User.id == ids["user_a"])).all()) == 1
+
+
+def test_rls_audit_logs_missing_org_context_sees_nothing(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    with Session(engine) as session:
+        assert (
+            len(session.exec(select(AuditLog).where(AuditLog.id == ids["audit_a"])).all())
             == 0
         )
 

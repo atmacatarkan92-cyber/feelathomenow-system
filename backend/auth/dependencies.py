@@ -8,7 +8,11 @@ from sqlmodel import select
 from db.database import get_session as _db_get_session
 from db.models import User, Tenant, Landlord, UserCredentials
 from app.core.request_logging import set_log_user_id
-from db.rls import apply_pg_organization_context, set_request_organization_id
+from db.rls import (
+    apply_pg_organization_context,
+    apply_pg_user_context,
+    set_request_organization_id,
+)
 from auth.security import decode_access_token, password_version_ts
 
 
@@ -50,6 +54,7 @@ def get_current_user(
             detail="Invalid authentication credentials",
         )
 
+    apply_pg_user_context(db, user_id)
     statement = select(User).where(User.id == user_id)
     user = db.exec(statement).first()
 

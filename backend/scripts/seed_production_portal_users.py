@@ -25,6 +25,7 @@ if _backend_root not in sys.path:
     sys.path.insert(0, _backend_root)
 
 from db.database import get_session  # noqa: E402
+from db.rls import apply_pg_organization_context  # noqa: E402
 from db.models import (  # noqa: E402
     User,
     UserCredentials,
@@ -55,6 +56,7 @@ def ensure_tenant(session):
 
     org = get_or_create_default_organization(session)
     org_id = str(org.id)
+    apply_pg_organization_context(session, org_id)
 
     user = session.exec(
         select(User).where(
@@ -127,6 +129,7 @@ def ensure_landlord(session):
 
     org = get_or_create_default_organization(session)
     org_id = str(org.id)
+    apply_pg_organization_context(session, org_id)
 
     user = session.exec(
         select(User).where(

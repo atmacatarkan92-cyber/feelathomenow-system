@@ -491,6 +491,7 @@ class AuditLog(SQLModel, table=True):
     __tablename__ = "audit_logs"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
     actor_user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     action: str = Field(max_length=32, index=True)  # create | update | delete
     entity_type: str = Field(max_length=64, index=True)  # unit | tenant | tenancy | ...

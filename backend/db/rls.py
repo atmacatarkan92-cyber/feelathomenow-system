@@ -1,21 +1,25 @@
 """
 PostgreSQL Row Level Security (RLS) session context.
 
-Tenant isolation policies compare rows to the transaction-local GUC:
-  app.current_organization_id
+Tenant isolation policies compare rows to transaction-local GUCs:
+  app.current_organization_id — primary org scope (most tables)
+  app.current_user_id — bootstrap: SELECT own users row before org GUC is known (JWT sub)
+  app.auth_unscoped_user_lookup — trusted auth-only: login / forgot-password email lookup
+    (SET LOCAL only in auth routes; must not persist across commits; see auth/routes.py)
 
 SET LOCAL is transaction-scoped: when a pooled connection returns to the pool and the
 next transaction begins, the previous SET LOCAL is gone — no cross-request leakage.
 
-We store the org id on session.info["rls_org_id"] and:
+We store context on session.info (rls_org_id, rls_user_id, rls_auth_unscoped) and:
 - On a new transaction (after_begin): apply SET LOCAL on the connection before other
   statements in that transaction.
-- When apply_pg_organization_context() is called while a transaction is already open
-  (e.g. after User/UserCredentials queries in get_current_user), we SET LOCAL immediately
-  on the current transaction — after_begin has already run for that transaction.
+- When apply_pg_organization_context() / apply_pg_user_context() is called while a
+  transaction is already open, we SET LOCAL immediately on the current transaction —
+  after_begin has already run for that transaction.
 
 Scripts without a request ContextVar must call apply_pg_organization_context(session, org_id)
-(or set SESSION-level GUC on a dedicated connection) before touching tenant-scoped tables.
+before touching tenant-scoped tables (and apply_pg_user_context when loading users by id
+before org context exists).
 """
 from __future__ import annotations
 
@@ -66,6 +70,14 @@ def _rls_after_begin(session: Session, transaction, connection) -> None:
             text("SET LOCAL app.current_organization_id = :v"),
             {"v": org_id},
         )
+    user_id = session.info.get("rls_user_id")
+    if user_id:
+        connection.execute(
+            text("SET LOCAL app.current_user_id = :v"),
+            {"v": str(user_id)},
+        )
+    if session.info.get("rls_auth_unscoped"):
+        connection.execute(text("SET LOCAL app.auth_unscoped_user_lookup = 'true'"))
 
 
 def apply_pg_organization_context(session: Session, organization_id: str | None) -> None:
@@ -90,5 +102,34 @@ def apply_pg_organization_context(session: Session, organization_id: str | None)
             text("SET LOCAL app.current_organization_id = :v"),
             {"v": s},
         )
+    else:
+        session.execute(text("SELECT 1"))
+
+
+def apply_pg_user_context(session: Session, user_id: str | None) -> None:
+    """
+    Bind app.current_user_id for RLS on users (self-row visible before org GUC is set).
+    Clears when user_id is empty.
+    """
+    if not user_id or not str(user_id).strip():
+        session.info.pop("rls_user_id", None)
+        return
+    s = str(user_id).strip()
+    session.info["rls_user_id"] = s
+    if session.in_transaction():
+        session.execute(text("SET LOCAL app.current_user_id = :v"), {"v": s})
+    else:
+        session.execute(text("SELECT 1"))
+
+
+def apply_pg_auth_unscoped_user_lookup(session: Session) -> None:
+    """
+    Trusted server-only: allow auth routes to match users by email (login / forgot-password).
+    Call session.info.pop('rls_auth_unscoped', None) and commit before any non-auth DML
+    so the GUC does not span transactions.
+    """
+    session.info["rls_auth_unscoped"] = True
+    if session.in_transaction():
+        session.execute(text("SET LOCAL app.auth_unscoped_user_lookup = 'true'"))
     else:
         session.execute(text("SELECT 1"))

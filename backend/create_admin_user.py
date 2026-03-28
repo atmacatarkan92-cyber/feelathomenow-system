@@ -16,6 +16,7 @@ from sqlmodel import select
 from db.database import get_session
 from db.models import User, UserCredentials, UserRole
 from db.organization import get_or_create_default_organization
+from db.rls import apply_pg_organization_context
 from auth.security import hash_password
 
 
@@ -30,6 +31,7 @@ def main() -> None:
 
         org = get_or_create_default_organization(session)
         org_id = str(org.id)
+        apply_pg_organization_context(session, org_id)
         # Check if user already exists in this organization
         existing = session.exec(
             select(User).where(

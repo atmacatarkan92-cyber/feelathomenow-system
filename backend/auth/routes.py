@@ -33,6 +33,11 @@ from auth.security import (
     password_meets_policy_for_new_account,
 )
 from auth.dependencies import get_current_user, get_db_session
+from db.rls import (
+    apply_pg_auth_unscoped_user_lookup,
+    apply_pg_organization_context,
+    apply_pg_user_context,
+)
 from app.core.rate_limit import limiter
 from email_service import send_password_reset_email, EmailServiceError
 
@@ -74,6 +79,7 @@ def _clear_refresh_cookie(response: JSONResponse) -> None:
 @limiter.limit("5/minute")
 def login(request: Request, data: LoginRequest, session=Depends(get_db_session)):
     """Verify credentials, issue access token (body) and refresh token (HttpOnly cookie)."""
+    apply_pg_auth_unscoped_user_lookup(session)
     statement = select(User, UserCredentials).join(
         UserCredentials, User.id == UserCredentials.user_id
     ).where(
@@ -85,6 +91,7 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
 
     matches = session.exec(statement).all()
     if len(matches) != 1:
+        session.info.pop("rls_auth_unscoped", None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -93,6 +100,28 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
     user, credentials = matches[0]
 
     if not verify_password(data.password, credentials.password_hash):
+        session.info.pop("rls_auth_unscoped", None)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
+
+    session.info.pop("rls_auth_unscoped", None)
+    session.commit()
+
+    apply_pg_user_context(session, str(user.id))
+    apply_pg_organization_context(session, str(user.organization_id))
+    user = session.get(User, str(user.id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
+
+    creds_for_token = session.exec(
+        select(UserCredentials).where(UserCredentials.user_id == str(user.id))
+    ).first()
+    if not creds_for_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -107,7 +136,7 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
         {
             "sub": str(user.id),
             "role": role_str,
-            "pv": password_version_ts(credentials.password_changed_at),
+            "pv": password_version_ts(creds_for_token.password_changed_at),
         }
     )
 
@@ -160,6 +189,7 @@ def refresh(request: Request, session=Depends(get_db_session)):
         _clear_refresh_cookie(response)
         return response
 
+    apply_pg_user_context(session, str(row.user_id))
     user = session.get(User, row.user_id)
     if not user or not user.is_active:
         row.revoked_at = now
@@ -276,13 +306,15 @@ def forgot_password(
     """
     generic_detail = "If the account exists, a password reset link has been sent."
 
-    # Load all active users matching this email (global or per-org).
+    apply_pg_auth_unscoped_user_lookup(session)
     users = session.exec(
         select(User).where(
             User.email == body.email,
             User.is_active == True,  # noqa: E712
         )
     ).all()
+    session.info.pop("rls_auth_unscoped", None)
+    session.commit()
 
     if not users:
         return GenericSuccessResponse(detail=generic_detail)

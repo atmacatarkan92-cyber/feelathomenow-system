@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from sqlmodel import Session
 
-from db.models import AuditLog
+from db.models import AuditLog, User
 
 
 def _serialize_value(v: Any) -> Any:
@@ -50,6 +50,7 @@ def create_audit_log(
     entity_id: str,
     old_values: Optional[dict] = None,
     new_values: Optional[dict] = None,
+    organization_id: Optional[str] = None,
 ) -> None:
     """
     Append one audit log row. Call after a successful create/update/delete within
@@ -58,7 +59,16 @@ def create_audit_log(
     - update: old_values=before snapshot, new_values=after snapshot
     - delete: old_values=snapshot of deleted entity, new_values=None
     """
+    org_id = organization_id
+    if org_id is None and actor_user_id:
+        actor = session.get(User, actor_user_id)
+        org_id = getattr(actor, "organization_id", None) if actor else None
+    if not org_id or not str(org_id).strip():
+        raise ValueError(
+            "create_audit_log requires organization_id or resolvable actor organization"
+        )
     entry = AuditLog(
+        organization_id=str(org_id).strip(),
         actor_user_id=actor_user_id,
         action=action,
         entity_type=entity_type,
