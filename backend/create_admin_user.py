@@ -40,7 +40,44 @@ def main() -> None:
             )
         ).first()
         if existing:
-            print(f"User with email '{email}' already exists (id={existing.id}). Aborting.")
+            existing_creds = session.exec(
+                select(UserCredentials).where(
+                    UserCredentials.user_id == str(existing.id)
+                )
+            ).first()
+            if existing_creds:
+                print(
+                    f"User with email '{email}' already exists and has login credentials "
+                    f"(user id={existing.id}). Nothing to do."
+                )
+                return
+
+            print(
+                f"User with email '{email}' already exists but has no credentials "
+                f"(user id={existing.id}). Enter a password to create them."
+            )
+            password = getpass("Admin password: ")
+            password_confirm = getpass("Confirm password: ")
+
+            if not password:
+                print("Password is required.")
+                return
+
+            if password != password_confirm:
+                print("Passwords do not match. Aborting.")
+                return
+
+            oid = str(existing.organization_id)
+            apply_pg_organization_context(session, oid)
+            creds = UserCredentials(
+                user_id=str(existing.id),
+                organization_id=oid,
+                password_hash=hash_password(password),
+                password_algo="bcrypt",
+            )
+            session.add(creds)
+            session.commit()
+            print(f"Created missing credentials for existing user id={existing.id}")
             return
 
         password = getpass("Admin password: ")
