@@ -1,6 +1,6 @@
 """Prerequisite: organization_id on refresh_tokens and user_credentials (Round 2 RLS prep).
 
-Revision ID: 043_rls_tokens_credentials_prereq
+Revision ID: 043_tokens_org_prereq
 Revises: 042_rls_users_audit_logs
 
 Adds organization_id matching public.organization.id (dynamic physical type per environment),
@@ -19,7 +19,7 @@ from typing import Sequence, Union
 from alembic import op
 from sqlalchemy import text
 
-revision: str = "043_rls_tokens_credentials_prereq"
+revision: str = "043_tokens_org_prereq"
 down_revision: Union[str, None] = "042_rls_users_audit_logs"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
