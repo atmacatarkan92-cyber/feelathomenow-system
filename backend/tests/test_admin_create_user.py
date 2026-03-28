@@ -11,11 +11,13 @@ from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, create_engine
+from sqlalchemy import delete
+from sqlmodel import Session, create_engine, select
 
 from auth.dependencies import get_db_session
 from auth.security import hash_password
 from db.models import Organization, RefreshToken, User, UserCredentials, UserRole
+from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
 
 
@@ -39,7 +41,10 @@ def admin_users_session(admin_users_engine) -> Generator[Session, None, None]:
 def admin_users_cleanup(admin_users_session: Session):
     admin_users_session.exec(RefreshToken.__table__.delete())
     admin_users_session.exec(UserCredentials.__table__.delete())
-    admin_users_session.exec(User.__table__.delete())
+    for oid in admin_users_session.scalars(select(Organization.id)).all():
+        oid_s = str(oid)
+        apply_pg_organization_context(admin_users_session, oid_s)
+        admin_users_session.execute(delete(User).where(User.organization_id == oid_s))
     admin_users_session.exec(Organization.__table__.delete())
     admin_users_session.commit()
 
@@ -55,6 +60,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
 
     pwd_a = "AdminPass!A1"
     pwd_b = "AdminPass!B1"
+    apply_pg_organization_context(admin_users_session, str(org_a.id))
     admin_a = User(
         organization_id=str(org_a.id),
         email="admin-a@test.example",
@@ -62,6 +68,10 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
         role=UserRole.admin,
         is_active=True,
     )
+    admin_users_session.add(admin_a)
+    admin_users_session.flush()
+
+    apply_pg_organization_context(admin_users_session, str(org_b.id))
     admin_b = User(
         organization_id=str(org_b.id),
         email="admin-b@test.example",
@@ -69,7 +79,6 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
         role=UserRole.admin,
         is_active=True,
     )
-    admin_users_session.add(admin_a)
     admin_users_session.add(admin_b)
     admin_users_session.flush()
     admin_users_session.add(
@@ -79,6 +88,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
         UserCredentials(user_id=str(admin_b.id), password_hash=hash_password(pwd_b))
     )
 
+    apply_pg_organization_context(admin_users_session, str(org_a.id))
     mgr = User(
         organization_id=str(org_a.id),
         email="manager-a@test.example",

@@ -12,11 +12,13 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, create_engine
+from sqlalchemy import delete
+from sqlmodel import Session, create_engine, select
 
 from auth.dependencies import get_current_user, get_db_session
 from auth.security import hash_password
 from db.models import Organization, RefreshToken, User, UserCredentials, UserRole
+from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
 
 
@@ -55,12 +57,16 @@ def admin_user(auth_db_session: Session) -> User:
     # Clean tables used by /auth/login before creating the test user
     auth_db_session.exec(RefreshToken.__table__.delete())
     auth_db_session.exec(UserCredentials.__table__.delete())
-    auth_db_session.exec(User.__table__.delete())
+    for oid in auth_db_session.scalars(select(Organization.id)).all():
+        oid_s = str(oid)
+        apply_pg_organization_context(auth_db_session, oid_s)
+        auth_db_session.execute(delete(User).where(User.organization_id == oid_s))
     auth_db_session.exec(Organization.__table__.delete())
 
     org = Organization(name="Auth Test Org")
     auth_db_session.add(org)
     auth_db_session.flush()
+    apply_pg_organization_context(auth_db_session, str(org.id))
 
     email = "admin@test.example"
     password = "test-password"
