@@ -65,8 +65,10 @@ def main() -> None:
         session.commit()
         session.refresh(user)
 
+        apply_pg_organization_context(session, org_id)
         creds = UserCredentials(
             user_id=user.id,
+            organization_id=org_id,
             password_hash=hash_password(password),
             password_algo="bcrypt",
         )
