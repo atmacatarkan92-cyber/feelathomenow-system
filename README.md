@@ -1,134 +1,101 @@
-# FeelAtHomeNow Website
+# FeelAtHomeNow System
 
-Professional website for FeelAtHomeNow - a Swiss company providing furnished business apartments and flexible housing solutions.
+## 1. Project Overview
 
-## Features
+Multi-tenant SaaS for managing furnished housing operations: properties, units, rooms, tenancies, CRM (tenants and landlords), documents, and operational KPIs. The **database** is the source of truth for tenant isolation; the API and admin UI sit on top.
 
-- **Multi-language Support**: German (default) and English
-- **Apartment Listings**: Fetched from Airtable (with MongoDB fallback)
-- **Image Gallery**: Carousel slider with thumbnails for each apartment
-- **Location Maps**: Interactive Leaflet/OpenStreetMap showing approximate locations
-- **Contact Form**: Saves inquiries to database with optional email notifications
-- **Responsive Design**: Mobile-friendly, modern UI with TailwindCSS
+## 2. Tech Stack
 
-## Tech Stack
+| Layer | Technology |
+|-------|------------|
+| Frontend | React (deployed on **Vercel**) |
+| Backend | **FastAPI** (Python) on **Render** |
+| Database | **PostgreSQL** on **Render** |
+| ORM & migrations | **SQLModel** + **Alembic** |
+| Auth | JWT access tokens; **HttpOnly** refresh cookies |
+| CI | **GitHub Actions** (pytest, Alembic upgrade, frontend build) |
 
-- **Frontend**: React, TailwindCSS, Shadcn UI, React Router
-- **Backend**: FastAPI, Python
-- **Database**: MongoDB (for contact inquiries), Airtable (for apartments)
-- **Maps**: Leaflet with OpenStreetMap
-- **Email**: SendGrid (optional)
+## 3. Architecture
 
-## Setup
+**Backend** — FastAPI app under `backend/` (API routes, auth, business logic). Uses SQLModel for models and PostgreSQL.
 
-### Prerequisites
+**Frontend** — React app under `frontend/` (admin portal and related UI). Talks to the API over HTTPS.
 
-- Node.js 18+
-- Python 3.11+
-- MongoDB
-- Airtable account (for apartment management)
+**Database** — Single PostgreSQL instance. Schema is owned by Alembic migrations, not ad-hoc DDL.
 
-### Backend Setup
+**Multi-tenancy** — Data is partitioned by **`organization_id`**. Isolation is enforced in the database with **Row Level Security (RLS)** on security-sensitive tables (users, audit logs, auth tables, and core tenant-scoped entities). Session-local variables (`SET LOCAL app.current_organization_id`, etc.) align connections with the active tenant.
+
+**RLS** — Policies restrict `SELECT`/`INSERT`/`UPDATE`/`DELETE` so rows are only visible when `organization_id` matches the bound context (or explicit, documented exceptions for auth bootstrap). See [docs/RLS_COVERAGE.md](docs/RLS_COVERAGE.md).
+
+## 4. Local Development Setup
+
+**Prerequisites:** Python 3.11+, Node.js 20+, PostgreSQL 16 (local or Docker).
+
+**Backend**
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+# Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Copy environment variables
-cp .env.example .env
+Configure environment (copy from `.env.example` if present in repo; set at least `DATABASE_URL`, `SECRET_KEY`). Run the API, for example:
 
-# Edit .env with your credentials:
-# - MONGO_URL
-# - AIRTABLE_API_KEY
-# - AIRTABLE_BASE_ID
-# - SMTP_* (optional; see Environment Variables)
-
-# Run the server
+```bash
 uvicorn server:app --reload --port 8001
 ```
 
-### Frontend Setup
+**Frontend**
 
 ```bash
 cd frontend
-
-# Install dependencies
-yarn install
-
-# Copy environment variables
-cp .env.example .env
-
-# Edit .env with your backend URL (see frontend/.env.example)
-# REACT_APP_API_URL=http://localhost:8001
-
-# Run the development server
-yarn start
+npm ci
+npm start
 ```
 
-## Airtable Configuration
+Point the frontend at your local API URL via the project’s env pattern (see `frontend/.env.example` if available).
 
-Create a table named "Apartments" with these fields:
+**Database tests** — Integration tests that hit PostgreSQL expect `TEST_DATABASE_URL` (see `backend/tests` and CI workflow).
 
-| Field | Type |
-|-------|------|
-| ID | Single line text |
-| Title (DE) | Single line text |
-| Title (EN) | Single line text |
-| City Code | Single select (Zurich, Geneva, Basel, Zug) |
-| City (DE) | Single line text |
-| City (EN) | Single line text |
-| Latitude | Number |
-| Longitude | Number |
-| Price (CHF/month) | Number |
-| Bedrooms | Number |
-| Bathrooms | Number |
-| Size (sqm) | Number |
-| Main Image URL | Attachment |
-| Gallery Images | Attachment |
-| Description (DE) | Long text |
-| Description (EN) | Long text |
-| Amenities (DE) | Long text (comma-separated) |
-| Amenities (EN) | Long text (comma-separated) |
-| Active | Checkbox |
+## 5. Migrations (Alembic)
 
-## API Endpoints
+Migrations live in `backend/alembic/versions/`. Apply from `backend/`:
 
-- `GET /api/health` - Health check
-- `GET /api/apartments` - List all apartments
-- `GET /api/apartments?city=Zurich` - Filter by city
-- `GET /api/apartments/{id}` - Get single apartment
-- `POST /api/contact` - Submit contact inquiry
+```bash
+alembic upgrade head
+```
 
-## Environment Variables
+Generate new revisions only after changing models in sync with the team’s migration process. CI runs `alembic upgrade head` against a fresh Postgres service before pytest.
 
-### Backend (.env)
+## 6. Security Model (RLS)
 
-| Variable | Description |
-|----------|-------------|
-| MONGO_URL | MongoDB connection string |
-| DB_NAME | Database name |
-| AIRTABLE_API_KEY | Airtable Personal Access Token |
-| AIRTABLE_BASE_ID | Airtable Base ID |
-| AIRTABLE_TABLE_NAME | Table name (default: "Apartments") |
-| SMTP_HOST | SMTP server (e.g. Microsoft 365) |
-| SMTP_PORT | SMTP port (typically 587 for STARTTLS) |
-| SMTP_USER | SMTP username (often mailbox address) |
-| SMTP_PASS | SMTP password or app password |
-| SMTP_FROM | From address (must be allowed for that mailbox) |
-| NOTIFICATION_EMAIL | Email to receive contact notifications |
+- **Enforcement:** PostgreSQL RLS policies; the application role used at runtime must **not** bypass RLS (no superuser, no `BYPASSRLS`).
+- **Context:** `db/rls.py` sets transaction-local GUCs (`app.current_organization_id`, `app.current_user_id`, and trusted paths for login/refresh) so each request’s SQL runs under the correct scope.
+- **Auth tables:** `user_credentials` and `refresh_tokens` carry `organization_id` and are protected by RLS; inserts require matching org context and row data.
+- **Detail:** [docs/RLS_COVERAGE.md](docs/RLS_COVERAGE.md).
 
-### Frontend (.env)
+## 7. Key Concepts
 
-| Variable | Description |
-|----------|-------------|
-| REACT_APP_API_URL | Backend API base URL (no trailing slash) |
+| Concept | Meaning |
+|---------|---------|
+| `organization_id` | Foreign key to `organization`; primary tenant boundary for RLS and queries. |
+| User | Portal login identity; scoped to one organization. |
+| **Tenancy** | Rental agreement linking tenant, room/unit, dates, and status. |
+| **Unit / room / property** | Inventory hierarchy for listings and operations. |
+| **CRM** | Tenant and landlord records and notes, scoped by organization. |
+| **Documents** | Stored metadata and file handling tied to units/tenants as implemented in the API. |
 
-## License
+## 8. Documentation
 
-Private - FeelAtHomeNow
+- **[docs/RLS_COVERAGE.md](docs/RLS_COVERAGE.md)** — RLS coverage, auth flows, context variables, migration references (042–044 for auth-related hardening).
+
+## Core Features (product scope)
+
+- Admin portal: properties, units, rooms, operational workflows  
+- Co-living and business-apartment use cases  
+- Tenant and landlord CRM  
+- Document management  
+- KPI / operational reporting (backend-driven)  
+- Multi-tenant SaaS deployment model (organization isolation + RLS)
