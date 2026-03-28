@@ -148,6 +148,7 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
     plain_refresh, token_hash, expires_at = create_refresh_token_value()
     rt = RefreshToken(
         user_id=str(user.id),
+        organization_id=user.organization_id,
         token_hash=token_hash,
         expires_at=expires_at,
     )
@@ -212,6 +213,7 @@ def refresh(request: Request, session=Depends(get_db_session)):
     plain_new, hash_new, expires_new = create_refresh_token_value()
     rt_new = RefreshToken(
         user_id=row.user_id,
+        organization_id=user.organization_id,
         token_hash=hash_new,
         expires_at=expires_new,
     )

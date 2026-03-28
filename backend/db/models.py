@@ -445,6 +445,7 @@ class UserCredentials(SQLModel, table=True):
     __tablename__ = "user_credentials"
 
     user_id: str = Field(primary_key=True, foreign_key="users.id")
+    organization_id: Optional[str] = Field(default=None, foreign_key="organization.id", index=True)
     password_hash: str
     password_algo: str = Field(default="argon2id")
     password_changed_at: datetime = Field(default_factory=datetime.utcnow)
@@ -454,6 +455,7 @@ class RefreshToken(SQLModel, table=True):
     __tablename__ = "refresh_tokens"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     user_id: str = Field(foreign_key="users.id", index=True)
+    organization_id: Optional[str] = Field(default=None, foreign_key="organization.id", index=True)
     token_hash: str = Field(index=True)
     expires_at: datetime = Field(index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)

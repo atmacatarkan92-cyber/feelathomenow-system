@@ -114,6 +114,7 @@ def admin_create_user(
 
         creds = UserCredentials(
             user_id=str(user.id),
+            organization_id=org_id,
             password_hash=hash_password(body.password),
         )
         session.add(creds)
