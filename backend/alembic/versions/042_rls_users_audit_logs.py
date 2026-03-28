@@ -12,6 +12,7 @@ Revises: 041_unit_landlord_lease
 See backend/db/rls.py for GUC application.
 """
 
+import re
 from typing import Sequence, Union
 
 from alembic import op
@@ -23,43 +24,76 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _pg_column_format_type(conn, relname: str, attname: str) -> tuple[int, int, str] | None:
+    """Return (atttypid, atttypmod, format_type) or None if column missing."""
+    row = conn.execute(
+        text(
+            """
+            SELECT a.atttypid, a.atttypmod,
+                   pg_catalog.format_type(a.atttypid, a.atttypmod)
+            FROM pg_catalog.pg_attribute a
+            JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = :relname
+              AND a.attname = :attname AND a.attnum > 0 AND NOT a.attisdropped
+            """
+        ),
+        {"relname": relname, "attname": attname},
+    ).fetchone()
+    if not row:
+        return None
+    typid, typmod, fmt = int(row[0]), int(row[1]), str(row[2])
+    return typid, typmod, fmt
+
+
+def _validate_type_sql_fragment(s: str) -> str:
+    s = str(s).strip()
+    if not re.match(r"^[a-zA-Z0-9\s\(\)]+$", s):
+        raise RuntimeError(f"042: refusing unsafe organization.id type fragment: {s!r}")
+    return s
+
+
+def _using_expr_for_type_change(org_type_sql: str, audit_type_sql: str) -> str:
+    """Expression for ALTER ... TYPE ... USING when audit_logs.organization_id must match organization.id."""
+    ol = org_type_sql.lower()
+    al = audit_type_sql.lower()
+    if "uuid" in ol and "uuid" not in al:
+        return "organization_id::uuid"
+    if "uuid" in al and "uuid" not in ol:
+        return "organization_id::text"
+    return "organization_id::text"
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # --- audit_logs: organization_id (UUID — must match organization.id on PostgreSQL) ---
-    conn.execute(
-        text(
-            """
-            ALTER TABLE audit_logs
-            ADD COLUMN IF NOT EXISTS organization_id UUID
-            """
+    # --- audit_logs.organization_id: exact same PostgreSQL type as organization.id (CI vs Render drift) ---
+    org_attr = _pg_column_format_type(conn, "organization", "id")
+    if not org_attr:
+        raise RuntimeError("042: public.organization.id not found")
+    org_typid, org_typmod, org_type_sql = org_attr[0], org_attr[1], _validate_type_sql_fragment(org_attr[2])
+
+    audit_attr = _pg_column_format_type(conn, "audit_logs", "organization_id")
+    if audit_attr is None:
+        conn.execute(
+            text(f"ALTER TABLE audit_logs ADD COLUMN organization_id {org_type_sql}")
         )
-    )
-    # Partial failed run may have created VARCHAR; normalize before FK.
-    conn.execute(
-        text(
-            """
-            DO $$
-            BEGIN
-              IF EXISTS (
-                SELECT 1 FROM information_schema.columns
-                WHERE table_schema = 'public'
-                  AND table_name = 'audit_logs'
-                  AND column_name = 'organization_id'
-                  AND data_type = 'character varying'
-              ) THEN
-                ALTER TABLE audit_logs
-                  ALTER COLUMN organization_id TYPE uuid USING (organization_id::uuid);
-              END IF;
-            END $$;
-            """
-        )
-    )
+    else:
+        aud_typid, aud_typmod, aud_type_sql = audit_attr[0], audit_attr[1], audit_attr[2]
+        if (aud_typid, aud_typmod) != (org_typid, org_typmod):
+            using = _using_expr_for_type_change(org_type_sql, aud_type_sql)
+            conn.execute(
+                text(
+                    f"ALTER TABLE audit_logs ALTER COLUMN organization_id TYPE {org_type_sql} "
+                    f"USING ({using})"
+                )
+            )
+
     conn.execute(
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = u.organization_id::uuid
+            SET organization_id = u.organization_id
             FROM users u
             WHERE a.actor_user_id = u.id
               AND a.organization_id IS NULL
@@ -70,7 +104,7 @@ def upgrade() -> None:
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = u.organization_id::uuid
+            SET organization_id = u.organization_id
             FROM unit u
             WHERE a.entity_type = 'unit'
               AND a.entity_id = u.id
@@ -82,7 +116,7 @@ def upgrade() -> None:
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = t.organization_id::uuid
+            SET organization_id = t.organization_id
             FROM tenant t
             WHERE a.entity_type = 'tenant'
               AND a.entity_id = t.id
@@ -94,7 +128,7 @@ def upgrade() -> None:
         text(
             """
             UPDATE audit_logs a
-            SET organization_id = t.organization_id::uuid
+            SET organization_id = t.organization_id
             FROM tenancies t
             WHERE a.entity_type = 'tenancy'
               AND a.entity_id = t.id
