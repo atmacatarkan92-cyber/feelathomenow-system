@@ -50,21 +50,27 @@ Helpers: `backend/db/rls.py` (`apply_pg_*`).
 
 ### B) Join-based (no `organization_id` on row — parent supplies scope)
 
+Migration **045** enabled **ENABLE + FORCE RLS** and created policies for `listings`, `listing_images`, and `listing_amenities`. Migration **046** replaced those policies to fix public reads when `unit` is under RLS (see below).
+
 | Table | Policy name | FORCE RLS | Mechanism |
 | ----- | ----------- | --------- | --------- |
-| `listings` | `listings_org_or_published` | yes | `EXISTS (unit WHERE unit.id = listings.unit_id AND org match)` **OR** published listing readable without org GUC (public API) |
-| `listing_images` | `listing_images_org_or_published` | yes | Via `listings` → `unit`; read also allows published parent |
-| `listing_amenities` | `listing_amenities_org_or_published` | yes | Same as `listing_images` |
+| `listings` | `listings_org_or_published` | yes | **USING:** `EXISTS (unit u … org match)` **or** `listings.is_published = true` (public branch does **not** reference `unit`; **046**). **WITH CHECK:** tenant path only via `EXISTS (unit … org match)`. |
+| `listing_images` | `listing_images_org_or_published` | yes | **USING:** org path via `listings`→`unit`; **or** `EXISTS (listings l … l.id = listing_id AND l.is_published = true)` with **no** `unit` in the published branch (**046**). **WITH CHECK:** org path via `listings`→`unit` only. |
+| `listing_amenities` | `listing_amenities_org_or_published` | yes | Same pattern as `listing_images` (**046**). |
 
-**Public marketing:** `listings.is_published = true` rows are readable with **no** tenant GUC (intentional cross-tenant public catalog). Writes require org context via `WITH CHECK` (tenant path only).
+**046 behavior (published read):** Without org GUC, the **published** branch must not rely on a `unit` subquery that is evaluated under `unit` RLS (which returned no rows). **046** removes `unit` from the public-read branch: `listings` uses `is_published` alone; children use a **listings-only** `EXISTS` for `is_published`.
+
+**Public marketing:** Published rows remain readable with **no** tenant GUC. Writes still require org context via `WITH CHECK` (tenant path).
 
 ### C) `inquiries` (mixed)
 
 | Column / rule | Purpose |
 | ------------- | ------- |
-| `organization_id` (nullable, FK → `organization`) | Denormalized tenant; backfilled from `listings` → `unit` where `apartment_id` set (migration **045**) |
+| `organization_id` (nullable, FK → `organization`) | Denormalized tenant; backfilled from `listings` → `unit` where `apartment_id` set; column type aligned to `organization.id` (**045**) |
 | Policy `inquiries_access` | **USING:** org match; OR anonymous rows (`organization_id` and `apartment_id` NULL) when org GUC unset; OR `app.current_inquiry_id` trusted row |
 | **WITH CHECK** | Anonymous insert (`both NULL`); or listing-linked insert with `organization_id` matching `listings`/`unit` org |
+
+Migration **045** enables **ENABLE + FORCE RLS** and installs `inquiries_access`.
 
 Anonymous web contact rows remain **admin-invisible** in org-scoped list endpoints (application query unchanged).
 
@@ -73,6 +79,10 @@ Anonymous web contact rows remain **admin-invisible** in org-scoped list endpoin
 | Policy | FORCE RLS | Mechanism |
 | ------ | --------- | --------- |
 | `org_isolation_password_reset_tokens` | yes | `EXISTS (users u WHERE u.id = user_id AND u.organization_id matches GUC)` **OR** `token_hash = app.current_password_reset_token_hash` |
+
+Migration **045** enables **ENABLE + FORCE RLS** and installs the policy.
+
+Migration **046** replaces `password_reset_tokens.user_id` → `users(id)` with **`ON DELETE CASCADE`** (was non-CASCADE in **019**).
 
 Forgot-password inserts set org context **per user** before insert (`auth/routes.py`). Reset endpoint uses `apply_pg_password_reset_token_hash_lookup` for the initial lookup.
 
@@ -88,7 +98,8 @@ Forgot-password inserts set org context **per user** before insert (`auth/routes
 | 036–039 | RLS: property managers, documents |
 | 042 | RLS: `users`, `audit_logs` |
 | 043–044 | Auth table columns + RLS: `user_credentials`, `refresh_tokens` |
-| **045** | RLS: `listings`, `listing_images`, `listing_amenities`, `inquiries`, `password_reset_tokens` |
+| **045** | RLS: `listings`, `listing_images`, `listing_amenities`, `inquiries`, `password_reset_tokens`; `inquiries.organization_id` + FK; inquiries policies |
+| **046** | Listing policies: public published-read path without `unit` subquery in the published branch; `password_reset_tokens.user_id` FK **`ON DELETE CASCADE`** |
 
 ---
 
