@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-Create a non-superuser app role for CI and grant DML on public schema.
+Create a non-superuser app role and grant DML on public schema.
 
-Run after `alembic upgrade head` using the migration (superuser) connection.
+Run after `alembic upgrade head` using the **privileged** connection (same user that
+owns migrated tables).
+
 Environment:
-  MIGRATE_DATABASE_URL — SQLAlchemy URL for the migration role (e.g. ci_user).
-  CI_MIGRATION_ROLE — name of the role that owns migrated tables (default: ci_user).
-  CI_APP_ROLE_PASSWORD — password for feelathomenow_app (default: feelathomenow_app_ci_pass).
+  MIGRATE_DATABASE_URL — Preferred URL for this script (bootstrap / migration user).
+  If unset, falls back to DATABASE_URL (legacy single-URL setups).
+  CI_MIGRATION_ROLE — Role that owns new tables (default: ci_user). Use `postgres` in
+    Docker Compose (`CI_MIGRATION_ROLE` is set there).
+  CI_APP_ROLE_PASSWORD — Password for feelathomenow_app (default: feelathomenow_app_ci_pass).
 
-Tests must use DATABASE_URL pointing at feelathomenow_app so RLS is enforced.
+Runtime `DATABASE_URL` must use `feelathomenow_app` so PostgreSQL RLS applies.
 """
 from __future__ import annotations
 

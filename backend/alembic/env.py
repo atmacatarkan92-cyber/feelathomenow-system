@@ -8,6 +8,7 @@ from alembic import context
 from sqlmodel import SQLModel
 
 # Ensure backend root is on path and .env is loaded before importing db
+import os
 import sys
 from pathlib import Path
 
@@ -17,7 +18,9 @@ sys.path.insert(0, str(_backend_root))
 from dotenv import load_dotenv
 load_dotenv(_backend_root / ".env")
 
-from db.database import engine as _engine, DATABASE_URL
+from sqlalchemy import create_engine
+
+from db.database import get_migration_database_url
 from db import models  # noqa: F401 — register all table models on SQLModel.metadata
 
 config = context.config
@@ -26,11 +29,14 @@ if config.config_file_name is not None:
 
 target_metadata = SQLModel.metadata
 
+_echo = os.getenv("SQL_ECHO", "").lower() in ("1", "true", "yes")
+
 
 def get_url():
-    """Use DATABASE_URL from backend/.env (same as db.database)."""
-    if DATABASE_URL:
-        return DATABASE_URL
+    """Privileged migration URL: MIGRATE_DATABASE_URL, else DATABASE_URL / PG_*."""
+    url = get_migration_database_url()
+    if url:
+        return url
     return config.get_main_option("sqlalchemy.url")
 
 
@@ -49,11 +55,17 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode (connects to DB)."""
-    if _engine is None:
+    mig_url = get_migration_database_url()
+    if not mig_url:
         raise RuntimeError(
-            "PostgreSQL is not configured. Set DATABASE_URL or PG_* in backend/.env (e.g. use docker compose up -d db)."
+            "PostgreSQL is not configured. Set MIGRATE_DATABASE_URL or DATABASE_URL or PG_* in backend/.env."
         )
-    connectable = _engine
+    connectable = create_engine(
+        mig_url,
+        echo=_echo,
+        pool_pre_ping=True,
+        connect_args={"client_encoding": "utf8"},
+    )
     with connectable.connect() as connection:
         context.configure(
             connection=connection,

@@ -1,7 +1,15 @@
 """
 PostgreSQL connection. In production, set DATABASE_URL (e.g. from secrets manager).
-Example: postgresql+psycopg2://user:password@host:5432/dbname
+
+Runtime vs migrations:
+- DATABASE_URL must be the **application** role (NOSUPERUSER, NOBYPASSRLS) so Row Level
+  Security applies. Do not point the app at a superuser.
+- MIGRATE_DATABASE_URL (optional): privileged role used only by Alembic and
+  scripts/ci_grant_app_role.py. If unset, migrations use DATABASE_URL (same as before).
+  Example: docker-compose sets MIGRATE_DATABASE_URL=postgres… and DATABASE_URL=feelathomenow_app…
 """
+from __future__ import annotations
+
 import os
 from pathlib import Path
 
@@ -16,15 +24,18 @@ _backend_root = Path(__file__).resolve().parent.parent
 load_dotenv(_backend_root / ".env")
 
 
+def _normalize_sqlalchemy_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif not url.startswith("postgresql"):
+        url = f"postgresql+psycopg2://{url}"
+    return url
+
+
 def _get_database_url():
     url = os.getenv("DATABASE_URL")
     if url:
-        # Ensure scheme is correct for SQLAlchemy
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
-        elif not url.startswith("postgresql"):
-            url = f"postgresql+psycopg2://{url}"
-        return url
+        return _normalize_sqlalchemy_url(url)
     # Local dev fallback (set DATABASE_URL or PG_PASSWORD in .env for production)
     if os.getenv("PG_PASSWORD") is not None or os.getenv("PG_USER") is not None:
         return URL.create(
@@ -36,6 +47,27 @@ def _get_database_url():
             database=os.getenv("PG_DATABASE", "feelathomenow"),
         )
     return None
+
+
+def get_migration_database_url() -> str | URL | None:
+    """
+    URL for Alembic and role-grant scripts. Prefer MIGRATE_DATABASE_URL when split from app.
+    Falls back to DATABASE_URL / PG_* so existing local and CI flows keep working.
+    """
+    raw = os.getenv("MIGRATE_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if raw:
+        return _normalize_sqlalchemy_url(raw)
+    if os.getenv("PG_PASSWORD") is not None or os.getenv("PG_USER") is not None:
+        return URL.create(
+            "postgresql+psycopg2",
+            username=os.getenv("PG_USER", "postgres"),
+            password=os.getenv("PG_PASSWORD", ""),
+            host=os.getenv("PG_HOST", "localhost"),
+            port=int(os.getenv("PG_PORT", "5432")),
+            database=os.getenv("PG_DATABASE", "feelathomenow"),
+        )
+    return None
+
 
 DATABASE_URL = _get_database_url()
 _echo = os.getenv("SQL_ECHO", "").lower() in ("1", "true", "yes")

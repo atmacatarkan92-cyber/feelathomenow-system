@@ -1,5 +1,8 @@
 # FeelAtHomeNow — local/production stack
 # Usage: copy .env.example to .env, set variables, then: docker compose up -d
+#
+# Backend connects as POSTGRES_APP_USER (default feelathomenow_app), NOT the Postgres superuser,
+# so Row Level Security applies. MIGRATE_DATABASE_URL uses the bootstrap user for Alembic + grants.
 
 services:
   postgres:
@@ -25,7 +28,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-feelathomenow}
+      # Privileged: migrations + scripts/ci_grant_app_role.py (table owner / DDL)
+      MIGRATE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-feelathomenow}
+      # Runtime: NOSUPERUSER NOBYPASSRLS (created by entrypoint grant script)
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_APP_USER:-feelathomenow_app}:${POSTGRES_APP_PASSWORD}@postgres:5432/${POSTGRES_DB:-feelathomenow}
+      CI_MIGRATION_ROLE: ${POSTGRES_USER:-postgres}
+      CI_APP_ROLE_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env}
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SENTRY_DSN: ${SENTRY_DSN:-}

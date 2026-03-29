@@ -65,7 +65,7 @@ Request flow: browser → API → SQLAlchemy `Session` → PostgreSQL. Authentic
 
 ## Local Development Setup
 
-**Requirements:** Python 3.11+, Node.js 20+, PostgreSQL 16 (local or Docker). Configure `DATABASE_URL` and `SECRET_KEY` (see `backend/.env` patterns).
+**Requirements:** Python 3.11+, Node.js 20+, PostgreSQL 16 (local or Docker). Configure `SECRET_KEY` and a PostgreSQL URL for the **application** database user (not a superuser) so RLS applies — see [docs/DEVOPS.md](docs/DEVOPS.md) for Docker split roles (`MIGRATE_DATABASE_URL` vs `DATABASE_URL`).
 
 **Backend**
 
@@ -94,14 +94,14 @@ Point the frontend at your API base URL using `frontend/.env` / `frontend/.env.e
 
 ## Migrations
 
-Alembic migrations live in `backend/alembic/versions/`. Apply from the `backend/` directory:
+Alembic migrations live in `backend/alembic/versions/`. Apply from the `backend/` directory using a **privileged** connection (or set `MIGRATE_DATABASE_URL` when `DATABASE_URL` is the app role only):
 
 ```bash
 cd backend
 alembic upgrade head
 ```
 
-New revisions should follow the team’s migration process. CI runs `alembic upgrade head` on a fresh PostgreSQL service before backend tests.
+New revisions should follow the team’s migration process. CI and Docker run migrations with a migration user, then `scripts/ci_grant_app_role.py`, then tests or the API with the app user — see [docs/DEVOPS.md](docs/DEVOPS.md).
 
 ---
 
