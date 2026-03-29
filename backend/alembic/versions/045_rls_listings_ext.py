@@ -13,6 +13,7 @@ Revises: 044_rls_tokens_credentials
 Fail-closed when app.current_organization_id is unset except documented public/trusted paths.
 """
 
+import re
 from typing import Sequence, Union
 
 from alembic import op
@@ -24,18 +25,76 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _pg_column_format_type(conn, relname: str, attname: str) -> tuple[int, int, str] | None:
+    """Return (atttypid, atttypmod, format_type) or None if column missing."""
+    row = conn.execute(
+        text(
+            """
+            SELECT a.atttypid, a.atttypmod,
+                   pg_catalog.format_type(a.atttypid, a.atttypmod)
+            FROM pg_catalog.pg_attribute a
+            JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = :relname
+              AND a.attname = :attname AND a.attnum > 0 AND NOT a.attisdropped
+            """
+        ),
+        {"relname": relname, "attname": attname},
+    ).fetchone()
+    if not row:
+        return None
+    typid, typmod, fmt = int(row[0]), int(row[1]), str(row[2])
+    return typid, typmod, fmt
+
+
+def _validate_type_sql_fragment(s: str) -> str:
+    s = str(s).strip()
+    if not re.match(r"^[a-zA-Z0-9\s\(\)]+$", s):
+        raise RuntimeError(f"045: refusing unsafe organization.id type fragment: {s!r}")
+    return s
+
+
+def _using_expr_for_type_change(org_type_sql: str, inquiries_type_sql: str) -> str:
+    """Expression for ALTER ... TYPE ... USING when inquiries.organization_id must match organization.id."""
+    ol = org_type_sql.lower()
+    al = inquiries_type_sql.lower()
+    if "uuid" in ol and "uuid" not in al:
+        return "organization_id::uuid"
+    if "uuid" in al and "uuid" not in ol:
+        return "organization_id::text"
+    return "organization_id::text"
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
     # --- inquiries.organization_id (denormalized tenant boundary + RLS) ---
+    # Same PostgreSQL type as organization.id (CI vs Render drift).
     conn.execute(
-        text(
-            """
-            ALTER TABLE inquiries
-            ADD COLUMN IF NOT EXISTS organization_id VARCHAR
-            """
-        )
+        text("ALTER TABLE inquiries DROP CONSTRAINT IF EXISTS inquiries_organization_id_fkey")
     )
+
+    org_attr = _pg_column_format_type(conn, "organization", "id")
+    if not org_attr:
+        raise RuntimeError("045: public.organization.id not found")
+    org_typid, org_typmod, org_type_sql = org_attr[0], org_attr[1], _validate_type_sql_fragment(org_attr[2])
+
+    inq_attr = _pg_column_format_type(conn, "inquiries", "organization_id")
+    if inq_attr is None:
+        conn.execute(
+            text(f"ALTER TABLE inquiries ADD COLUMN organization_id {org_type_sql}")
+        )
+    else:
+        inq_typid, inq_typmod, inq_type_sql = inq_attr[0], inq_attr[1], inq_attr[2]
+        if (inq_typid, inq_typmod) != (org_typid, org_typmod):
+            using = _using_expr_for_type_change(org_type_sql, inq_type_sql)
+            conn.execute(
+                text(
+                    f"ALTER TABLE inquiries ALTER COLUMN organization_id TYPE {org_type_sql} "
+                    f"USING ({using})"
+                )
+            )
+
     conn.execute(
         text(
             """
@@ -46,6 +105,11 @@ def upgrade() -> None:
             WHERE i.apartment_id = l.id
               AND i.organization_id IS NULL
             """
+        )
+    )
+    conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_inquiries_organization_id ON inquiries (organization_id)"
         )
     )
     conn.execute(
@@ -64,11 +128,6 @@ def upgrade() -> None:
             END
             $$;
             """
-        )
-    )
-    conn.execute(
-        text(
-            "CREATE INDEX IF NOT EXISTS ix_inquiries_organization_id ON inquiries (organization_id)"
         )
     )
 
