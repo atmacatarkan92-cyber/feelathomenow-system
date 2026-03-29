@@ -339,10 +339,11 @@ def forgot_password(
             User.is_active == True,  # noqa: E712
         )
     ).all()
+    user_data = [(str(u.id), str(u.organization_id), u.email) for u in users]
     session.info.pop("rls_auth_unscoped", None)
     session.commit()
 
-    if not users:
+    if not user_data:
         return GenericSuccessResponse(detail=generic_detail)
 
     ttl_minutes = int(os.environ.get("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "60"))
@@ -354,31 +355,31 @@ def forgot_password(
     if not frontend_url:
         frontend_url = "http://localhost:3000"
 
-    tokens_to_send: list[tuple[User, str]] = []
-    for u in users:
-        apply_pg_organization_context(session, str(u.organization_id))
+    tokens_to_send: list[tuple[str, str]] = []
+    for user_id, org_id, user_email in user_data:
+        apply_pg_organization_context(session, org_id)
         raw_token = secrets.token_urlsafe(48)
         token_hash = hash_password_reset_token(raw_token)
         session.add(
             PasswordResetToken(
-                user_id=str(u.id),
+                user_id=user_id,
                 token_hash=token_hash,
                 expires_at=now + timedelta(minutes=ttl_minutes),
                 used_at=None,
             )
         )
         session.flush()
-        tokens_to_send.append((u, raw_token))
+        tokens_to_send.append((user_email, raw_token))
 
     session.commit()
 
     # Email delivery: never fail the endpoint response (generic message always),
     # but do log and continue if sending fails for a recipient.
     base = frontend_url.rstrip("/")
-    for u, raw_token in tokens_to_send:
+    for user_email, raw_token in tokens_to_send:
         reset_link = f"{base}/reset-password?token={raw_token}"
         try:
-            send_password_reset_email(u.email, reset_link)
+            send_password_reset_email(user_email, reset_link)
         except EmailServiceError:
             # Intentionally do not leak details to the client.
             continue
