@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Globe } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -14,6 +14,24 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, toggleLanguage } = useLanguage();
   const location = useLocation();
+  const isHome = location.pathname === '/';
+  const [pastHero, setPastHero] = useState(false);
+
+  useEffect(() => {
+    if (!isHome) {
+      setPastHero(false);
+      return undefined;
+    }
+    const onScroll = () => {
+      const threshold = Math.min(window.innerHeight * 0.5, 520);
+      setPastHero(window.scrollY > threshold);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isHome]);
+
+  const darkHeroHeader = isHome && !pastHero;
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -32,20 +50,40 @@ const Header = () => {
     return location.pathname === path;
   };
 
-  const linkClass = (active, external) =>
-    `text-[14px] font-medium transition-colors ${
+  const linkClass = (active, external) => {
+    if (darkHeroHeader) {
+      return `text-[14px] font-medium transition-colors ${
+        !external && active ? '' : 'text-slate-400 hover:text-white'
+      }`;
+    }
+    return `text-[14px] font-medium transition-colors ${
       !external && active ? '' : 'text-slate-500 hover:text-slate-900'
     }`;
+  };
 
   const linkStyle = (active, external) =>
     !external && active ? { color: ACCENT } : undefined;
 
+  const headerSurface = darkHeroHeader
+    ? 'border-b border-white/10 bg-[#05080f]/90 backdrop-blur-xl supports-[backdrop-filter]:bg-[#05080f]/80'
+    : 'border-b border-slate-100/80 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/75';
+
+  const logoClass = darkHeroHeader ? 'h-8 w-auto sm:h-9 brightness-0 invert' : 'h-8 w-auto sm:h-9';
+
+  const globeBtnClass = darkHeroHeader
+    ? 'hidden items-center gap-2 rounded-full text-slate-400 hover:bg-white/10 hover:text-white sm:flex'
+    : 'hidden items-center gap-2 rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-900 sm:flex';
+
+  const menuToggleClass = darkHeroHeader
+    ? 'rounded-full p-2.5 text-slate-200 transition-colors hover:bg-white/10 lg:hidden'
+    : 'rounded-full p-2.5 text-slate-700 transition-colors hover:bg-slate-50 lg:hidden';
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-100/80 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
+    <header className={`fixed top-0 left-0 right-0 z-50 ${headerSurface}`}>
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between lg:h-[4.25rem]">
           <Link to="/" className="flex shrink-0 items-center -ml-0.5">
-            <img src={vantioLogo} alt="Vantio" className="h-8 w-auto sm:h-9" />
+            <img src={vantioLogo} alt="Vantio" className={logoClass} />
           </Link>
 
           <div className="hidden items-center gap-12 lg:flex">
@@ -84,19 +122,14 @@ const Header = () => {
                 Request demo
               </Button>
             </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleLanguage}
-              className="hidden items-center gap-2 rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-900 sm:flex"
-            >
+            <Button variant="ghost" size="sm" onClick={toggleLanguage} className={globeBtnClass}>
               <Globe className="h-4 w-4" />
               <span className="text-[13px] font-medium">{language.toUpperCase()}</span>
             </Button>
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="rounded-full p-2.5 text-slate-700 transition-colors hover:bg-slate-50 lg:hidden"
+              className={menuToggleClass}
               type="button"
               aria-label="Toggle menu"
             >
@@ -106,13 +139,21 @@ const Header = () => {
         </div>
 
         {isMenuOpen && (
-          <div className="border-t border-slate-100 py-6 lg:hidden">
+          <div
+            className={`border-t py-6 lg:hidden ${
+              darkHeroHeader ? 'border-white/10 bg-[#05080f]/98' : 'border-slate-100'
+            }`}
+          >
             <div className="flex flex-col gap-1">
               {navigation.map((item) => {
                 const active = item.external ? false : isActive(item.href);
-                const mobileClass = `rounded-xl px-4 py-3.5 text-[15px] font-medium transition-colors ${
-                  active ? 'bg-slate-50' : 'text-slate-700 hover:bg-slate-50'
-                }`;
+                const mobileClass = darkHeroHeader
+                  ? `rounded-xl px-4 py-3.5 text-[15px] font-medium transition-colors ${
+                      active ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5'
+                    }`
+                  : `rounded-xl px-4 py-3.5 text-[15px] font-medium transition-colors ${
+                      active ? 'bg-slate-50' : 'text-slate-700 hover:bg-slate-50'
+                    }`;
                 const mobileStyle = active && !item.external ? { color: ACCENT } : undefined;
                 return item.external ? (
                   <a
@@ -147,7 +188,9 @@ const Header = () => {
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="flex items-center gap-2 rounded-xl px-4 py-3.5 text-[15px] font-medium text-slate-500 transition-colors hover:bg-slate-50 sm:hidden"
+                className={`flex items-center gap-2 rounded-xl px-4 py-3.5 text-[15px] font-medium transition-colors sm:hidden ${
+                  darkHeroHeader ? 'text-slate-400 hover:bg-white/5' : 'text-slate-500 hover:bg-slate-50'
+                }`}
               >
                 <Globe className="h-4 w-4" />
                 <span>{language === 'de' ? 'English' : 'Deutsch'}</span>

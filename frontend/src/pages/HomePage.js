@@ -143,13 +143,13 @@ function HeroProductPreview() {
   return (
     <div className="relative w-full mt-20 sm:mt-24 lg:mt-32">
       <div
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[min(520px,90vw)] w-[min(900px,120%)] -translate-x-1/2 -translate-y-1/2 rounded-[100%] bg-gradient-to-tr from-orange-100/[0.35] via-white/0 to-slate-200/[0.25] blur-[100px]"
+        className="pointer-events-none absolute left-1/2 top-[55%] h-[min(420px,70vw)] w-[min(720px,95%)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500/[0.12] blur-[100px]"
         aria-hidden
       />
       <div className="relative mx-auto max-w-6xl">
         <div
-          className="rounded-[1.75rem] bg-white shadow-[0_40px_100px_-32px_rgba(15,23,42,0.28)] ring-1 ring-slate-200/90 overflow-hidden"
-          style={{ boxShadow: `0 40px 100px -32px rgba(15,23,42,0.22), 0 0 0 1px rgba(15,23,42,0.04)` }}
+          className="rounded-[1.75rem] bg-white shadow-[0_40px_100px_-28px_rgba(0,0,0,0.55)] ring-1 ring-white/20 overflow-hidden"
+          style={{ boxShadow: `0 40px 100px -28px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.12)` }}
         >
           <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/95 px-5 py-3.5">
             <div className="flex items-center gap-2">
@@ -282,27 +282,46 @@ const btnPrimary =
   'rounded-full font-semibold text-white shadow-[0_8px_24px_-6px_rgba(249,115,22,0.45)] hover:opacity-[0.96] transition-opacity px-8 py-6 text-[15px]';
 const btnSecondary =
   'rounded-full font-semibold border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50 px-8 py-6 text-[15px]';
+const btnHeroSecondary =
+  'rounded-full font-semibold border border-white/25 bg-white/[0.04] text-white shadow-none backdrop-blur-sm hover:bg-white/10 px-8 py-6 text-[15px]';
 
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-white antialiased">
-      {/* 1. Hero — full-height, dominant type, new preview */}
-      <section className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white pb-24 pt-28 sm:pb-28 sm:pt-32 lg:pb-32 lg:pt-36">
+      {/* 1. Hero — dark premium; only this section is dark */}
+      <section className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[#05080f] pb-0 pt-28 sm:pt-32 lg:pt-36">
+        {/* Subtle grid */}
         <div
-          className="pointer-events-none absolute -left-40 top-20 h-[500px] w-[500px] rounded-full bg-orange-50/[0.45] blur-[120px]"
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)
+            `,
+            backgroundSize: '56px 56px',
+          }}
+          aria-hidden
+        />
+        {/* Soft orange glows */}
+        <div
+          className="pointer-events-none absolute -left-32 top-1/4 h-[420px] w-[420px] rounded-full bg-orange-500/[0.09] blur-[110px]"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute -right-32 bottom-0 h-[420px] w-[420px] rounded-full bg-slate-100/80 blur-[100px]"
+          className="pointer-events-none absolute -right-20 top-1/2 h-[380px] w-[380px] rounded-full bg-orange-400/[0.06] blur-[100px]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute bottom-32 left-1/2 h-64 w-[min(90%,520px)] -translate-x-1/2 rounded-full bg-orange-500/[0.07] blur-[90px]"
           aria-hidden
         />
 
-        <div className={`relative z-10 ${sectionWrap} flex flex-col`}>
+        <div className={`relative z-10 ${sectionWrap} flex flex-col pb-16 sm:pb-20 lg:pb-24`}>
           <div className="mx-auto max-w-4xl text-center">
-            <h1 className="text-[2.75rem] font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
+            <h1 className="text-[2.75rem] font-bold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
               {LANDING.hero.headline}
             </h1>
-            <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-slate-500 sm:text-xl lg:text-2xl lg:leading-relaxed">
+            <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl lg:text-2xl lg:leading-relaxed">
               {LANDING.hero.subheadline}
             </p>
             <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
@@ -313,22 +332,28 @@ const HomePage = () => {
                 </Button>
               </Link>
               <a href={PUBLIC_APP_LOGIN_URL} rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className={btnSecondary}>
+                <Button size="lg" variant="ghost" className={btnHeroSecondary}>
                   {LANDING.hero.secondaryCta}
                 </Button>
               </a>
             </div>
-            <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+            <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
               {LANDING.hero.tagline}
             </p>
           </div>
 
           <HeroProductPreview />
         </div>
+
+        {/* Transition into light sections */}
+        <div
+          className="pointer-events-none relative z-10 h-28 w-full bg-gradient-to-b from-[#05080f] via-slate-100/80 to-slate-50 sm:h-36"
+          aria-hidden
+        />
       </section>
 
       {/* 2. Social proof */}
-      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
+      <section className={`bg-slate-50 ${sectionY}`}>
         <div className={sectionWrap}>
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
