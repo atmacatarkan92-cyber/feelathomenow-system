@@ -18,6 +18,14 @@ const labelStyle = {
   color: "#374151",
 };
 
+const fieldErrorStyle = {
+  color: "#B91C1C",
+  fontSize: "12px",
+  marginTop: "4px",
+  marginBottom: 0,
+  lineHeight: 1.35,
+};
+
 const cardStyle = {
   background: "#FFFFFF",
   border: "1px solid #E5E7EB",
@@ -30,6 +38,13 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
+function inputStyleWithError(hasError) {
+  return {
+    ...inputStyle,
+    borderColor: hasError ? "#DC2626" : "#E5E7EB",
+  };
+}
+
 export default function AdminUsersPage() {
   const [form, setForm] = useState({
     email: "",
@@ -38,9 +53,26 @@ export default function AdminUsersPage() {
     name: "",
   });
 
+  const [errors, setErrors] = useState({ email: "", password: "", role: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const validateFields = () => {
+    const next = { email: "", password: "", role: "" };
+    const emailTrim = form.email.trim();
+    if (!emailTrim || !isValidEmail(emailTrim)) {
+      next.email = "Bitte gültige E-Mail eingeben";
+    }
+    if (!form.password || form.password.length < 8) {
+      next.password = "Passwort muss mindestens 8 Zeichen lang sein";
+    }
+    if (!form.role) {
+      next.role = "Bitte Rolle auswählen";
+    }
+    setErrors(next);
+    return !next.email && !next.password && !next.role;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,24 +81,14 @@ export default function AdminUsersPage() {
     setError("");
     setSuccess("");
 
+    if (!validateFields()) {
+      return;
+    }
+
     const email = form.email.trim();
     const password = form.password;
     const role = form.role;
     const name = form.name.trim();
-
-    // Frontend validation: reject empty input before API call.
-    if (!email || !isValidEmail(email)) {
-      setError("Validation error");
-      return;
-    }
-    if (!password || password.length < 8) {
-      setError("Validation error");
-      return;
-    }
-    if (!role) {
-      setError("Validation error");
-      return;
-    }
 
     const payload = {
       email,
@@ -102,6 +124,7 @@ export default function AdminUsersPage() {
 
       setSuccess("User created successfully");
       setForm({ email: "", password: "", role: "", name: "" });
+      setErrors({ email: "", password: "", role: "" });
     } catch (e2) {
       setError("Something went wrong");
     } finally {
@@ -135,12 +158,19 @@ export default function AdminUsersPage() {
             <input
               type="email"
               value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              style={inputStyle}
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, email: v }));
+                const t = v.trim();
+                if (t && isValidEmail(t)) {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
+              style={inputStyleWithError(!!errors.email)}
               placeholder="name@example.com"
               autoComplete="email"
-              required
             />
+            {errors.email ? <p style={fieldErrorStyle}>{errors.email}</p> : null}
           </div>
 
           <div>
@@ -148,20 +178,31 @@ export default function AdminUsersPage() {
             <input
               type="password"
               value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              style={inputStyle}
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, password: v }));
+                if (v.length >= 8) {
+                  setErrors((prev) => ({ ...prev, password: "" }));
+                }
+              }}
+              style={inputStyleWithError(!!errors.password)}
               autoComplete="new-password"
-              required
             />
+            {errors.password ? <p style={fieldErrorStyle}>{errors.password}</p> : null}
           </div>
 
           <div>
             <label style={labelStyle}>Role *</label>
             <select
               value={form.role}
-              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              style={inputStyle}
-              required
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, role: v }));
+                if (v) {
+                  setErrors((prev) => ({ ...prev, role: "" }));
+                }
+              }}
+              style={inputStyleWithError(!!errors.role)}
             >
               <option value="" disabled>
                 Select role
@@ -170,6 +211,7 @@ export default function AdminUsersPage() {
               <option value="landlord">landlord</option>
               <option value="tenant">tenant</option>
             </select>
+            {errors.role ? <p style={fieldErrorStyle}>{errors.role}</p> : null}
           </div>
 
           <div>
@@ -206,6 +248,7 @@ export default function AdminUsersPage() {
               onClick={() => {
                 setError("");
                 setSuccess("");
+                setErrors({ email: "", password: "", role: "" });
                 setForm({ email: "", password: "", role: "", name: "" });
               }}
               style={{
@@ -239,4 +282,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
