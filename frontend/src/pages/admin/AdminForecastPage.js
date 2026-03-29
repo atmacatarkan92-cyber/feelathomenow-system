@@ -60,7 +60,7 @@ function AdminForecastPage() {
           fontWeight:700,
           marginBottom:"8px"
         }}>
-          FeelAtHomeNow Admin
+          Vantio
         </div>
 
         <h2 style={{

@@ -637,7 +637,7 @@ export default function AdminUebersichtPage() {
                 letterSpacing: "0.04em",
               }}
             >
-              FeelAtHomeNow Admin
+              Vantio
             </div>
             <h2
               style={{

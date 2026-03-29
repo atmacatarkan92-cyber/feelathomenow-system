@@ -94,7 +94,7 @@ function AdminSidebar() {
             letterSpacing: "-0.02em",
           }}
         >
-          FeelAtHomeNow
+          Vantio
         </h2>
       </div>
 

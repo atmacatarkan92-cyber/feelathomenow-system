@@ -153,7 +153,7 @@ function AdminPerformancePage() {
             marginBottom: "8px",
           }}
         >
-          FeelAtHomeNow Admin
+          Vantio
         </div>
 
         <h2

@@ -13,7 +13,7 @@ function AdminLayout() {
       <div style={{ display: "flex", minHeight: "100vh" }}>
         <AdminSidebar />
         <div style={{ flex: 1, padding: "40px" }}>
-          <h1>FeelAtHomeNow Admin</h1>
+          <h1>Vantio</h1>
           <Outlet />
         </div>
       </div>
@@ -36,7 +36,7 @@ function AdminLayout() {
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <AdminSidebar />
       <div style={{ flex: 1, padding: "40px" }}>
-        <h1>FeelAtHomeNow Admin</h1>
+        <h1>Vantio</h1>
         <Outlet />
       </div>
     </div>

@@ -58,7 +58,7 @@ export default function Admin() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Administration" subtitle="FeelAtHomeNow – Verwaltung aller Daten und Einstellungen" />
+      <PageHeader title="Administration" subtitle="Vantio – Verwaltung aller Daten und Einstellungen" />
 
       <Tabs defaultValue="finance" className="space-y-6">
         <TabsList className="bg-white border border-slate-200 p-1 flex-wrap h-auto gap-1">

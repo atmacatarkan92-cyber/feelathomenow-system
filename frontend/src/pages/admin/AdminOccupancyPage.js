@@ -201,7 +201,7 @@ function AdminOccupancyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold text-orange-600">FeelAtHomeNow Admin</p>
+        <p className="text-sm font-semibold text-orange-600">Vantio</p>
         <h2 className="text-3xl font-bold text-slate-800 mt-1">Belegung</h2>
         <p className="text-slate-500 mt-1">
           Übersicht über Auslastung, freie Zimmer, Reservierungen und Belegungsquote

@@ -19,7 +19,7 @@ export default function AdminInvoiceSettings() {
   const setting = settings[0] || {};
 
   const [form, setForm] = useState({
-    company_name: setting.company_name || "FeelAtHomeNow",
+    company_name: setting.company_name || "Vantio",
     company_address: setting.company_address || "Musterstrasse 123",
     company_city: setting.company_city || "8000 Zürich",
     iban: setting.iban || "CH93 0076 2011 6238 5295 7",

@@ -64,10 +64,10 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex items-center gap-2">
           <img 
             src="https://media.base44.com/images/public/69b1fb087eaad111e37b7816/2eefc4c2c_IMG-20260206-WA0002.jpg" 
-            alt="FeelAtHomeNow" 
+            alt="Vantio" 
             className="h-8 w-auto"
           />
-          <span className="font-semibold text-slate-900 text-sm">FeelAtHomeNow</span>
+          <span className="font-semibold text-slate-900 text-sm">Vantio</span>
         </div>
         <div className="w-9" />
       </header>
@@ -87,11 +87,11 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex items-center gap-3">
             <img 
               src="https://media.base44.com/images/public/69b1fb087eaad111e37b7816/2eefc4c2c_IMG-20260206-WA0002.jpg" 
-              alt="FeelAtHomeNow" 
+              alt="Vantio" 
               className="h-10 w-auto"
             />
             <div>
-              <h1 className="font-bold text-slate-900 text-lg leading-tight">FeelAtHomeNow</h1>
+              <h1 className="font-bold text-slate-900 text-lg leading-tight">Vantio</h1>
               <p className="text-xs text-slate-500">Mein Zuhause</p>
             </div>
           </div>

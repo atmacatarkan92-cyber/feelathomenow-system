@@ -105,7 +105,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader
         title={`Willkommen, ${user.full_name?.split(" ")[0] || "zurück"}`}
-        subtitle="Ihr FeelAtHomeNow Dashboard – Alles für Ihr Zuhause"
+        subtitle="Ihr Vantio Dashboard – Alles für Ihr Zuhause"
       />
 
       <QuickStats stats={stats} />

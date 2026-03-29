@@ -384,7 +384,7 @@ function AdminTenantsPage() {
             marginBottom: "8px",
           }}
         >
-          FeelAtHomeNow Admin
+          Vantio
         </div>
 
         {deleteError ? (

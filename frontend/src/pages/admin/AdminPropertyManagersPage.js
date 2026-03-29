@@ -195,7 +195,7 @@ function AdminPropertyManagersPage() {
             marginBottom: "8px",
           }}
         >
-          FeelAtHomeNow Admin
+          Vantio
         </div>
 
         <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>

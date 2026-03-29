@@ -200,7 +200,7 @@ def send_password_reset_email(recipient_email: str, reset_link: str) -> bool:
     - Caller generates the reset token and includes it in reset_link.
     - This function does not log reset_link.
     """
-    subject = "Reset your FeelAtHomeNow password"
+    subject = "Passwort zurücksetzen – Vantio"
     html_content = f"""
     <!DOCTYPE html>
     <html>

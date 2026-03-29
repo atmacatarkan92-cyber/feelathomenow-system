@@ -456,7 +456,7 @@ function AdminBusinessApartmentsDashboardPage() {
         <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
           <div>
             <p className="text-sm font-semibold text-orange-600">
-              FeelAtHomeNow Admin
+              Vantio
             </p>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mt-2">
               Business-Apartment Dashboard
