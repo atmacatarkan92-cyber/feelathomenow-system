@@ -1,124 +1,140 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Home, Building2, Users, Briefcase, CheckCircle, Quote } from 'lucide-react';
-import { useLanguage } from '../contexts/LanguageContext';
+import {
+  ArrowRight,
+  Building2,
+  Layers,
+  BarChart3,
+  Wallet,
+  Users,
+  Share2,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { mockTestimonials } from '../utils/mockData';
+
+/**
+ * Public landing copy (EN). Structure is ready to swap for i18n later.
+ */
+const LANDING = {
+  hero: {
+    headline: 'All-in-One Property Management Software for Modern Rental Businesses',
+    subheadline:
+      'Manage co-living, serviced apartments and rental portfolios in one platform — with real-time insights, automation and full control.',
+    tagline: 'Built for operators. Not spreadsheets.',
+    primaryCta: 'Request demo',
+    secondaryCta: 'Login',
+  },
+  features: [
+    {
+      title: 'Portfolio Management',
+      description: 'Centralize units, buildings and contracts in one operational view.',
+      Icon: Layers,
+    },
+    {
+      title: 'Flexible Rental Models',
+      description: 'Co-living, serviced apartments and mixed portfolios — configured your way.',
+      Icon: Building2,
+    },
+    {
+      title: 'Real-Time Analytics',
+      description: 'Live occupancy, revenue and performance metrics without manual exports.',
+      Icon: BarChart3,
+    },
+    {
+      title: 'Financial Overview',
+      description: 'Invoices, payments and cash-flow visibility across your portfolio.',
+      Icon: Wallet,
+    },
+    {
+      title: 'Tenant Management',
+      description: 'Onboarding, communication and lifecycle tools built for scale.',
+      Icon: Users,
+    },
+    {
+      title: 'Listings & Distribution',
+      description: 'Publish and sync listings with consistent branding and control.',
+      Icon: Share2,
+    },
+  ],
+  problemSolution: {
+    problem: 'Excel chaos, no overview, manual processes',
+    solution: 'One platform, clear data, full control',
+  },
+  audience: {
+    title: 'Who is Vantio for?',
+    items: [
+      'Property managers',
+      'Co-living operators',
+      'Serviced apartment providers',
+      'Real estate investors',
+    ],
+  },
+  finalCta: {
+    headline: 'Ready to run your rental business in one system?',
+    button: 'Request demo',
+  },
+};
 
 const HomePage = () => {
-  const { t, language } = useLanguage();
-  const observerRef = useRef(null);
-
-  useEffect(() => {
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('animate-fade-in');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    document.querySelectorAll('.fade-on-scroll').forEach((el) => {
-      observerRef.current.observe(el);
-    });
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, []);
-
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Image with Overlay */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.pexels.com/photos/15031994/pexels-photo-15031994.jpeg"
-            alt="Modern apartment"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-gray-900/70 to-gray-900/50" />
-        </div>
-
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            {t.hero.headline}
+    <div className="min-h-screen bg-white">
+      {/* 1. Hero */}
+      <section className="relative pt-28 pb-20 lg:pt-32 lg:pb-28 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-orange-50/40 pointer-events-none" />
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight tracking-tight">
+            {LANDING.hero.headline}
           </h1>
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-200 mb-10 max-w-3xl mx-auto leading-relaxed">
-            {t.hero.subheadline}
+          <p className="text-lg sm:text-xl text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
+            {LANDING.hero.subheadline}
+          </p>
+          <p className="text-sm font-medium text-slate-500 mb-10 uppercase tracking-wide">
+            {LANDING.hero.tagline}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link to="/apartments">
-              <Button 
-                size="lg" 
-                className="bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+            <Link to="/contact">
+              <Button
+                size="lg"
+                className="bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white px-8 py-6 text-base font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
               >
-                {t.hero.cta1}
+                {LANDING.hero.primaryCta}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/for-companies">
-              <Button 
-                size="lg" 
+            <Link to="/admin/login">
+              <Button
+                size="lg"
                 variant="outline"
-                className="bg-white/10 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 py-6 text-lg font-semibold rounded-lg transition-all duration-300 transform hover:-translate-y-1"
+                className="border-2 border-slate-200 text-slate-800 hover:bg-slate-50 px-8 py-6 text-base font-semibold rounded-lg"
               >
-                {t.hero.cta2}
-                <ArrowRight className="ml-2 h-5 w-5" />
+                {LANDING.hero.secondaryCta}
               </Button>
             </Link>
-          </div>
-        </div>
-
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-pulse" />
           </div>
         </div>
       </section>
 
-      {/* Services Section */}
-      <section className="py-20 bg-white fade-on-scroll">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {t.services.title}
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              {t.services.subtitle}
+      {/* 2. Features */}
+      <section id="features" className="py-20 bg-white border-t border-slate-100 scroll-mt-24">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Features</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto">
+              Everything you need to operate modern rental portfolios in one place.
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { icon: Home, title: t.services.service1Title, desc: t.services.service1Desc },
-              { icon: Users, title: t.services.service2Title, desc: t.services.service2Desc },
-              { icon: Building2, title: t.services.service3Title, desc: t.services.service3Desc },
-              { icon: Briefcase, title: t.services.service4Title, desc: t.services.service4Desc },
-            ].map((service, index) => (
-              <Card 
-                key={index} 
-                className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border-gray-100 overflow-hidden"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {LANDING.features.map(({ title, description, Icon }) => (
+              <Card
+                key={title}
+                className="border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300"
               >
                 <CardContent className="p-6">
-                  <div className="w-14 h-14 bg-[#FF7A3D]/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-[#FF7A3D] transition-colors duration-300">
-                    <service.icon className="h-7 w-7 text-[#FF7A3D] group-hover:text-white transition-colors duration-300" />
+                  <div className="w-11 h-11 rounded-lg bg-[#FF7A3D]/10 flex items-center justify-center mb-4">
+                    <Icon className="h-5 w-5 text-[#FF7A3D]" strokeWidth={2} />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {service.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {service.desc}
-                  </p>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -126,159 +142,62 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Benefits for Companies Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white fade-on-scroll">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                {t.companies.title}
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                {t.companies.subtitle}
+      {/* 3. Problem → Solution */}
+      <section className="py-20 bg-slate-900 text-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-stretch">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 md:p-10">
+              <p className="text-xs font-semibold uppercase tracking-wider text-orange-400 mb-3">
+                The problem
               </p>
-              <div className="space-y-4">
-                {[
-                  { title: t.companies.benefit1Title, desc: t.companies.benefit1Desc },
-                  { title: t.companies.benefit2Title, desc: t.companies.benefit2Desc },
-                  { title: t.companies.benefit3Title, desc: t.companies.benefit3Desc },
-                  { title: t.companies.benefit4Title, desc: t.companies.benefit4Desc },
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <CheckCircle className="h-6 w-6 text-[#FF7A3D] flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{benefit.title}</h4>
-                      <p className="text-gray-600">{benefit.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link to="/for-companies">
-                <Button 
-                  className="mt-8 bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white"
-                  size="lg"
-                >
-                  {t.companies.cta}
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
-            <div className="relative">
-              <img
-                src="/apartment.png"
-                alt="Business professionals"
-                className="rounded-2xl shadow-2xl w-full h-[500px] object-cover"
-              />
-              <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits for Property Managers Section */}
-      <section className="py-20 bg-white fade-on-scroll">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="order-2 lg:order-1 relative">
-              <img
-                src="https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg"
-                alt="Property management"
-                className="rounded-2xl shadow-2xl w-full h-[500px] object-cover"
-              />
-              <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
-            </div>
-            <div className="order-1 lg:order-2">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                {t.propertyManagers.title}
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                {t.propertyManagers.subtitle}
+              <p className="text-xl md:text-2xl font-semibold leading-snug text-white/95">
+                {LANDING.problemSolution.problem}
               </p>
-              <div className="space-y-4">
-                {[
-                  { title: t.propertyManagers.benefit1Title, desc: t.propertyManagers.benefit1Desc },
-                  { title: t.propertyManagers.benefit2Title, desc: t.propertyManagers.benefit2Desc },
-                  { title: t.propertyManagers.benefit3Title, desc: t.propertyManagers.benefit3Desc },
-                  { title: t.propertyManagers.benefit4Title, desc: t.propertyManagers.benefit4Desc },
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <CheckCircle className="h-6 w-6 text-[#FF7A3D] flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{benefit.title}</h4>
-                      <p className="text-gray-600">{benefit.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link to="/for-property-managers">
-                <Button 
-                  className="mt-8 bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white"
-                  size="lg"
-                >
-                  {t.propertyManagers.cta}
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
+            </div>
+            <div className="rounded-2xl border border-[#FF7A3D]/40 bg-[#FF7A3D]/10 p-8 md:p-10">
+              <p className="text-xs font-semibold uppercase tracking-wider text-orange-200 mb-3">
+                The solution
+              </p>
+              <p className="text-xl md:text-2xl font-semibold leading-snug text-white">
+                {LANDING.problemSolution.solution}
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white fade-on-scroll">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {language === 'de' ? 'Was unsere Kunden sagen' : 'What Our Clients Say'}
-            </h2>
-            
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {mockTestimonials.map((testimonial) => (
-              <Card key={testimonial.id} className="border-gray-100 hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <Quote className="h-8 w-8 text-[#FF7A3D] mb-4" />
-                  <p className="text-gray-700 mb-6 leading-relaxed italic">
-                    "{testimonial.text[language]}"
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
-                      <img 
-                        src={testimonial.image} 
-                        alt={testimonial.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                      <p className="text-sm text-gray-600">{testimonial.role[language]}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-[#2C3E50] to-[#34495E] fade-on-scroll">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            {language === 'de' ? 'Bereit, Ihr Zuhause in der Schweiz zu finden?' : 'Ready to Find Your Home in Switzerland?'}
+      {/* 4. Target group */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-10">
+            {LANDING.audience.title}
           </h2>
-          <p className="text-xl text-gray-200 mb-8">
-            {language === 'de'
-              ? 'Kontaktieren Sie uns noch heute und lassen Sie uns die perfekte Wohnung für Sie finden.'
-              : 'Contact us today and let us find the perfect apartment for you.'}
-          </p>
+          <ul className="space-y-4 text-left max-w-md mx-auto">
+            {LANDING.audience.items.map((item) => (
+              <li
+                key={item}
+                className="flex items-center gap-3 text-slate-700 text-lg border-b border-slate-200/80 pb-4 last:border-0 last:pb-0"
+              >
+                <span className="flex h-2 w-2 rounded-full bg-[#FF7A3D] shrink-0" aria-hidden />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* 5. Final CTA */}
+      <section className="py-20 bg-gradient-to-r from-slate-800 to-slate-900">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 leading-snug">
+            {LANDING.finalCta.headline}
+          </h2>
           <Link to="/contact">
-            <Button 
+            <Button
               size="lg"
-              className="bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white px-10 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+              className="bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white px-10 py-6 text-base font-semibold rounded-lg shadow-lg"
             >
-              {t.nav.contact}
+              {LANDING.finalCta.button}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
