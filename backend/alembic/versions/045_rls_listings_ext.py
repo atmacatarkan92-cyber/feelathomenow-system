@@ -1,6 +1,6 @@
 """RLS: listings, listing_images, listing_amenities, inquiries, password_reset_tokens.
 
-Revision ID: 045_rls_listings_inquiries_password_reset
+Revision ID: 045_rls_listings_ext
 Revises: 044_rls_tokens_credentials
 
 - listings / children: tenant isolation via unit.organization_id; published rows also
@@ -18,7 +18,7 @@ from typing import Sequence, Union
 from alembic import op
 from sqlalchemy import text
 
-revision: str = "045_rls_listings_inquiries_password_reset"
+revision: str = "045_rls_listings_ext"
 down_revision: Union[str, None] = "044_rls_tokens_credentials"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
