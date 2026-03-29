@@ -58,7 +58,7 @@ Request flow: browser → API → SQLAlchemy `Session` → PostgreSQL. Authentic
 
 - **Tenant boundary:** `organization_id` on scoped rows, aligned with an `organization` record.
 - **Defense in depth:** Admin routes use dependencies such as `get_current_organization` with explicit filters; **RLS** restricts which rows the application database role can read or write even if an application bug omits a `WHERE` clause.
-- **RLS scope:** Enforced on security-sensitive and core tenant tables (including `users`, `audit_logs`, `user_credentials`, `refresh_tokens`, and business entities introduced across migrations **023**, **025**, **030**, **042**, **043**, **044**). Exact policy names and GUCs are documented in [docs/RLS_COVERAGE.md](docs/RLS_COVERAGE.md).
+- **RLS scope:** Enforced on security-sensitive and core tenant tables (including `users`, `audit_logs`, `user_credentials`, `refresh_tokens`, and business entities introduced across migrations **023**, **025**, **030**, **042–046**). Exact policy names and GUCs are documented in [docs/RLS_COVERAGE.md](docs/RLS_COVERAGE.md).
 - **Runtime role:** The app must connect as a role that is **not** superuser and **not** `BYPASSRLS`, or RLS does not apply as intended.
 
 ---
@@ -134,7 +134,7 @@ PostgreSQL **Row Level Security** policies compare row data (typically `organiza
 | Document | Contents |
 |----------|----------|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, request lifecycle, RLS context, testing notes |
-| [docs/RLS_COVERAGE.md](docs/RLS_COVERAGE.md) | RLS tables, auth flows, GUC reference, migration summary (e.g. 042–044) |
+| [docs/RLS_COVERAGE.md](docs/RLS_COVERAGE.md) | RLS tables, auth flows, GUC reference, migration summary (042–046) |
 | [docs/DEVOPS.md](docs/DEVOPS.md) | Deployment and operations notes |
 
 Historical and phase-specific documents are under [docs/archive/](docs/archive/).
