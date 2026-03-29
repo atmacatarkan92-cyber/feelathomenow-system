@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { PUBLIC_APP_LOGIN_URL } from '../components/Header';
 
 /** Public landing copy (EN). Ready for i18n swap later. */
 const LANDING = {
@@ -122,7 +123,7 @@ const HomePage = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/admin/login">
+            <a href={PUBLIC_APP_LOGIN_URL} rel="noopener noreferrer">
               <Button
                 size="lg"
                 variant="outline"
@@ -130,7 +131,7 @@ const HomePage = () => {
               >
                 {LANDING.hero.secondaryCta}
               </Button>
-            </Link>
+            </a>
           </div>
           <p className="text-sm font-medium text-slate-500 tracking-[0.2em] uppercase">
             {LANDING.hero.tagline}
@@ -287,7 +288,7 @@ const HomePage = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/admin/login">
+            <a href={PUBLIC_APP_LOGIN_URL} rel="noopener noreferrer">
               <Button
                 size="lg"
                 variant="outline"
@@ -295,7 +296,7 @@ const HomePage = () => {
               >
                 {LANDING.finalCta.secondary}
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>
