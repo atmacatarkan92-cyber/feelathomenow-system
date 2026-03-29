@@ -134,7 +134,7 @@ const LANDING = {
   },
 };
 
-const sectionWrap = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8';
+const sectionWrap = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
 const sectionY = 'py-24 lg:py-32';
 
 /** Premium app-frame preview — distinct layout from prior iterations. */

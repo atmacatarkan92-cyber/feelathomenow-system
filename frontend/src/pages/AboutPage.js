@@ -1,7 +1,12 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent } from '../components/ui/card';
-import { Target, Eye, Award, Users, Heart, Shield, TrendingUp } from 'lucide-react';
+import { Target, Eye, Award, Users, Heart, Shield } from 'lucide-react';
+
+const ACCENT = '#F97316';
+const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const cardClass =
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md';
 
 const AboutPage = () => {
   const { t, language } = useLanguage();
@@ -37,107 +42,88 @@ const AboutPage = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-20">
-      {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              {t.aboutPage.title}
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+    <div className="min-h-screen bg-slate-50">
+      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-16 lg:pt-32 lg:pb-24">
+        <div className={PAGE}>
+          <div className="mb-12 text-center">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">{t.aboutPage.title}</h1>
+            <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-slate-500 md:text-xl">
               {t.aboutPage.subtitle}
             </p>
           </div>
 
-          {/* Hero Image */}
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl mb-16">
+          <div className="relative mb-16 overflow-hidden rounded-2xl border border-slate-200 shadow-lg">
             <img
               src="https://images.unsplash.com/photo-1620563092215-0fbc6b55cfc5"
               alt="Zurich cityscape"
-              className="w-full h-96 object-cover"
+              className="h-96 w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 to-transparent" />
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20">
+          <div className="mb-20 grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-[#FF7A3D] mb-2">
-             {stat.number}
-          </div>
-                <div className="text-gray-600 font-medium">
-                  {stat.label}
+                <div className="mb-2 text-4xl font-bold md:text-5xl" style={{ color: ACCENT }}>
+                  {stat.number}
                 </div>
+                <div className="font-medium text-slate-500">{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Mission & Vision Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12">
-            {/* Mission */}
-            <Card className="border-gray-100 shadow-lg">
+      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
+        <div className={PAGE}>
+          <div className="grid gap-8 md:grid-cols-2 md:gap-10">
+            <Card className={`${cardClass} border-slate-200`}>
               <CardContent className="p-8">
-                <div className="w-16 h-16 bg-[#FF7A3D]/10 rounded-full flex items-center justify-center mb-6">
-                  <Target className="h-8 w-8 text-[#FF7A3D]" />
+                <div
+                  className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-orange-100"
+                  style={{ backgroundColor: `${ACCENT}14` }}
+                >
+                  <Target className="h-8 w-8" style={{ color: ACCENT }} />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                  {t.aboutPage.missionTitle}
-                </h2>
-                <p className="text-gray-700 leading-relaxed text-lg">
-                  {t.aboutPage.missionText}
-                </p>
+                <h2 className="mb-4 text-3xl font-bold tracking-tight text-slate-900">{t.aboutPage.missionTitle}</h2>
+                <p className="text-lg leading-relaxed text-slate-500">{t.aboutPage.missionText}</p>
               </CardContent>
             </Card>
 
-            {/* Vision */}
-            <Card className="border-gray-100 shadow-lg">
+            <Card className={`${cardClass} border-slate-200`}>
               <CardContent className="p-8">
-                <div className="w-16 h-16 bg-[#FF7A3D]/10 rounded-full flex items-center justify-center mb-6">
-                  <Eye className="h-8 w-8 text-[#FF7A3D]" />
+                <div
+                  className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-orange-100"
+                  style={{ backgroundColor: `${ACCENT}14` }}
+                >
+                  <Eye className="h-8 w-8" style={{ color: ACCENT }} />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                  {t.aboutPage.visionTitle}
-                </h2>
-                <p className="text-gray-700 leading-relaxed text-lg">
-                  {t.aboutPage.visionText}
-                </p>
+                <h2 className="mb-4 text-3xl font-bold tracking-tight text-slate-900">{t.aboutPage.visionTitle}</h2>
+                <p className="text-lg leading-relaxed text-slate-500">{t.aboutPage.visionText}</p>
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {t.aboutPage.valuesTitle}
-            </h2>
+      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
+        <div className={PAGE}>
+          <div className="mb-16 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{t.aboutPage.valuesTitle}</h2>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {values.map((value, index) => (
-              <Card 
-                key={index}
-                className="border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
-              >
+              <Card key={index} className={`${cardClass} border-slate-200`}>
                 <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-[#FF7A3D]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <value.icon className="h-8 w-8 text-[#FF7A3D]" />
+                  <div
+                    className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-orange-100"
+                    style={{ backgroundColor: `${ACCENT}14` }}
+                  >
+                    <value.icon className="h-8 w-8" style={{ color: ACCENT }} />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {value.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {value.desc}
-                  </p>
+                  <h3 className="mb-2 text-xl font-semibold text-slate-900">{value.title}</h3>
+                  <p className="leading-relaxed text-slate-500">{value.desc}</p>
                 </CardContent>
               </Card>
             ))}
@@ -145,22 +131,21 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Our Story Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-20">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
               {language === 'de' ? 'Unsere Geschichte' : 'Our Story'}
             </h2>
           </div>
 
-          <div className="prose prose-lg max-w-none text-gray-700">
-            <p className="text-lg leading-relaxed mb-6">
+          <div className="max-w-none text-slate-500">
+            <p className="mb-6 text-lg leading-relaxed">
               {language === 'de'
                 ? 'FeelAtHomeNow entstand aus der Idee, internationalen Professionals, Expats und Studierenden den Start in der Schweiz einfacher zu machen. Gerade in Städten wie Zürich ist es oft schwierig, kurzfristig passenden Wohnraum zu finden. Genau hier setzen wir an – mit möblierten Apartments und flexiblen Co-Living Lösungen.'
                 : 'FeelAtHomeNow was created with the idea of making it easier for international professionals, expats and students to settle in Switzerland. Especially in cities like Zurich, finding suitable housing on short notice can be challenging. This is exactly where we come in – with furnished apartments and flexible co-living solutions.'}
             </p>
-            <p className="text-lg leading-relaxed mb-6">
+            <p className="mb-6 text-lg leading-relaxed">
               {language === 'de'
                 ? 'Seit unserer Gründung haben wir über 140 Kunden dabei geholfen, sich in der Schweiz zuhause zu fühlen. Unsere Apartments befinden sich in den besten Lagen von Zürich, Genf, Basel und Zug – immer mit dem Fokus auf Qualität, Service und Flexibilität.'
                 : 'Since our founding, we have helped over 140 clients feel at home in Switzerland. Our apartments are located in prime areas of Zurich, Geneva, Basel and Zug – always with a focus on quality, service and flexibility.'}
@@ -174,21 +159,23 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Image Gallery */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
+        <div className={PAGE}>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
               'https://images.unsplash.com/photo-1573137785546-9d19e4f33f87',
               'https://images.unsplash.com/photo-1643981670720-eef07ebdb179',
               'https://images.unsplash.com/photo-1649790247335-42156c080db6',
               'https://images.pexels.com/photos/15031992/pexels-photo-15031992.jpeg',
             ].map((image, index) => (
-              <div key={index} className="relative h-64 rounded-lg overflow-hidden shadow-lg group">
+              <div
+                key={index}
+                className={`group relative h-64 overflow-hidden ${cardClass} border-slate-200 p-0`}
+              >
                 <img
                   src={image}
                   alt={`Swiss location ${index + 1}`}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               </div>
             ))}

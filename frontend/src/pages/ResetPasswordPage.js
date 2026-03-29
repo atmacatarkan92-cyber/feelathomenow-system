@@ -1,37 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL } from '../config';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardContent } from '../components/ui/card';
 
-const cardStyle = {
-  maxWidth: "420px",
-  margin: "0 auto",
-  background: "#FFFFFF",
-  border: "1px solid #E5E7EB",
-  borderRadius: "18px",
-  padding: "32px",
-  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "12px 14px",
-  borderRadius: "8px",
-  border: "1px solid #E5E7EB",
-  fontSize: "14px",
-  boxSizing: "border-box",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "13px",
-  fontWeight: 600,
-  color: "#374151",
-};
+const ACCENT = '#F97316';
+const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
 
 function isValidPasswordLength(pw) {
-  return String(pw || "").length >= 8;
+  return String(pw || '').length >= 8;
 }
 
 export default function ResetPasswordPage() {
@@ -40,20 +19,19 @@ export default function ResetPasswordPage() {
 
   const token = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    return params.get("token");
+    return params.get('token');
   }, [location.search]);
 
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    // Clear messages when token changes.
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
   }, [token]);
 
   const canSubmit = Boolean(token) && !submitting;
@@ -62,29 +40,28 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     if (!token) {
-      setError("This reset link is invalid.");
+      setError('This reset link is invalid.');
       return;
     }
 
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     if (!newPassword || !isValidPasswordLength(newPassword)) {
-      setError("Validation error");
+      setError('Validation error');
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Validation error");
+      setError('Validation error');
       return;
     }
 
     setSubmitting(true);
     try {
-      // Do not log token/password.
       const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           token,
@@ -100,108 +77,110 @@ export default function ResetPasswordPage() {
       }
 
       if (!res.ok) {
-        const detail = payload?.detail ? String(payload.detail) : "";
+        const detail = payload?.detail ? String(payload.detail) : '';
 
-        if (detail.includes("Invalid or expired token")) {
-          setError("This reset link is invalid or has expired.");
-        } else if (detail.includes("Password does not meet requirements")) {
-          setError("Password does not meet requirements");
+        if (detail.includes('Invalid or expired token')) {
+          setError('This reset link is invalid or has expired.');
+        } else if (detail.includes('Password does not meet requirements')) {
+          setError('Password does not meet requirements');
         } else {
-          setError("Something went wrong. Please try again.");
+          setError('Something went wrong. Please try again.');
         }
         return;
       }
 
-      setSuccess("Your password has been reset successfully.");
-      // Clear password fields immediately after success.
-      setNewPassword("");
-      setConfirmPassword("");
+      setSuccess('Your password has been reset successfully.');
+      setNewPassword('');
+      setConfirmPassword('');
 
-      // Optional auto-redirect to admin login (minimal and consistent with existing routes).
       setTimeout(() => {
         try {
-          navigate("/admin/login");
+          navigate('/admin/login');
         } catch {
-          // ignore navigation errors
+          // ignore
         }
       }, 1500);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError('Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ padding: "24px" }}>
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: "22px", fontWeight: 800, margin: "0 0 8px 0", color: "#0F172A" }}>
-          Reset Password
-        </h2>
-        <p style={{ color: "#64748B", margin: "0 0 24px 0", fontSize: "14px" }}>
-          {token
-            ? "Choose a new password for your account."
-            : "This reset link is invalid."}
-        </p>
-
-        {error && <p style={{ color: "#B91C1C", margin: 0, fontSize: "14px" }}>{error}</p>}
-        {success && <p style={{ color: "#166534", margin: "0 0 12px 0", fontSize: "14px" }}>{success}</p>}
-
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px", marginTop: "8px" }}>
-          <div>
-            <label style={labelStyle}>New password *</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              style={inputStyle}
-              autoComplete="new-password"
-              required
-              disabled={!token}
-            />
+    <div className="min-h-screen bg-slate-50">
+      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-12 lg:pt-32 lg:pb-16">
+        <div className={PAGE}>
+          <div className="mx-auto max-w-lg text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Reset Password</h1>
+            <p className="mt-4 text-lg text-slate-500">
+              {token ? 'Choose a new password for your account.' : 'This reset link is invalid.'}
+            </p>
           </div>
+        </div>
+      </section>
 
-          <div>
-            <label style={labelStyle}>Confirm new password *</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              style={inputStyle}
-              autoComplete="new-password"
-              required
-              disabled={!token}
-            />
-          </div>
+      <section className="border-t border-slate-100 py-24 lg:py-32">
+        <div className={PAGE}>
+          <Card className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <CardContent className="p-8">
+              {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+              {success && <p className="mb-4 text-sm font-medium text-emerald-700">{success}</p>}
 
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            style={{
-              padding: "12px 20px",
-              background: "#0F172A",
-              color: "#FFF",
-              border: "none",
-              borderRadius: "10px",
-              fontWeight: 700,
-              fontSize: "14px",
-              cursor: !canSubmit ? "not-allowed" : "pointer",
-              opacity: !canSubmit ? 0.7 : 1,
-            }}
-          >
-            {submitting ? "Resetting …" : "Reset Password"}
-          </button>
-        </form>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label htmlFor="new-password" className="mb-2 block text-sm font-medium text-slate-700">
+                    New password *
+                  </label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                    disabled={!token}
+                    className="border-slate-200"
+                  />
+                </div>
 
-        {success && (
-          <div style={{ marginTop: "14px", color: "#475569", fontSize: "14px" }}>
-            <Link to="/admin/login" style={{ color: "#2563EB", textDecoration: "none", fontWeight: 700 }}>
-              Go to Login
-            </Link>
-          </div>
-        )}
-      </div>
+                <div>
+                  <label htmlFor="confirm-password" className="mb-2 block text-sm font-medium text-slate-700">
+                    Confirm new password *
+                  </label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                    disabled={!token}
+                    className="border-slate-200"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="w-full rounded-full font-semibold text-white shadow-sm disabled:opacity-70"
+                  style={{ backgroundColor: ACCENT }}
+                >
+                  {submitting ? 'Resetting …' : 'Reset Password'}
+                </Button>
+              </form>
+
+              {success && (
+                <p className="mt-6 text-sm text-slate-500">
+                  <Link to="/admin/login" className="font-semibold hover:underline" style={{ color: ACCENT }}>
+                    Go to Login
+                  </Link>
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </div>
   );
 }
-

@@ -4,6 +4,11 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { MapPin, Clock, Package, Headphones, CheckCircle, ArrowRight } from 'lucide-react';
 
+const ACCENT = '#F97316';
+const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const cardClass =
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md';
+
 const ForCompaniesPage = () => {
   const { t, language } = useLanguage();
 
@@ -40,67 +45,53 @@ const ForCompaniesPage = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-20">
-      {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+    <div className="min-h-screen bg-slate-50">
+      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-16 lg:pt-32 lg:pb-24">
+        <div className={PAGE}>
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                {t.companiesPage.title}
-              </h1>
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                {t.companiesPage.subtitle}
-              </p>
-              <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-                {t.companiesPage.heroText}
-              </p>
-              <Button 
+              <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">{t.companiesPage.title}</h1>
+              <p className="mt-6 text-xl leading-relaxed text-slate-500">{t.companiesPage.subtitle}</p>
+              <p className="mt-6 text-lg leading-relaxed text-slate-500">{t.companiesPage.heroText}</p>
+              <Button
                 size="lg"
-                className="bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white"
-                onClick={() => window.location.href = '/contact'}
+                className="mt-8 rounded-full px-8 font-semibold text-white shadow-[0_8px_24px_-6px_rgba(249,115,22,0.4)]"
+                style={{ backgroundColor: ACCENT }}
+                onClick={() => (window.location.href = '/contact')}
               >
                 {t.companiesPage.ctaButton}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
             <div className="relative">
-             <img
-              src="/bild-unternehmen-page.png"
-              alt="Corporate Housing Switzerland"
-              className="rounded-2xl shadow-2xl w-full h-[500px] object-cover"
-            />
-              <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
+              <img
+                src="/bild-unternehmen-page.png"
+                alt="Corporate Housing Switzerland"
+                className="h-[500px] w-full rounded-2xl object-cover shadow-xl ring-1 ring-slate-200/80"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why FeelAtHomeNow Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {t.companiesPage.whyTitle}
-            </h2>
+      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
+        <div className={PAGE}>
+          <div className="mb-16 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{t.companiesPage.whyTitle}</h2>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {features.map((feature, index) => (
-              <Card 
-                key={index}
-                className="border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
-              >
+              <Card key={index} className={`${cardClass} border-slate-200`}>
                 <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-[#FF7A3D]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <feature.icon className="h-8 w-8 text-[#FF7A3D]" />
+                  <div
+                    className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-orange-100"
+                    style={{ backgroundColor: `${ACCENT}14` }}
+                  >
+                    <feature.icon className="h-8 w-8" style={{ color: ACCENT }} />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {feature.desc}
-                  </p>
+                  <h3 className="mb-2 text-xl font-semibold text-slate-900">{feature.title}</h3>
+                  <p className="leading-relaxed text-slate-500">{feature.desc}</p>
                 </CardContent>
               </Card>
             ))}
@@ -108,72 +99,71 @@ const ForCompaniesPage = () => {
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-20">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
               {language === 'de' ? 'Ihre Vorteile' : 'Your Benefits'}
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-6 md:grid-cols-2">
             {benefits.map((benefit, index) => (
-              <div key={index} className="flex items-start space-x-3 bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <CheckCircle className="h-6 w-6 text-[#FF7A3D] flex-shrink-0 mt-1" />
-                <p className="text-gray-700 text-lg">{benefit}</p>
+              <div
+                key={index}
+                className={`flex items-start space-x-3 ${cardClass} border-slate-200 p-6`}
+              >
+                <CheckCircle className="mt-1 h-6 w-6 shrink-0" style={{ color: ACCENT }} />
+                <p className="text-lg text-slate-500">{benefit}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Image Gallery Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="relative h-64 md:h-80 rounded-lg overflow-hidden shadow-lg group">
-              <img
-                src="https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg"
-                alt="Team collaboration"
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-            </div>
-            <div className="relative h-64 md:h-80 rounded-lg overflow-hidden shadow-lg group">
-              <img
-                src="https://images.pexels.com/photos/6950015/pexels-photo-6950015.jpeg"
-                alt="Business meeting"
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-            </div>
-            <div className="relative h-64 md:h-80 rounded-lg overflow-hidden shadow-lg group">
-              <img
-                src="https://images.pexels.com/photos/7688457/pexels-photo-7688457.jpeg"
-                alt="Diverse team"
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-            </div>
+      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
+        <div className={PAGE}>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg',
+              'https://images.pexels.com/photos/6950015/pexels-photo-6950015.jpeg',
+              'https://images.pexels.com/photos/7688457/pexels-photo-7688457.jpeg',
+            ].map((src, i) => (
+              <div
+                key={i}
+                className={`group relative h-64 overflow-hidden rounded-2xl border border-slate-200 shadow-sm md:h-80 ${cardClass}`}
+              >
+                <img
+                  src={src}
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-[#2C3E50] to-[#34495E]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            {t.companiesPage.ctaTitle}
-          </h2>
-          <p className="text-xl text-gray-200 mb-8">
-            {t.companiesPage.ctaText}
-          </p>
-          <Button 
-            size="lg"
-            className="bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white px-10 py-6 text-lg"
-            onClick={() => window.location.href = '/contact'}
+      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
+        <div className={PAGE}>
+          <div
+            className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200/90 p-10 text-center shadow-[0_24px_80px_-40px_rgba(15,23,42,0.2)] sm:p-14 lg:p-16"
+            style={{
+              background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #fff7ed 100%)',
+            }}
           >
-            {t.companiesPage.ctaButton}
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{t.companiesPage.ctaTitle}</h2>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-500">{t.companiesPage.ctaText}</p>
+            <Button
+              size="lg"
+              className="mt-10 rounded-full px-10 py-6 text-lg font-semibold text-white shadow-[0_8px_24px_-6px_rgba(249,115,22,0.4)]"
+              style={{ backgroundColor: ACCENT }}
+              onClick={() => (window.location.href = '/contact')}
+            >
+              {t.companiesPage.ctaButton}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </section>
     </div>

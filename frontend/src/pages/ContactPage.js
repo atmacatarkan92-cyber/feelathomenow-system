@@ -10,6 +10,11 @@ import { toast } from 'sonner';
 
 import { API_BASE_URL } from '../config';
 
+const ACCENT = '#F97316';
+const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const cardClass =
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md';
+
 const ContactPage = () => {
   const { t, language } = useLanguage();
   const location = useLocation();
@@ -23,19 +28,19 @@ const ContactPage = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   useEffect(() => {
-  const params = new URLSearchParams(location.search);
-  const city = params.get('city');
+    const params = new URLSearchParams(location.search);
+    const city = params.get('city');
 
-  if (city) {
-    setFormData((prev) => ({
-      ...prev,
-      message:
-        language === 'de'
-          ? `Ich interessiere mich für eine Wohnung in ${city}.`
-          : `I am interested in an apartment in ${city}.`,
-    }));
-  }
-}, [location.search, language]);
+    if (city) {
+      setFormData((prev) => ({
+        ...prev,
+        message:
+          language === 'de'
+            ? `Ich interessiere mich für eine Wohnung in ${city}.`
+            : `I am interested in an apartment in ${city}.`,
+      }));
+    }
+  }, [location.search, language]);
 
   const handleChange = (e) => {
     setFormData({
@@ -64,7 +69,6 @@ const ContactPage = () => {
 
       if (response.ok && result.success) {
         toast.success(result.message || t.contact.successMessage);
-        // Reset form
         setFormData({
           name: '',
           email: '',
@@ -115,152 +119,153 @@ const ContactPage = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-20">
-      {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              {t.contact.title}
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              {t.contact.subtitle}
-            </p>
+    <div className="min-h-screen bg-slate-50">
+      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-16 lg:pt-32 lg:pb-24">
+        <div className={PAGE}>
+          <div className="mb-4 text-center">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">{t.contact.title}</h1>
+            <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-500 md:text-xl">{t.contact.subtitle}</p>
           </div>
+        </div>
+      </section>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
-            {/* Contact Form */}
-            <Card className="border-gray-100 shadow-xl">
-              <CardContent className="p-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.contact.namePlaceholder}
-                    </label>
-                    <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder={t.contact.namePlaceholder}
-                      className="w-full"
-                    />
-                  </div>
+      <section className="border-t border-slate-100 py-24 lg:py-32">
+        <div className={PAGE}>
+          <div className="grid items-start gap-12 lg:grid-cols-2">
+            <Card className="border-0 shadow-none">
+              <CardContent className="p-0">
+                <div className={`${cardClass} p-8`}>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <label htmlFor="name" className="mb-2 block text-sm font-medium text-slate-700">
+                        {t.contact.namePlaceholder}
+                      </label>
+                      <Input
+                        id="name"
+                        name="name"
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder={t.contact.namePlaceholder}
+                        className="w-full border-slate-200"
+                      />
+                    </div>
 
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.contact.emailPlaceholder}
-                    </label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder={t.contact.emailPlaceholder}
-                      className="w-full"
-                    />
-                  </div>
+                    <div>
+                      <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
+                        {t.contact.emailPlaceholder}
+                      </label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder={t.contact.emailPlaceholder}
+                        className="w-full border-slate-200"
+                      />
+                    </div>
 
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.contact.phonePlaceholder}
-                    </label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder={t.contact.phonePlaceholder}
-                      className="w-full"
-                    />
-                  </div>
+                    <div>
+                      <label htmlFor="phone" className="mb-2 block text-sm font-medium text-slate-700">
+                        {t.contact.phonePlaceholder}
+                      </label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={handleChange}
+                        placeholder={t.contact.phonePlaceholder}
+                        className="w-full border-slate-200"
+                      />
+                    </div>
 
-                  <div>
-                    <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.contact.companyPlaceholder}
-                    </label>
-                    <Input
-                      id="company"
-                      name="company"
-                      type="text"
-                      value={formData.company}
-                      onChange={handleChange}
-                      placeholder={t.contact.companyPlaceholder}
-                      className="w-full"
-                    />
-                  </div>
+                    <div>
+                      <label htmlFor="company" className="mb-2 block text-sm font-medium text-slate-700">
+                        {t.contact.companyPlaceholder}
+                      </label>
+                      <Input
+                        id="company"
+                        name="company"
+                        type="text"
+                        value={formData.company}
+                        onChange={handleChange}
+                        placeholder={t.contact.companyPlaceholder}
+                        className="w-full border-slate-200"
+                      />
+                    </div>
 
-                  <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.contact.messagePlaceholder}
-                    </label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      required
-                      value={formData.message}
-                      onChange={handleChange}
-                      placeholder={t.contact.messagePlaceholder}
-                      rows={5}
-                      className="w-full"
-                    />
-                  </div>
+                    <div>
+                      <label htmlFor="message" className="mb-2 block text-sm font-medium text-slate-700">
+                        {t.contact.messagePlaceholder}
+                      </label>
+                      <Textarea
+                        id="message"
+                        name="message"
+                        required
+                        value={formData.message}
+                        onChange={handleChange}
+                        placeholder={t.contact.messagePlaceholder}
+                        rows={5}
+                        className="w-full border-slate-200"
+                      />
+                    </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white py-6 text-lg font-semibold disabled:opacity-70"
-                    data-testid="contact-submit-btn"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        <span>{language === 'de' ? 'Wird gesendet...' : 'Sending...'}</span>
-                      </>
-                    ) : (
-                      <>
-                        {t.contact.submit}
-                        <Send className="ml-2 h-5 w-5" />
-                      </>
-                    )}
-                  </Button>
-                </form>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full rounded-full py-6 text-lg font-semibold text-white shadow-[0_8px_24px_-6px_rgba(249,115,22,0.4)] disabled:opacity-70"
+                      style={{ backgroundColor: ACCENT }}
+                      data-testid="contact-submit-btn"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          <span>{language === 'de' ? 'Wird gesendet...' : 'Sending...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          {t.contact.submit}
+                          <Send className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Contact Information */}
             <div className="space-y-8">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                <h2 className="mb-8 text-2xl font-bold tracking-tight text-slate-900">
                   {language === 'de' ? 'Kontaktinformationen' : 'Contact Information'}
                 </h2>
                 <div className="space-y-6">
                   {contactInfo.map((info, index) => (
-                    <Card key={index} className="border-gray-100 hover:shadow-lg transition-shadow">
+                    <Card key={index} className={`${cardClass} border-slate-200`}>
                       <CardContent className="p-6">
                         <div className="flex items-start space-x-4">
-                          <div className="w-12 h-12 bg-[#FF7A3D]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <info.icon className="h-6 w-6 text-[#FF7A3D]" />
+                          <div
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-orange-100"
+                            style={{ backgroundColor: `${ACCENT}14` }}
+                          >
+                            <info.icon className="h-6 w-6" style={{ color: ACCENT }} />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900 mb-1">
-                              {info.title}
-                            </h3>
+                            <h3 className="mb-1 font-semibold text-slate-900">{info.title}</h3>
                             {info.link ? (
-                              <a 
+                              <a
                                 href={info.link}
-                                className="text-gray-600 hover:text-[#FF7A3D] transition-colors"
+                                className="font-medium text-[#F97316] transition-colors hover:underline"
                               >
                                 {info.value}
                               </a>
                             ) : (
-                              <p className="text-gray-600">{info.value}</p>
+                              <p className="text-slate-500">{info.value}</p>
                             )}
                           </div>
                         </div>
@@ -270,15 +275,14 @@ const ContactPage = () => {
                 </div>
               </div>
 
-              {/* Map Image */}
-              <Card className="border-gray-100 overflow-hidden">
+              <Card className={`${cardClass} overflow-hidden border-slate-200 p-0`}>
                 <CardContent className="p-0">
                   <img
                     src="https://images.unsplash.com/photo-1620563092215-0fbc6b55cfc5?auto=format&fit=crop&w=1200&q=80"
                     alt="Zurich location"
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-64 object-cover"
+                    className="h-64 w-full object-cover"
                   />
                 </CardContent>
               </Card>
@@ -287,23 +291,38 @@ const ContactPage = () => {
         </div>
       </section>
 
-      {/* Cities Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
+        <div className={PAGE}>
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
               {language === 'de' ? 'Wir sind in diesen Städten aktiv' : 'We Operate in These Cities'}
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {[
-              { name: 'Zürich', image: 'https://images.unsplash.com/photo-1620563092215-0fbc6b55cfc5?auto=format&fit=crop&w=900&q=75' },
-              { name: 'Genf', image: 'https://images.unsplash.com/photo-1573137785546-9d19e4f33f87?auto=format&fit=crop&w=900&q=75' },
-              { name: 'Basel', image: 'https://images.unsplash.com/photo-1643981670720-eef07ebdb179?auto=format&fit=crop&w=900&q=75' },
-              { name: 'Zug', image: 'https://images.unsplash.com/photo-1649790247335-42156c080db6?auto=format&fit=crop&w=900&q=75' },
+              {
+                name: 'Zürich',
+                image:
+                  'https://images.unsplash.com/photo-1620563092215-0fbc6b55cfc5?auto=format&fit=crop&w=900&q=75',
+              },
+              {
+                name: 'Genf',
+                image:
+                  'https://images.unsplash.com/photo-1573137785546-9d19e4f33f87?auto=format&fit=crop&w=900&q=75',
+              },
+              {
+                name: 'Basel',
+                image:
+                  'https://images.unsplash.com/photo-1643981670720-eef07ebdb179?auto=format&fit=crop&w=900&q=75',
+              },
+              {
+                name: 'Zug',
+                image:
+                  'https://images.unsplash.com/photo-1649790247335-42156c080db6?auto=format&fit=crop&w=900&q=75',
+              },
             ].map((city, index) => (
-              <Card key={index} className="overflow-hidden border-gray-100 hover:shadow-xl transition-all duration-300 group">
+              <Card key={index} className={`${cardClass} group overflow-hidden border-slate-200 p-0`}>
                 <CardContent className="p-0">
                   <div className="relative h-48 overflow-hidden">
                     <img
@@ -311,9 +330,9 @@ const ContactPage = () => {
                       alt={city.name}
                       loading="lazy"
                       decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 to-transparent" />
                     <div className="absolute bottom-4 left-4">
                       <h3 className="text-2xl font-bold text-white">{city.name}</h3>
                     </div>
