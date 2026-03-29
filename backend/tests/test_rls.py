@@ -18,9 +18,13 @@ from sqlmodel import Session, select
 
 from db.models import (
     AuditLog,
+    City,
+    Inquiry,
     Invoice,
     Landlord,
+    Listing,
     Organization,
+    PasswordResetToken,
     Property,
     RefreshToken,
     Room,
@@ -33,7 +37,11 @@ from db.models import (
     UserCredentials,
     UserRole,
 )
-from db.rls import apply_pg_organization_context, apply_pg_user_context
+from db.rls import (
+    apply_pg_organization_context,
+    apply_pg_password_reset_token_hash_lookup,
+    apply_pg_user_context,
+)
 
 
 def _require_engine():
@@ -69,6 +77,11 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ("users", "org_isolation_users"),
         ("user_credentials", "org_isolation_user_credentials"),
         ("refresh_tokens", "org_isolation_refresh_tokens"),
+        ("listings", "listings_org_or_published"),
+        ("listing_images", "listing_images_org_or_published"),
+        ("listing_amenities", "listing_amenities_org_or_published"),
+        ("inquiries", "inquiries_access"),
+        ("password_reset_tokens", "org_isolation_password_reset_tokens"),
     }
     with Session(engine) as session:
         cu, su = session.execute(text("SELECT current_user, session_user")).one()
@@ -104,9 +117,10 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
                   AND c.relname IN (
-                    'audit_logs', 'invoices', 'landlords', 'properties', 'refresh_tokens',
-                    'room', 'tenancies', 'tenant', 'tenant_events', 'tenant_notes',
-                    'unit', 'unit_costs', 'user_credentials', 'users'
+                    'audit_logs', 'inquiries', 'invoices', 'landlords', 'listing_amenities',
+                    'listing_images', 'listings', 'password_reset_tokens', 'properties',
+                    'refresh_tokens', 'room', 'tenancies', 'tenant', 'tenant_events',
+                    'tenant_notes', 'unit', 'unit_costs', 'user_credentials', 'users'
                   )
                 ORDER BY c.relname
                 """
@@ -115,8 +129,13 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         names = [r[0] for r in rls_rows]
         assert names == [
             "audit_logs",
+            "inquiries",
             "invoices",
             "landlords",
+            "listing_amenities",
+            "listing_images",
+            "listings",
+            "password_reset_tokens",
             "properties",
             "refresh_tokens",
             "room",
@@ -129,11 +148,21 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "user_credentials",
             "users",
         ], (
-            f"expected RLS tables from migrations 023/025/030/042/044; got {names}"
+            f"expected RLS tables from migrations 023/025/030/042/044/045; got {names}"
         )
         for relname, relrowsecurity, relforcerowsecurity in rls_rows:
             assert relrowsecurity is True, f"RLS not enabled on {relname}"
-            if relname in ("audit_logs", "users", "user_credentials", "refresh_tokens"):
+            if relname in (
+                "audit_logs",
+                "users",
+                "user_credentials",
+                "refresh_tokens",
+                "listings",
+                "listing_images",
+                "listing_amenities",
+                "inquiries",
+                "password_reset_tokens",
+            ):
                 assert relforcerowsecurity is True, (
                     f"FORCE ROW LEVEL SECURITY expected on {relname}"
                 )
@@ -147,7 +176,9 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                     'audit_logs', 'unit', 'tenant', 'room', 'tenancies', 'invoices',
                     'properties', 'landlords', 'unit_costs',
                     'tenant_notes', 'tenant_events', 'users',
-                    'user_credentials', 'refresh_tokens'
+                    'user_credentials', 'refresh_tokens',
+                    'listings', 'listing_images', 'listing_amenities',
+                    'inquiries', 'password_reset_tokens'
                 )
                 """
             )
@@ -156,7 +187,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         assert got == expected_policies, (
             f"expected policies {expected_policies}; got {got}. "
             "Apply migrations 023_rls_unit_tenant_room, 025_rls_core_tables, 030_rls_tenant_crm, "
-            "042_rls_users_audit_logs, 044_rls_tokens_credentials."
+            "042_rls_users_audit_logs, 044_rls_tokens_credentials, 045_rls_listings_inquiries_password_reset."
         )
 
 
@@ -856,3 +887,169 @@ def test_rls_missing_context_sees_no_extended_rows(engine, seeded_rls_extended_r
             )
             == 0
         )
+
+
+@pytest.fixture
+def seed_listing_rls_rows(engine, seeded_tenant_rows):
+    """City + unpublished listing on org A unit; teardown listing + city."""
+    ids = dict(seeded_tenant_rows)
+    org_a = ids["org_a"]
+    tag = uuid.uuid4().hex[:8]
+    ids["city_id"] = f"rls-city-{tag}"
+    ids["listing_id"] = f"rls-list-{tag}"
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(City(id=ids["city_id"], code=f"zrls{tag}", name_de="Z", name_en="Z"))
+        session.add(
+            Listing(
+                id=ids["listing_id"],
+                unit_id=ids["unit_a"],
+                city_id=ids["city_id"],
+                slug=f"slug-{tag}",
+                is_published=False,
+            )
+        )
+        session.commit()
+    yield ids
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(
+            text("DELETE FROM listing_images WHERE listing_id = :lid"),
+            {"lid": ids["listing_id"]},
+        )
+        session.execute(
+            text("DELETE FROM listing_amenities WHERE listing_id = :lid"),
+            {"lid": ids["listing_id"]},
+        )
+        session.execute(text("DELETE FROM listings WHERE id = :lid"), {"lid": ids["listing_id"]})
+        session.execute(text("DELETE FROM cities WHERE id = :cid"), {"cid": ids["city_id"]})
+        session.commit()
+
+
+def test_rls_listing_other_org_sees_no_rows(engine, seed_listing_rls_rows):
+    ids = seed_listing_rls_rows
+    org_b = ids["org_b"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        rows = session.exec(select(Listing).where(Listing.id == ids["listing_id"])).all()
+    assert len(rows) == 0
+
+
+def test_rls_unpublished_listing_invisible_without_org_guc(engine, seed_listing_rls_rows):
+    ids = seed_listing_rls_rows
+    with Session(engine) as session:
+        rows = session.exec(select(Listing).where(Listing.id == ids["listing_id"])).all()
+    assert len(rows) == 0
+
+
+def test_rls_published_listing_visible_without_org_guc(engine, seed_listing_rls_rows):
+    ids = seed_listing_rls_rows
+    org_a = ids["org_a"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        lst = session.get(Listing, ids["listing_id"])
+        assert lst is not None
+        lst.is_published = True
+        session.add(lst)
+        session.commit()
+    with Session(engine) as session:
+        rows = session.exec(select(Listing).where(Listing.id == ids["listing_id"])).all()
+    assert len(rows) == 1
+
+
+def test_rls_inquiry_org_isolation(engine, seed_listing_rls_rows):
+    ids = seed_listing_rls_rows
+    org_a = ids["org_a"]
+    org_b = ids["org_b"]
+    tag = uuid.uuid4().hex[:8]
+    iq_id = f"rls-iq-{tag}"
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            Inquiry(
+                id=iq_id,
+                name="n",
+                email="e@e.test",
+                message="m",
+                apartment_id=ids["listing_id"],
+                organization_id=org_a,
+            )
+        )
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        assert len(session.exec(select(Inquiry).where(Inquiry.id == iq_id)).all()) == 0
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(text("DELETE FROM inquiries WHERE id = :id"), {"id": iq_id})
+        session.commit()
+
+
+def test_rls_password_reset_token_org_isolation(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    org_a = ids["org_a"]
+    org_b = ids["org_b"]
+    tag = uuid.uuid4().hex[:8]
+    pr_id = f"rls-pr-{tag}"
+    th = f"hash-{tag}"
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            PasswordResetToken(
+                id=pr_id,
+                user_id=ids["user_a"],
+                token_hash=th,
+                expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            )
+        )
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        assert (
+            len(
+                session.exec(
+                    select(PasswordResetToken).where(PasswordResetToken.id == pr_id)
+                ).all()
+            )
+            == 0
+        )
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(
+            text("DELETE FROM password_reset_tokens WHERE id = :id"), {"id": pr_id}
+        )
+        session.commit()
+
+
+def test_rls_password_reset_hash_lookup_trusted_path(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    org_a = ids["org_a"]
+    tag = uuid.uuid4().hex[:8]
+    pr_id = f"rls-pr-{tag}"
+    th = f"hash-trust-{tag}"
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            PasswordResetToken(
+                id=pr_id,
+                user_id=ids["user_a"],
+                token_hash=th,
+                expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            )
+        )
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_password_reset_token_hash_lookup(session, th)
+        try:
+            row = session.exec(
+                select(PasswordResetToken).where(PasswordResetToken.id == pr_id)
+            ).first()
+            assert row is not None
+        finally:
+            apply_pg_password_reset_token_hash_lookup(session, None)
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(
+            text("DELETE FROM password_reset_tokens WHERE id = :id"), {"id": pr_id}
+        )
+        session.commit()

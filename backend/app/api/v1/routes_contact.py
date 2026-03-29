@@ -9,6 +9,7 @@ from sqlmodel import Session as SQLModelSession
 from auth.dependencies import get_current_organization, get_db_session, require_roles
 from db.database import engine
 from db.models import Inquiry, Listing, Unit
+from db.rls import apply_pg_inquiry_id_lookup
 from email_service import send_contact_notification, EmailServiceError
 from models import ContactInquiryCreate, ContactResponse
 
@@ -31,6 +32,20 @@ def submit_contact(
     """
     if engine is None:
         raise HTTPException(status_code=503, detail="Service temporarily unavailable.")
+    org_id_for_inquiry = None
+    if inquiry.apartment_id:
+        listing = db.get(Listing, inquiry.apartment_id)
+        if listing:
+            unit = db.get(Unit, listing.unit_id)
+            if unit and getattr(unit, "organization_id", None):
+                org_id_for_inquiry = str(unit.organization_id)
+
+    if inquiry.apartment_id and org_id_for_inquiry is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or unknown apartment listing reference.",
+        )
+
     obj = Inquiry(
         name=inquiry.name,
         email=inquiry.email,
@@ -39,6 +54,7 @@ def submit_contact(
         company=inquiry.company or None,
         language=inquiry.language or "de",
         apartment_id=inquiry.apartment_id,
+        organization_id=org_id_for_inquiry,
     )
     db.add(obj)
     db.commit()
@@ -56,24 +72,29 @@ def send_email_notification_sync(inquiry_id: str):
     if engine is None:
         return
     with SQLModelSession(engine) as db:
-        inquiry = db.get(Inquiry, inquiry_id)
-        if not inquiry:
-            return
+        apply_pg_inquiry_id_lookup(db, inquiry_id)
         try:
-            send_contact_notification(
-                recipient_email=NOTIFICATION_EMAIL,
-                contact_name=inquiry.name,
-                contact_email=inquiry.email,
-                contact_phone=inquiry.phone or "",
-                contact_company=inquiry.company or "",
-                contact_message=inquiry.message,
-                language=inquiry.language or "de",
-            )
+            inquiry = db.get(Inquiry, inquiry_id)
+            if not inquiry:
+                return
+            try:
+                send_contact_notification(
+                    recipient_email=NOTIFICATION_EMAIL,
+                    contact_name=inquiry.name,
+                    contact_email=inquiry.email,
+                    contact_phone=inquiry.phone or "",
+                    contact_company=inquiry.company or "",
+                    contact_message=inquiry.message,
+                    language=inquiry.language or "de",
+                )
+            except EmailServiceError as e:
+                logger.error(str(e))
+                return
             inquiry.email_sent = True
             db.add(inquiry)
             db.commit()
-        except EmailServiceError as e:
-            logger.error(str(e))
+        finally:
+            apply_pg_inquiry_id_lookup(db, None)
 
 
 @router.get("/admin/inquiries", response_model=List[dict])

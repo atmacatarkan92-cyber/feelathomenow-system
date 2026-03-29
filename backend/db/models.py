@@ -260,6 +260,7 @@ class Inquiry(SQLModel, table=True):
     company: Optional[str] = Field(default=None, max_length=200)
     language: Optional[str] = Field(default="de", max_length=10)
     apartment_id: Optional[str] = Field(default=None, foreign_key="listings.id", index=True)
+    organization_id: Optional[str] = Field(default=None, foreign_key="organization.id", index=True)
     email_sent: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

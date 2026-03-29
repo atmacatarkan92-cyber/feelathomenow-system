@@ -2,221 +2,104 @@
 
 ## Status
 
-**Production: ACTIVE**
-**Last Updated:** 2026-03-28
-**Scope:** Core multi-tenant data isolation (users + auth layer)
+**Production: ACTIVE**  
+**Last Updated:** 2026-03-27  
+**Scope:** Multi-tenant data isolation (operational CRM, auth, marketing/listings, inquiries, password-reset tokens)
 
 ---
 
 ## Overview
 
-Row-Level Security (RLS) is fully enforced on all authentication-critical and tenant-bound tables.
+PostgreSQL **Row Level Security (RLS)** is enabled on tenant-bound and security-sensitive tables. Policies are **fail-closed** when `app.current_organization_id` is unset, except where explicitly documented (public marketing reads, trusted auth paths, anonymous contact intake).
 
-The system guarantees that:
-
-* No cross-organization data access is possible
-* All reads and writes are scoped by `organization_id`
-* Authentication flows use controlled, minimal bypass mechanisms
-* The database enforces isolation — not the application layer
+The application still applies org filters in routes; RLS is the **database-level backstop** if a query omits a `WHERE` clause.
 
 ---
 
-## Covered Tables
+## RLS Context Variables (GUCs)
 
-### 1. users
+| Variable | Purpose |
+| -------- | ------- |
+| `app.current_organization_id` | Primary tenant scope for most policies |
+| `app.current_user_id` | Bootstrap: own `users` row before org is known |
+| `app.auth_unscoped_user_lookup` | Trusted: login / forgot-password user lookup by email |
+| `app.current_refresh_token_hash` | Trusted: resolve `refresh_tokens` before org is known |
+| `app.current_password_reset_token_hash` | Trusted: resolve `password_reset_tokens` before org is known |
+| `app.current_inquiry_id` | Trusted: single-row `inquiries` access (e.g. background email task) |
 
-* RLS: **ENABLED**
-* Scope: `organization_id`
-* Special policies:
-
-  * `auth_unscoped_user_lookup` (login, password reset)
-  * `current_user_id` (self-access)
-
-**Purpose:**
-
-* Identity layer
-* Entry point for authentication
+Helpers: `backend/db/rls.py` (`apply_pg_*`).
 
 ---
 
-### 2. audit_logs
+## Covered Tables (by pattern)
 
-* RLS: **ENABLED**
-* Scope: `organization_id`
+### A) Direct `organization_id` column
 
-**Purpose:**
+| Table | Policy name | FORCE RLS | Notes |
+| ----- | ----------- | --------- | ----- |
+| `users` | `org_isolation_users` | yes | + unscoped / `current_user_id` paths (migration 042) |
+| `audit_logs` | `org_isolation_audit_logs` | yes | 042 |
+| `user_credentials` | `org_isolation_user_credentials` | yes | + `auth_unscoped_user_lookup` (044) |
+| `refresh_tokens` | `org_isolation_refresh_tokens` | yes | + `current_refresh_token_hash` (044) |
+| `unit`, `tenant`, `room` | `org_isolation_*` | yes | 023 |
+| `tenancies`, `invoices`, `properties`, `landlords` | `org_isolation_*` | no FORCE | 025 |
+| `unit_costs` | `org_isolation_unit_costs` | no | via parent `unit` (025) |
+| `tenant_notes`, `tenant_events` | `org_isolation_*` | yes | 030 |
+| `property_managers` | (per 036) | | |
+| `unit_documents`, `tenant_documents` | (per 037/039) | | |
 
-* Security auditing
-* Immutable tenant-scoped logs
+### B) Join-based (no `organization_id` on row — parent supplies scope)
 
----
+| Table | Policy name | FORCE RLS | Mechanism |
+| ----- | ----------- | --------- | --------- |
+| `listings` | `listings_org_or_published` | yes | `EXISTS (unit WHERE unit.id = listings.unit_id AND org match)` **OR** published listing readable without org GUC (public API) |
+| `listing_images` | `listing_images_org_or_published` | yes | Via `listings` → `unit`; read also allows published parent |
+| `listing_amenities` | `listing_amenities_org_or_published` | yes | Same as `listing_images` |
 
-### 3. user_credentials
+**Public marketing:** `listings.is_published = true` rows are readable with **no** tenant GUC (intentional cross-tenant public catalog). Writes require org context via `WITH CHECK` (tenant path only).
 
-* RLS: **ENABLED**
-* Scope: `organization_id`
-* Constraint:
+### C) `inquiries` (mixed)
 
-  * `organization_id NOT NULL`
-  * FK → `organization.id`
+| Column / rule | Purpose |
+| ------------- | ------- |
+| `organization_id` (nullable, FK → `organization`) | Denormalized tenant; backfilled from `listings` → `unit` where `apartment_id` set (migration **045**) |
+| Policy `inquiries_access` | **USING:** org match; OR anonymous rows (`organization_id` and `apartment_id` NULL) when org GUC unset; OR `app.current_inquiry_id` trusted row |
+| **WITH CHECK** | Anonymous insert (`both NULL`); or listing-linked insert with `organization_id` matching `listings`/`unit` org |
 
-**Purpose:**
+Anonymous web contact rows remain **admin-invisible** in org-scoped list endpoints (application query unchanged).
 
-* Password storage (bcrypt)
-* Authentication verification
+### D) `password_reset_tokens`
 
-**Important:**
+| Policy | FORCE RLS | Mechanism |
+| ------ | --------- | --------- |
+| `org_isolation_password_reset_tokens` | yes | `EXISTS (users u WHERE u.id = user_id AND u.organization_id matches GUC)` **OR** `token_hash = app.current_password_reset_token_hash` |
 
-* No unscoped access allowed
-* Access only after organization context is set
-
----
-
-### 4. refresh_tokens
-
-* RLS: **ENABLED**
-* Scope: `organization_id`
-* Special policy:
-
-  * `current_refresh_token_hash` (trusted auth path)
-
-**Purpose:**
-
-* Session continuation
-* Token rotation / revocation
-
----
-
-## Authentication Flow (RLS-aware)
-
-### Login
-
-1. Enable:
-
-   * `auth_unscoped_user_lookup`
-2. Query `users` by email
-3. Set:
-
-   * `app.current_organization_id`
-4. Query `user_credentials`
-5. Verify password
-6. Issue refresh token
-
----
-
-### Refresh Token
-
-1. Enable:
-
-   * `current_refresh_token_hash`
-2. Resolve token
-3. Load user
-4. Set organization context
-5. Issue new token
-
----
-
-### Logout
-
-1. Enable:
-
-   * `current_refresh_token_hash`
-2. Revoke token
-
----
-
-## RLS Context Variables
-
-| Variable                         | Purpose               |
-| -------------------------------- | --------------------- |
-| `app.current_organization_id`    | Main tenant isolation |
-| `app.current_user_id`            | Self-access           |
-| `app.auth_unscoped_user_lookup`  | Login/email lookup    |
-| `app.current_refresh_token_hash` | Token resolution      |
-
----
-
-## Guarantees
-
-The system enforces:
-
-* Strong tenant isolation at database level
-* No accidental cross-tenant queries possible
-* No reliance on frontend or API-layer filtering
-* Authentication logic aligned with RLS policies
-
----
-
-## Known Constraints
-
-* All inserts into RLS tables must include `organization_id`
-* Session context must be set before queries
-* Multi-org operations require explicit context switching
-* Test fixtures must be RLS-aware
-
----
-
-## Bootstrap / Admin Creation
-
-Script: `create_admin_user.py`
-
-Supports:
-
-* New user creation
-* Existing user repair (missing credentials)
-* Safe idempotent execution
-
-Behavior:
-
-* Uses correct `organization_id`
-* Applies org context before credential insert
-* Never leaves partial data
-
----
-
-## Data Integrity Rules
-
-* `user_credentials.user_id` → FK → `users.id`
-* `user_credentials.organization_id` → FK → `organization.id`
-* `refresh_tokens.user_id` → FK → `users.id`
-* `organization_id` must always match parent entity
+Forgot-password inserts set org context **per user** before insert (`auth/routes.py`). Reset endpoint uses `apply_pg_password_reset_token_hash_lookup` for the initial lookup.
 
 ---
 
 ## Migration Summary
 
-| Migration | Description                                            |
-| --------- | ------------------------------------------------------ |
-| 042       | RLS for users + audit_logs                             |
-| 043       | Add organization_id to auth tables (dynamic type-safe) |
-| 044       | RLS for user_credentials + refresh_tokens              |
+| Migration | Description |
+| --------- | ----------- |
+| 023 | RLS: `unit`, `tenant`, `room` |
+| 025 | RLS: core business tables |
+| 030 | RLS: tenant CRM |
+| 036–039 | RLS: property managers, documents |
+| 042 | RLS: `users`, `audit_logs` |
+| 043–044 | Auth table columns + RLS: `user_credentials`, `refresh_tokens` |
+| **045** | RLS: `listings`, `listing_images`, `listing_amenities`, `inquiries`, `password_reset_tokens` |
 
 ---
 
-## Security Model
+## Verification
 
-* Database is the source of truth for access control
-* Application cannot bypass tenant boundaries
-* Minimal trusted paths are explicitly controlled
-* All sensitive operations require explicit context
+- Runtime DB role must be **non-superuser** and **not** `BYPASSRLS` (see `docs/DEVOPS.md`, `tests/test_rls.py`).
+- Policy inventory: `tests/test_rls.py` (`test_rls_environment_validates_database_role_and_policies`).
 
 ---
 
-## Next Steps
+## Remaining / operational notes
 
-* Extend RLS to remaining domain tables
-* Add monitoring for failed auth / RLS violations
-* Improve audit log visibility
-* Add automated security tests
-
----
-
-## Final Assessment
-
-The system now operates with:
-
-* Production-grade multi-tenant isolation
-* Secure authentication flows aligned with database policies
-* Strong guarantees against data leakage
-
-**Status: READY FOR SCALE**
+- **Reference tables** (e.g. `cities`) are not tenant-scoped; listings reference them by FK only.
+- **Backups / `pg_dump`:** use a role appropriate for your backup strategy; do not weaken RLS to dump (see `docs/archive/database-backups.md`).

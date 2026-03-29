@@ -36,6 +36,7 @@ from auth.dependencies import get_current_user, get_db_session
 from db.rls import (
     apply_pg_auth_unscoped_user_lookup,
     apply_pg_organization_context,
+    apply_pg_password_reset_token_hash_lookup,
     apply_pg_refresh_token_hash_lookup,
     apply_pg_user_context,
 )
@@ -355,6 +356,7 @@ def forgot_password(
 
     tokens_to_send: list[tuple[User, str]] = []
     for u in users:
+        apply_pg_organization_context(session, str(u.organization_id))
         raw_token = secrets.token_urlsafe(48)
         token_hash = hash_password_reset_token(raw_token)
         session.add(
@@ -365,6 +367,7 @@ def forgot_password(
                 used_at=None,
             )
         )
+        session.flush()
         tokens_to_send.append((u, raw_token))
 
     session.commit()
@@ -405,13 +408,17 @@ def reset_password(
     now = datetime.now(timezone.utc)
 
     token_hash = hash_password_reset_token(body.token)
-    token_row = session.exec(
-        select(PasswordResetToken).where(
-            PasswordResetToken.token_hash == token_hash,
-            PasswordResetToken.used_at.is_(None),
-            PasswordResetToken.expires_at > now,
-        )
-    ).first()
+    apply_pg_password_reset_token_hash_lookup(session, token_hash)
+    try:
+        token_row = session.exec(
+            select(PasswordResetToken).where(
+                PasswordResetToken.token_hash == token_hash,
+                PasswordResetToken.used_at.is_(None),
+                PasswordResetToken.expires_at > now,
+            )
+        ).first()
+    finally:
+        apply_pg_password_reset_token_hash_lookup(session, None)
 
     if not token_row:
         raise HTTPException(
