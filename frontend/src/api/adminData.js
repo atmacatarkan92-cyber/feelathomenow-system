@@ -658,8 +658,9 @@ export function fetchAdminDashboardKpis(params = {}) {
 /**
  * Landlords (Phase D). List, get, create, update, soft-delete (archive).
  */
-export function fetchAdminLandlords() {
-  return fetch(`${API_BASE_URL}/api/admin/landlords`, { headers: getApiHeaders() }).then((res) => {
+export function fetchAdminLandlords(status = "active") {
+  const q = status ? `?status=${encodeURIComponent(status)}` : "";
+  return fetch(`${API_BASE_URL}/api/admin/landlords${q}`, { headers: getApiHeaders() }).then((res) => {
     if (!res.ok) throw new Error("Verwaltungen konnten nicht geladen werden.");
     return res.json();
   });
@@ -707,6 +708,19 @@ export function deleteAdminLandlord(id) {
     if (!res.ok) {
       if (res.status === 404) throw new Error("Verwaltung nicht gefunden.");
       throw new Error("Archivieren fehlgeschlagen.");
+    }
+    return res.json();
+  });
+}
+
+export function restoreAdminLandlord(id) {
+  return fetch(`${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(id)}/restore`, {
+    method: "POST",
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) throw new Error("Verwaltung nicht gefunden.");
+      throw new Error("Reaktivieren fehlgeschlagen.");
     }
     return res.json();
   });

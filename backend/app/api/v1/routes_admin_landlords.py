@@ -4,9 +4,10 @@ Protected by require_roles("admin", "manager").
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import not_
 from pydantic import BaseModel, EmailStr
 from sqlmodel import select
 
@@ -89,19 +90,20 @@ def _validate_address_update(data: dict) -> None:
 
 @router.get("/landlords", response_model=List[dict])
 def admin_list_landlords(
+    status: Literal["active", "archived", "all"] = Query("active"),
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    """List all landlords (Phase D table)."""
-    landlords = list(
-        session.exec(
-            select(Landlord)
-            .where(Landlord.organization_id == org_id)
-            .where(Landlord.deleted_at.is_(None))
-            .order_by(Landlord.contact_name, Landlord.company_name)
-        ).all()
-    )
+    """List landlords. status=active (default): not archived; archived: soft-deleted only; all: both."""
+    stmt = select(Landlord).where(Landlord.organization_id == org_id)
+    if status == "active":
+        stmt = stmt.where(Landlord.deleted_at.is_(None))
+    elif status == "archived":
+        stmt = stmt.where(not_(Landlord.deleted_at.is_(None)))
+    # status == "all": no deleted_at filter
+    stmt = stmt.order_by(Landlord.contact_name, Landlord.company_name)
+    landlords = list(session.exec(stmt).all())
     return [_landlord_to_dict(l) for l in landlords]
 
 
@@ -112,13 +114,9 @@ def admin_get_landlord(
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    """Get a single landlord by id."""
+    """Get a single landlord by id (includes archived)."""
     landlord = session.get(Landlord, landlord_id)
-    if (
-        not landlord
-        or str(landlord.organization_id) != org_id
-        or getattr(landlord, "deleted_at", None) is not None
-    ):
+    if not landlord or str(landlord.organization_id) != org_id:
         raise HTTPException(status_code=404, detail="Landlord not found")
     return _landlord_to_dict(landlord)
 
@@ -176,6 +174,28 @@ def admin_archive_landlord(
         raise HTTPException(status_code=404, detail="Landlord not found")
     now = datetime.utcnow()
     landlord.deleted_at = now
+    landlord.updated_at = now
+    session.add(landlord)
+    session.commit()
+    session.refresh(landlord)
+    return _landlord_to_dict(landlord)
+
+
+@router.post("/landlords/{landlord_id}/restore", response_model=dict)
+def admin_restore_landlord(
+    landlord_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """Clear deleted_at (reactivate). No-op if already active."""
+    landlord = session.get(Landlord, landlord_id)
+    if not landlord or str(landlord.organization_id) != org_id:
+        raise HTTPException(status_code=404, detail="Landlord not found")
+    if landlord.deleted_at is None:
+        return _landlord_to_dict(landlord)
+    now = datetime.utcnow()
+    landlord.deleted_at = None
     landlord.updated_at = now
     session.add(landlord)
     session.commit()

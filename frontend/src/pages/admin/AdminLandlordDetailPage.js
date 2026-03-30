@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { deleteAdminLandlord, fetchAdminLandlord } from "../../api/adminData";
+import { deleteAdminLandlord, fetchAdminLandlord, restoreAdminLandlord } from "../../api/adminData";
 
 function dash(s) {
   const t = s != null ? String(s).trim() : "";
@@ -31,6 +31,8 @@ function AdminLandlordDetailPage() {
   const [error, setError] = useState("");
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -71,6 +73,7 @@ function AdminLandlordDetailPage() {
   const title = row.company_name?.trim() || row.contact_name?.trim() || "Verwaltung";
   const isInactive = row.status === "inactive";
   const statusLabel = isInactive ? "Inaktiv" : "Aktiv";
+  const isArchived = !!row.deleted_at;
 
   const addrLine1 = row.address_line1?.trim() || "";
   const plz = row.postal_code?.trim() || "";
@@ -94,6 +97,11 @@ function AdminLandlordDetailPage() {
             </h1>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
+            {isArchived ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">
+                Archiviert
+              </span>
+            ) : null}
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
                 isInactive ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-800"
@@ -101,13 +109,23 @@ function AdminLandlordDetailPage() {
             >
               {statusLabel}
             </span>
-            <button
-              type="button"
-              onClick={() => setArchiveModalOpen(true)}
-              className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition-colors"
-            >
-              Archivieren
-            </button>
+            {isArchived ? (
+              <button
+                type="button"
+                onClick={() => setRestoreModalOpen(true)}
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50 transition-colors"
+              >
+                Reaktivieren
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setArchiveModalOpen(true)}
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition-colors"
+              >
+                Archivieren
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -179,6 +197,59 @@ function AdminLandlordDetailPage() {
           </div>
         </section>
       </div>
+
+      {restoreModalOpen && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 p-4"
+          onClick={() => !restoring && setRestoreModalOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="restore-landlord-title"
+          >
+            <h2 id="restore-landlord-title" className="text-lg font-semibold text-slate-900 mb-3">
+              Verwaltung reaktivieren?
+            </h2>
+            <p className="text-sm text-slate-600 mb-6">
+              Die Verwaltung wird wieder aktiv und erscheint in der normalen Verwaltungsliste unter «Aktiv».
+            </p>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                disabled={restoring}
+                onClick={() => setRestoreModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 text-sm font-semibold hover:bg-slate-100 disabled:opacity-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                disabled={restoring}
+                onClick={() => {
+                  setRestoring(true);
+                  restoreAdminLandlord(id)
+                    .then((data) => {
+                      toast.success("Verwaltung wurde reaktiviert.");
+                      setRestoreModalOpen(false);
+                      setRow(data);
+                    })
+                    .catch((e) => {
+                      toast.error(e.message || "Reaktivieren fehlgeschlagen.");
+                    })
+                    .finally(() => setRestoring(false));
+                }}
+                className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {restoring ? "…" : "Jetzt reaktivieren"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {archiveModalOpen && (
         <div

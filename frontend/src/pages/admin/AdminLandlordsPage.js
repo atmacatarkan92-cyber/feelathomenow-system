@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchAdminLandlords,
@@ -36,19 +36,20 @@ function AdminLandlordsPage() {
     status: "active",
   });
   const [saving, setSaving] = useState(false);
+  const [listFilter, setListFilter] = useState("active");
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     setError("");
-    fetchAdminLandlords()
+    fetchAdminLandlords(listFilter)
       .then(setLandlords)
       .catch((e) => setError(e.message || "Fehler beim Laden."))
       .finally(() => setLoading(false));
-  };
+  }, [listFilter]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const editParam = searchParams.get("edit");
   useEffect(() => {
@@ -186,7 +187,15 @@ function AdminLandlordsPage() {
       {error && (
         <p style={{ color: "#B91C1C", marginBottom: "12px", fontSize: "14px" }}>{error}</p>
       )}
-      <div style={{ marginBottom: "16px" }}>
+      <div
+        style={{
+          marginBottom: "16px",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
         <button
           type="button"
           onClick={openCreate}
@@ -202,6 +211,18 @@ function AdminLandlordsPage() {
         >
           + Neue Verwaltung
         </button>
+        <label style={{ ...labelStyle, marginBottom: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+          <span>Anzeige</span>
+          <select
+            value={listFilter}
+            onChange={(e) => setListFilter(e.target.value)}
+            style={{ ...inputStyle, width: "auto", minWidth: "140px" }}
+          >
+            <option value="active">Aktiv</option>
+            <option value="archived">Archiviert</option>
+            <option value="all">Alle</option>
+          </select>
+        </label>
       </div>
 
       <table style={tableStyle}>
@@ -234,18 +255,22 @@ function AdminLandlordsPage() {
                 </td>
                 <td style={tdStyle}>{row.contact_name || "—"}</td>
                 <td style={tdStyle}>{row.email || "—"}</td>
-                <td style={tdStyle}>{row.status || "—"}</td>
+                <td style={tdStyle}>
+                  {row.deleted_at ? "Archiviert" : row.status === "inactive" ? "Inaktiv" : "Aktiv"}
+                </td>
                 <td style={tdStyle}>
                   <button
                     type="button"
                     onClick={() => openEdit(row)}
+                    disabled={!!row.deleted_at}
                     style={{
                       padding: "6px 12px",
-                      background: "#F1F5F9",
+                      background: row.deleted_at ? "#F8FAFC" : "#F1F5F9",
                       border: "1px solid #E2E8F0",
                       borderRadius: "6px",
-                      cursor: "pointer",
+                      cursor: row.deleted_at ? "not-allowed" : "pointer",
                       fontSize: "13px",
+                      color: row.deleted_at ? "#94A3B8" : undefined,
                     }}
                   >
                     Bearbeiten
