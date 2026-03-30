@@ -1,7 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchAdminUnits, fetchAdminRooms, fetchAdminOccupancy, fetchAdminOccupancyRooms, normalizeUnit, normalizeRoom } from "../../api/adminData";
+import {
+  fetchAdminUnits,
+  fetchAdminRooms,
+  fetchAdminOccupancy,
+  fetchAdminOccupancyRooms,
+  fetchAdminTenanciesAll,
+  normalizeUnit,
+  normalizeRoom,
+} from "../../api/adminData";
 import OccupancyMap from "../../components/OccupancyMap";
+import {
+  getRoomOccupancyStatus,
+} from "../../utils/unitOccupancyStatus";
 
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
@@ -76,6 +87,7 @@ function getStatusBadgeType(status) {
 function AdminOccupancyPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [tenancies, setTenancies] = useState([]);
   const [occupancyFromApi, setOccupancyFromApi] = useState(null);
   const [occupancyRoomsByUnit, setOccupancyRoomsByUnit] = useState({});
   const [onDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -87,6 +99,9 @@ function AdminOccupancyPage() {
     fetchAdminRooms()
       .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
       .catch(() => setRooms([]));
+    fetchAdminTenanciesAll()
+      .then((data) => setTenancies(Array.isArray(data) ? data : []))
+      .catch(() => setTenancies([]));
     fetchAdminOccupancy()
       .then((data) => setOccupancyFromApi(data))
       .catch(() => setOccupancyFromApi(null));
@@ -140,11 +155,16 @@ function AdminOccupancyPage() {
     }
     return coLivingUnits.map((unit) => {
       const unitRooms = getRoomsForUnit(unit.unitId, rooms);
-
-      const occupiedCount = unitRooms.filter((room) => room.status === "Belegt").length;
-      const reservedCount = unitRooms.filter((room) => room.status === "Reserviert").length;
-      const freeCount = unitRooms.filter((room) => room.status === "Frei").length;
       const totalRooms = unitRooms.length;
+      let occupiedCount = 0;
+      let reservedCount = 0;
+      let freeCount = 0;
+      for (const room of unitRooms) {
+        const occ = getRoomOccupancyStatus(room, tenancies);
+        if (occ === "belegt") occupiedCount += 1;
+        else if (occ === "reserviert") reservedCount += 1;
+        else freeCount += 1;
+      }
 
       const occupancyRate =
         totalRooms > 0 ? (occupiedCount / totalRooms) * 100 : 0;
@@ -171,7 +191,7 @@ function AdminOccupancyPage() {
         displayStatus,
       };
     });
-  }, [occupancyFromApi, units, coLivingUnits, rooms]);
+  }, [occupancyFromApi, units, coLivingUnits, rooms, tenancies]);
 
   const summary = useMemo(() => {
     const totalRooms = occupancyRows.reduce((sum, row) => sum + row.totalRooms, 0);

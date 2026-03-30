@@ -18,10 +18,16 @@ import {
   fetchAdminOccupancy,
   fetchAdminOccupancyRooms,
   fetchAdminProfit,
+  fetchAdminTenanciesAll,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
 import OccupancyMap from "../../components/OccupancyMap";
+import {
+  getRoomOccupancyStatus,
+  parseIsoDate,
+  tenanciesForRoom,
+} from "../../utils/unitOccupancyStatus";
 
 function sumFilteredProfitField(profitResponse, filteredUnits, field) {
   if (!profitResponse?.units || !Array.isArray(profitResponse.units)) return null;
@@ -156,32 +162,57 @@ function getMonthEnd(date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
-function isDateOnOrAfter(dateA, dateB) {
-  if (!dateA) return false;
-  return new Date(dateA) >= new Date(dateB);
-}
-
-function overlapsMonth(startDate, endDate, monthStart, monthEnd) {
-  if (!startDate) return false;
-
-  const start = new Date(startDate);
-  const end = endDate ? new Date(endDate) : null;
-
-  if (start > monthEnd) return false;
-  if (end && end < monthStart) return false;
-
-  return true;
-}
-
 function getRoomsForUnit(unitId, allRooms = []) {
   return allRooms.filter((room) => (room.unitId || room.unit_id) === unitId);
 }
 
-function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
+function toIsoDay(d) {
+  if (!d || !(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function tenancyOverlapsMonth(t, monthStart, monthEnd) {
+  const moveIn = parseIsoDate(t?.move_in_date);
+  if (!moveIn) return false;
+  const moveOut = t.move_out_date ? parseIsoDate(t.move_out_date) : null;
+  const end = moveOut || "9999-12-31";
+  const ms = toIsoDay(monthStart);
+  const me = toIsoDay(monthEnd);
+  if (!ms || !me) return false;
+  return moveIn <= me && end >= ms;
+}
+
+function normalizeTenancyStatusLocal(t) {
+  return String(t?.status ?? "").trim().toLowerCase();
+}
+
+/** Current month: getRoomOccupancyStatus. Other months: overlap + active / reserved / ended only; else frei. */
+function roomOccupancyKindForMonth(room, tenancies, monthStart, monthEnd, isCurrentMonth) {
+  if (isCurrentMonth) {
+    return getRoomOccupancyStatus(room, tenancies) || "frei";
+  }
+  const roomT = tenanciesForRoom(room, tenancies || []).filter((t) =>
+    tenancyOverlapsMonth(t, monthStart, monthEnd)
+  );
+  if (roomT.length === 0) return "frei";
+  if (roomT.some((t) => normalizeTenancyStatusLocal(t) === "active")) return "belegt";
+  if (roomT.some((t) => normalizeTenancyStatusLocal(t) === "reserved")) return "reserviert";
+  if (roomT.some((t) => normalizeTenancyStatusLocal(t) === "ended")) return "belegt";
+  return "frei";
+}
+
+function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = [], tenancies = []) {
   const rooms = getRoomsForUnit(unit.unitId || unit.id, allRooms);
   const monthStart = getMonthStart(activeMonth);
   const monthEnd = getMonthEnd(activeMonth);
   const leaseStarted = hasLeaseStarted(unit);
+  const now = new Date();
+  const isCurrentMonth =
+    activeMonth.getFullYear() === now.getFullYear() &&
+    activeMonth.getMonth() === now.getMonth();
 
   if (rooms.length === 0) {
     const total = Number(unit.rooms || 0);
@@ -202,87 +233,26 @@ function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
     };
   }
 
-  const occupiedRooms = rooms.filter((room) => {
-    if (room.status !== "Belegt") return false;
-    if (!room.moveInDate || room.moveInDate === "-") return false;
-
-    const moveInDate = room.moveInDate;
-    const moveOutDate =
-      room.moveOutDate && room.moveOutDate !== "-" ? room.moveOutDate : null;
-
-    return overlapsMonth(moveInDate, moveOutDate, monthStart, monthEnd);
-  });
-
-  const reservedRooms = rooms.filter((room) => {
-    if (room.status !== "Reserviert") return false;
-
-    const reservedFrom =
-      room.reservedFrom && room.reservedFrom !== "-"
-        ? room.reservedFrom
-        : room.moveInDate && room.moveInDate !== "-"
-        ? room.moveInDate
-        : null;
-
-    const reservedUntil =
-      room.reservedUntil && room.reservedUntil !== "-"
-        ? room.reservedUntil
-        : null;
-
-    if (!reservedFrom && !reservedUntil) return true;
-    if (!reservedFrom && reservedUntil) {
-      return isDateOnOrAfter(reservedUntil, monthStart);
-    }
-
-    return overlapsMonth(reservedFrom, reservedUntil, monthStart, monthEnd);
-  });
-
-  const freeRooms = rooms.filter((room) => {
-    const isOccupiedInMonth =
-      room.status === "Belegt" &&
-      room.moveInDate &&
-      room.moveInDate !== "-" &&
-      overlapsMonth(
-        room.moveInDate,
-        room.moveOutDate && room.moveOutDate !== "-" ? room.moveOutDate : null,
-        monthStart,
-        monthEnd
-      );
-
-    const isReservedInMonth =
-      room.status === "Reserviert" &&
-      (() => {
-        const reservedFrom =
-          room.reservedFrom && room.reservedFrom !== "-"
-            ? room.reservedFrom
-            : room.moveInDate && room.moveInDate !== "-"
-            ? room.moveInDate
-            : null;
-
-        const reservedUntil =
-          room.reservedUntil && room.reservedUntil !== "-"
-            ? room.reservedUntil
-            : null;
-
-        if (!reservedFrom && !reservedUntil) return true;
-        if (!reservedFrom && reservedUntil) {
-          return isDateOnOrAfter(reservedUntil, monthStart);
-        }
-
-        return overlapsMonth(
-          reservedFrom,
-          reservedUntil,
-          monthStart,
-          monthEnd
-        );
-      })();
-
-    return !isOccupiedInMonth && !isReservedInMonth;
-  });
+  let occupiedCount = 0;
+  let reservedCount = 0;
+  let freeCount = 0;
+  for (const room of rooms) {
+    const kind = roomOccupancyKindForMonth(
+      room,
+      tenancies,
+      monthStart,
+      monthEnd,
+      isCurrentMonth
+    );
+    if (kind === "belegt") occupiedCount += 1;
+    else if (kind === "reserviert") reservedCount += 1;
+    else freeCount += 1;
+  }
 
   return {
-    occupiedCount: occupiedRooms.length,
-    reservedCount: reservedRooms.length,
-    freeCount: freeRooms.length,
+    occupiedCount,
+    reservedCount,
+    freeCount,
     totalRooms: rooms.length,
     fullRevenue: null,
     currentRevenue: null,
@@ -290,9 +260,9 @@ function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
     currentProfit: null,
     runningCosts: null,
     isFullyOccupied:
-      rooms.length > 0 && occupiedRooms.length === rooms.length,
+      rooms.length > 0 && occupiedCount === rooms.length,
     isPartiallyOccupied:
-      occupiedRooms.length > 0 && occupiedRooms.length < rooms.length,
+      occupiedCount > 0 && occupiedCount < rooms.length,
     leaseStarted,
   };
 }
@@ -549,6 +519,7 @@ function AdminCoLivingDashboardPage() {
 
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [tenancies, setTenancies] = useState([]);
   const [occupancyApi, setOccupancyApi] = useState(null);
   const [occupancyRoomsMap, setOccupancyRoomsMap] = useState(null);
   const [profitSixMonth, setProfitSixMonth] = useState(null);
@@ -582,6 +553,9 @@ function AdminCoLivingDashboardPage() {
     fetchAdminRooms()
       .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
       .catch(() => setRooms([]));
+    fetchAdminTenanciesAll()
+      .then((data) => setTenancies(Array.isArray(data) ? data : []))
+      .catch(() => setTenancies([]));
     fetchAdminOccupancy()
       .then((data) => setOccupancyApi(data))
       .catch(() => setOccupancyApi(null));
@@ -660,7 +634,7 @@ function AdminCoLivingDashboardPage() {
     let totalProf = 0;
 
     const unitPerformance = filteredUnits.map((unit) => {
-      const metrics = getCoLivingMetricsForMonth(unit, activeMonth, rooms);
+      const metrics = getCoLivingMetricsForMonth(unit, activeMonth, rooms, tenancies);
       const uid = String(unit.id ?? unit.unitId);
       const prow = profitByUnitIdActive.get(uid);
       const currentRevenue = prow != null ? Number(prow.revenue) : null;
@@ -762,6 +736,7 @@ function AdminCoLivingDashboardPage() {
     filteredUnits,
     activeMonth,
     rooms,
+    tenancies,
     profitByUnitIdActive,
     profitForActiveMonth,
   ]);
