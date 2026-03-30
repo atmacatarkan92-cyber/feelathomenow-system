@@ -6,6 +6,7 @@ import OccupancyMap from "../../components/OccupancyMap";
 import {
   fetchAdminUnit,
   fetchAdminRooms,
+  deleteAdminRoom,
   fetchAdminOccupancyRooms,
   fetchAdminTenancies,
   fetchAdminTenant,
@@ -1363,13 +1364,22 @@ function AdminUnitDetailPage() {
     handleCloseRoomModal();
   }
 
-  function handleDeleteRoom(id) {
+  async function handleDeleteRoom(id) {
     const confirmed = window.confirm(
       "Möchtest du diesen Room wirklich löschen?"
     );
     if (!confirmed) return;
 
-    setRooms((prev) => prev.filter((room) => String(room.id) !== String(id)));
+    try {
+      await deleteAdminRoom(id);
+      const data = await fetchAdminRooms(unitId);
+      setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []);
+    } catch (err) {
+      window.alert(
+        err?.message ||
+          "Room konnte nicht gelöscht werden."
+      );
+    }
   }
 
   function handleUnitDocumentPick() {

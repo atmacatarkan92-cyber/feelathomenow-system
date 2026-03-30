@@ -7,12 +7,13 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import func
 
 ALLOWED_ROOM_STATUS = frozenset({"Frei", "Belegt", "Reserviert"})
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Unit, Room
+from db.models import Unit, Room, Tenancy, TenancyStatus
 from app.core.rate_limit import limiter
 
 
@@ -175,6 +176,22 @@ def admin_delete_room(
     cur_unit = session.get(Unit, room.unit_id)
     if not cur_unit or str(getattr(cur_unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Room not found")
+    _blocking = session.execute(
+        select(func.count())
+        .select_from(Tenancy)
+        .where(Tenancy.room_id == room_id)
+        .where(Tenancy.organization_id == org_id)
+        .where(Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved]))
+    ).scalar()
+    blocking_count = int(_blocking) if _blocking is not None else 0
+    if blocking_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Room kann nicht gelöscht werden, da noch aktive oder reservierte "
+                "Mietverhältnisse existieren."
+            ),
+        )
     session.delete(room)
     session.commit()
     return {"status": "ok", "message": "Room deleted"}

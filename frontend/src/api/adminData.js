@@ -238,6 +238,21 @@ export function fetchAdminRooms(unitId = null) {
   });
 }
 
+export async function deleteAdminRoom(roomId) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/rooms/${encodeURIComponent(roomId)}`,
+    { method: "DELETE", headers: getApiHeaders() }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  try {
+    return await res.json();
+  } catch {
+    return { status: "ok" };
+  }
+}
+
 /**
  * @param {{ skip?: number, limit?: number, q?: string }} [params]
  */
