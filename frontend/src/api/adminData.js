@@ -691,6 +691,26 @@ export function fetchAdminLandlordProperties(landlordId) {
   });
 }
 
+export function verifyAdminAddress(body) {
+  return fetch(`${API_BASE_URL}/api/admin/address/verify`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify({
+      address_line1: body.address_line1 ?? "",
+      postal_code: body.postal_code ?? "",
+      city: body.city ?? "",
+    }),
+  }).then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        typeof data.detail === "string" ? data.detail : "Adressprüfung fehlgeschlagen."
+      );
+    }
+    return data;
+  });
+}
+
 export function createAdminLandlord(body) {
   return fetch(`${API_BASE_URL}/api/admin/landlords`, {
     method: "POST",

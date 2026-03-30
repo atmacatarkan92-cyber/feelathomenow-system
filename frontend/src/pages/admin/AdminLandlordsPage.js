@@ -5,6 +5,7 @@ import {
   fetchAdminLandlord,
   createAdminLandlord,
   updateAdminLandlord,
+  verifyAdminAddress,
 } from "../../api/adminData";
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 
@@ -37,6 +38,8 @@ function AdminLandlordsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [listFilter, setListFilter] = useState("active");
+  const [addressVerify, setAddressVerify] = useState(null);
+  const [verifyLoading, setVerifyLoading] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -50,6 +53,10 @@ function AdminLandlordsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    setAddressVerify(null);
+  }, [form.address_line1, form.postal_code, form.city]);
 
   const editParam = searchParams.get("edit");
   useEffect(() => {
@@ -397,6 +404,96 @@ function AdminLandlordsPage() {
                   ))}
                 </select>
               </div>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerifyLoading(true);
+                    verifyAdminAddress({
+                      address_line1: form.address_line1,
+                      postal_code: form.postal_code,
+                      city: form.city,
+                    })
+                      .then(setAddressVerify)
+                      .catch((e) =>
+                        setAddressVerify({
+                          valid: false,
+                          message: e.message || "Adressprüfung fehlgeschlagen.",
+                        })
+                      )
+                      .finally(() => setVerifyLoading(false));
+                  }}
+                  disabled={saving || verifyLoading}
+                  style={{
+                    padding: "8px 12px",
+                    background: "#FFF",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "8px",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    cursor: saving || verifyLoading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {verifyLoading ? "Prüfe …" : "Adresse prüfen"}
+                </button>
+              </div>
+              {addressVerify ? (
+                <div
+                  style={{
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: `1px solid ${addressVerify.valid ? "#BBF7D0" : "#FDE68A"}`,
+                    background: addressVerify.valid ? "#F0FDF4" : "#FFFBEB",
+                    fontSize: "13px",
+                  }}
+                >
+                  {!addressVerify.valid ? (
+                    <p style={{ margin: "0 0 8px 0", color: "#92400E" }}>
+                      {addressVerify.message || "Adresse konnte nicht bestätigt werden."}
+                    </p>
+                  ) : null}
+                  {addressVerify.valid && addressVerify.formatted_address ? (
+                    <p style={{ margin: "0 0 8px 0", color: "#0F172A" }}>
+                      <strong>Vorschlag:</strong> {addressVerify.formatted_address}
+                    </p>
+                  ) : null}
+                  {addressVerify.valid &&
+                  addressVerify.normalized &&
+                  Object.keys(addressVerify.normalized).length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const n = addressVerify.normalized;
+                        setForm((f) => ({
+                          ...f,
+                          address_line1: n.address_line1 ?? f.address_line1,
+                          postal_code: n.postal_code ?? f.postal_code,
+                          city: n.city ?? f.city,
+                          canton:
+                            n.canton !== undefined &&
+                            n.canton !== null &&
+                            String(n.canton).trim() !== ""
+                              ? n.canton
+                              : f.canton,
+                        }));
+                        setAddressVerify(null);
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        background: "#0F172A",
+                        color: "#FFF",
+                        border: "none",
+                        borderRadius: "6px",
+                        fontWeight: 600,
+                        fontSize: "13px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Übernehmen
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               <div>
                 <label style={labelStyle}>Website (optional)</label>
                 <input
