@@ -100,6 +100,61 @@ export function fetchAdminUnit(id) {
   });
 }
 
+export function fetchAdminUnitCosts(unitId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/units/${encodeURIComponent(unitId)}/costs`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) throw new Error("Zusätzliche Kosten konnten nicht geladen werden.");
+    return res.json();
+  });
+}
+
+export async function createAdminUnitCost(unitId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/units/${encodeURIComponent(unitId)}/costs`,
+    {
+      method: "POST",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export async function updateAdminUnitCost(unitId, costId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/units/${encodeURIComponent(unitId)}/costs/${encodeURIComponent(costId)}`,
+    {
+      method: "PATCH",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export async function deleteAdminUnitCost(unitId, costId) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/units/${encodeURIComponent(unitId)}/costs/${encodeURIComponent(costId)}`,
+    { method: "DELETE", headers: getApiHeaders() }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  try {
+    return await res.json();
+  } catch {
+    return { status: "ok" };
+  }
+}
+
 /**
  * Audit log entries for an entity (e.g. unit). GET /api/admin/audit-logs
  */

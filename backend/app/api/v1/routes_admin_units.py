@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Unit, Room, Property, Landlord, PropertyManager, User, Tenancy
+from db.models import Unit, Room, Property, Landlord, PropertyManager, User, Tenancy, UnitCost
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
 
@@ -301,6 +301,62 @@ class UnitListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+def _unit_cost_to_dict(c: UnitCost) -> dict:
+    ca = getattr(c, "created_at", None)
+    return {
+        "id": str(c.id),
+        "unit_id": str(c.unit_id),
+        "cost_type": c.cost_type,
+        "amount_chf": float(c.amount_chf or 0),
+        "created_at": ca.isoformat() if ca is not None and hasattr(ca, "isoformat") else None,
+    }
+
+
+class UnitCostCreateBody(BaseModel):
+    cost_type: str
+    amount_chf: float = Field(gt=0)
+
+    @field_validator("cost_type", mode="before")
+    @classmethod
+    def _normalize_cost_type_create(cls, v):
+        if v is None:
+            raise ValueError("cost_type is required")
+        s = str(v).strip()
+        if not s:
+            raise ValueError("cost_type must not be empty")
+        return s
+
+
+class UnitCostPatchBody(BaseModel):
+    cost_type: Optional[str] = None
+    amount_chf: Optional[float] = None
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self) -> "UnitCostPatchBody":
+        if self.cost_type is None and self.amount_chf is None:
+            raise ValueError("At least one of cost_type or amount_chf is required")
+        return self
+
+    @field_validator("cost_type", mode="before")
+    @classmethod
+    def _normalize_cost_type_patch(cls, v):
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s:
+            raise ValueError("cost_type must not be empty")
+        return s
+
+    @field_validator("amount_chf")
+    @classmethod
+    def _amount_positive_if_set(cls, v):
+        if v is None:
+            return None
+        if v <= 0:
+            raise ValueError("amount_chf must be positive")
+        return v
 
 
 def _create_initial_rooms_for_unit(session, unit: Unit, body: UnitCreate) -> None:
@@ -593,3 +649,97 @@ def admin_list_rooms_for_unit(
         ).all()
     )
     return [_room_to_dict(r) for r in rooms]
+
+
+@router.get("/units/{unit_id}/costs", response_model=List[dict])
+def admin_list_unit_costs(
+    unit_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """List additional monthly costs for a unit (unit_costs table)."""
+    unit = session.get(Unit, unit_id)
+    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    rows = list(
+        session.exec(
+            select(UnitCost)
+            .where(UnitCost.unit_id == unit_id)
+            .order_by(UnitCost.created_at)
+        ).all()
+    )
+    return [_unit_cost_to_dict(c) for c in rows]
+
+
+@router.post("/units/{unit_id}/costs", response_model=dict)
+@limiter.limit("30/minute")
+def admin_create_unit_cost(
+    request: Request,
+    unit_id: str,
+    body: UnitCostCreateBody,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    unit = session.get(Unit, unit_id)
+    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    row = UnitCost(
+        unit_id=unit_id,
+        cost_type=body.cost_type,
+        amount_chf=float(body.amount_chf),
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return _unit_cost_to_dict(row)
+
+
+@router.patch("/units/{unit_id}/costs/{cost_id}", response_model=dict)
+@limiter.limit("30/minute")
+def admin_patch_unit_cost(
+    request: Request,
+    unit_id: str,
+    cost_id: str,
+    body: UnitCostPatchBody,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    unit = session.get(Unit, unit_id)
+    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    row = session.get(UnitCost, cost_id)
+    if not row or row.unit_id != unit_id:
+        raise HTTPException(status_code=404, detail="Cost not found")
+    data = body.model_dump(exclude_unset=True)
+    if "cost_type" in data:
+        row.cost_type = data["cost_type"]
+    if "amount_chf" in data:
+        row.amount_chf = float(data["amount_chf"])
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return _unit_cost_to_dict(row)
+
+
+@router.delete("/units/{unit_id}/costs/{cost_id}")
+@limiter.limit("30/minute")
+def admin_delete_unit_cost(
+    request: Request,
+    unit_id: str,
+    cost_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    unit = session.get(Unit, unit_id)
+    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    row = session.get(UnitCost, cost_id)
+    if not row or row.unit_id != unit_id:
+        raise HTTPException(status_code=404, detail="Cost not found")
+    session.delete(row)
+    session.commit()
+    return {"status": "ok"}

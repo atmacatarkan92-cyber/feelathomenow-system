@@ -16,6 +16,10 @@ import {
   uploadAdminUnitDocument,
   fetchAdminUnitDocumentDownloadUrl,
   deleteAdminUnitDocument,
+  fetchAdminUnitCosts,
+  createAdminUnitCost,
+  updateAdminUnitCost,
+  deleteAdminUnitCost,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -785,6 +789,20 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
   ).slice(0, 12);
 }
 
+const UNIT_COST_TYPE_OPTIONS = [
+  "Miete",
+  "Nebenkosten",
+  "Reinigung",
+  "Internet",
+  "Sonstiges",
+];
+const UNIT_COST_FIXED_SET = new Set([
+  "Miete",
+  "Nebenkosten",
+  "Reinigung",
+  "Internet",
+]);
+
 function AdminUnitDetailPage() {
   const { unitId } = useParams();
   const [unit, setUnit] = useState(null);
@@ -800,6 +818,15 @@ function AdminUnitDetailPage() {
   const [unitDocUploadError, setUnitDocUploadError] = useState("");
   const [unitDocCategory, setUnitDocCategory] = useState("");
   const unitDocFileInputRef = useRef(null);
+  const [unitCosts, setUnitCosts] = useState([]);
+  const [costForm, setCostForm] = useState({
+    cost_type: "",
+    custom_type: "",
+    amount_chf: "",
+  });
+  const [costLoading, setCostLoading] = useState(false);
+  const [costError, setCostError] = useState("");
+  const [editingCostId, setEditingCostId] = useState(null);
   const [verwaltungLabel, setVerwaltungLabel] = useState("");
   const [bewirtschafterLabel, setBewirtschafterLabel] = useState("");
   const [linksResolving, setLinksResolving] = useState(false);
@@ -814,6 +841,21 @@ function AdminUnitDetailPage() {
       .then((u) => setUnit(u ? normalizeUnit(u) : null))
       .catch(() => setUnit(null))
       .finally(() => setLoading(false));
+  }, [unitId]);
+
+  useEffect(() => {
+    if (!unitId) return;
+    setCostError("");
+    setCostLoading(true);
+    fetchAdminUnitCosts(unitId)
+      .then((rows) => setUnitCosts(Array.isArray(rows) ? rows : []))
+      .catch((e) => {
+        setUnitCosts([]);
+        setCostError(
+          e.message || "Zusätzliche Kosten konnten nicht geladen werden."
+        );
+      })
+      .finally(() => setCostLoading(false));
   }, [unitId]);
 
   useEffect(() => {
@@ -1376,6 +1418,121 @@ function AdminUnitDetailPage() {
     }
   }
 
+  const reloadUnitCosts = () => {
+    if (!unitId) return Promise.resolve();
+    return fetchAdminUnitCosts(unitId)
+      .then((rows) => setUnitCosts(Array.isArray(rows) ? rows : []))
+      .catch(() => {});
+  };
+
+  function parseCostAmountInput(raw) {
+    const n = Number(String(raw).replace(",", ".").trim());
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return n;
+  }
+
+  function resolveBackendCostTypeFromForm(form) {
+    if (form.cost_type === "Sonstiges") {
+      return String(form.custom_type || "").trim();
+    }
+    return String(form.cost_type || "").trim();
+  }
+
+  async function handleUnitCostSubmit(e) {
+    e.preventDefault();
+    if (!unitId) return;
+    setCostError("");
+    if (!costForm.cost_type) {
+      setCostError("Bitte Kostenart wählen.");
+      return;
+    }
+    if (costForm.cost_type === "Sonstiges") {
+      const t = String(costForm.custom_type || "").trim();
+      if (!t) {
+        setCostError("Bitte Bezeichnung für „Sonstiges“ eingeben.");
+        return;
+      }
+    }
+    const amt = parseCostAmountInput(costForm.amount_chf);
+    if (amt == null) {
+      setCostError("Bitte einen gültigen Betrag grösser als 0 eingeben.");
+      return;
+    }
+    const cost_type = resolveBackendCostTypeFromForm(costForm);
+    if (!cost_type) {
+      setCostError("Bitte Kostenart angeben.");
+      return;
+    }
+    setCostLoading(true);
+    try {
+      if (editingCostId) {
+        await updateAdminUnitCost(unitId, editingCostId, {
+          cost_type,
+          amount_chf: amt,
+        });
+      } else {
+        await createAdminUnitCost(unitId, { cost_type, amount_chf: amt });
+      }
+      await reloadUnitCosts();
+      setCostForm({ cost_type: "", custom_type: "", amount_chf: "" });
+      setEditingCostId(null);
+    } catch (err) {
+      setCostError(err.message || "Speichern fehlgeschlagen.");
+    } finally {
+      setCostLoading(false);
+    }
+  }
+
+  function handleUnitCostEdit(row) {
+    if (!row || !row.id) return;
+    const ct = String(row.cost_type || "");
+    if (UNIT_COST_FIXED_SET.has(ct)) {
+      setCostForm({
+        cost_type: ct,
+        custom_type: "",
+        amount_chf: String(row.amount_chf ?? ""),
+      });
+    } else {
+      setCostForm({
+        cost_type: "Sonstiges",
+        custom_type: ct,
+        amount_chf: String(row.amount_chf ?? ""),
+      });
+    }
+    setEditingCostId(String(row.id));
+    setCostError("");
+  }
+
+  function handleUnitCostCancel() {
+    setCostForm({ cost_type: "", custom_type: "", amount_chf: "" });
+    setEditingCostId(null);
+    setCostError("");
+  }
+
+  async function handleUnitCostDelete(row) {
+    if (!unitId || !row?.id) return;
+    if (!window.confirm("Diesen Eintrag wirklich löschen?")) return;
+    setCostLoading(true);
+    setCostError("");
+    try {
+      await deleteAdminUnitCost(unitId, String(row.id));
+      if (editingCostId === String(row.id)) {
+        setCostForm({ cost_type: "", custom_type: "", amount_chf: "" });
+        setEditingCostId(null);
+      }
+      await reloadUnitCosts();
+    } catch (err) {
+      setCostError(err.message || "Löschen fehlgeschlagen.");
+    } finally {
+      setCostLoading(false);
+    }
+  }
+
+  const unitCostsTotalMonthly = unitCosts.reduce(
+    (sum, r) => sum + Number(r.amount_chf || 0),
+    0
+  );
+
   const landlordDepositTypeKey = String(unit.landlordDepositType || "")
     .trim()
     .toLowerCase();
@@ -1627,6 +1784,175 @@ function AdminUnitDetailPage() {
               />
             </div>
           </SectionCard>
+
+          <div className="xl:col-span-2">
+            <SectionCard
+              title="Zusätzliche Kosten"
+              subtitle="Weitere monatliche Posten (unit_costs)"
+            >
+              {costError ? (
+                <p className="text-sm text-red-600 mb-3">{costError}</p>
+              ) : null}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-700">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="py-2 pr-4 font-medium">Kostenart</th>
+                      <th className="py-2 pr-4 font-medium">Betrag CHF/Mt</th>
+                      <th className="py-2 pr-4 font-medium">Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unitCosts.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="py-3 text-slate-500 text-sm"
+                        >
+                          {costLoading && !costError
+                            ? "Lade …"
+                            : "Keine zusätzlichen Kosten erfasst."}
+                        </td>
+                      </tr>
+                    ) : (
+                      unitCosts.map((row) => (
+                        <tr
+                          key={String(row.id)}
+                          className="border-b border-slate-100"
+                        >
+                          <td className="py-2 pr-4 font-medium">
+                            {row.cost_type || "—"}
+                          </td>
+                          <td className="py-2 pr-4">
+                            {Number.isFinite(Number(row.amount_chf))
+                              ? `CHF ${Number(row.amount_chf).toLocaleString("de-CH", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}`
+                              : "—"}
+                          </td>
+                          <td className="py-2 pr-4">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <button
+                                type="button"
+                                disabled={costLoading}
+                                onClick={() => handleUnitCostEdit(row)}
+                                className="text-orange-600 hover:underline text-sm font-medium disabled:opacity-50"
+                              >
+                                Bearbeiten
+                              </button>
+                              <button
+                                type="button"
+                                disabled={costLoading}
+                                onClick={() => handleUnitCostDelete(row)}
+                                className="text-red-600 hover:underline text-sm font-medium disabled:opacity-50"
+                              >
+                                Löschen
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-sm text-slate-700 mt-3 font-medium">
+                Total: CHF{" "}
+                {unitCostsTotalMonthly.toLocaleString("de-CH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                / Monat
+              </p>
+              <form
+                onSubmit={handleUnitCostSubmit}
+                className="mt-6 pt-4 border-t border-slate-200 space-y-3"
+              >
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
+                  <label className="flex flex-col gap-1 text-sm text-slate-600">
+                    <span>Kostenart</span>
+                    <select
+                      value={costForm.cost_type}
+                      onChange={(e) =>
+                        setCostForm((f) => ({
+                          ...f,
+                          cost_type: e.target.value,
+                          custom_type:
+                            e.target.value === "Sonstiges" ? f.custom_type : "",
+                        }))
+                      }
+                      disabled={costLoading}
+                      className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 min-w-[200px]"
+                    >
+                      <option value="">— wählen —</option>
+                      {UNIT_COST_TYPE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {costForm.cost_type === "Sonstiges" ? (
+                    <label className="flex flex-col gap-1 text-sm text-slate-600">
+                      <span>Bezeichnung</span>
+                      <input
+                        type="text"
+                        value={costForm.custom_type}
+                        onChange={(e) =>
+                          setCostForm((f) => ({
+                            ...f,
+                            custom_type: e.target.value,
+                          }))
+                        }
+                        disabled={costLoading}
+                        className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 min-w-[200px]"
+                        placeholder="z. B. Haftpflicht"
+                      />
+                    </label>
+                  ) : null}
+                  <label className="flex flex-col gap-1 text-sm text-slate-600">
+                    <span>Betrag (CHF / Monat)</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={costForm.amount_chf}
+                      onChange={(e) =>
+                        setCostForm((f) => ({
+                          ...f,
+                          amount_chf: e.target.value,
+                        }))
+                      }
+                      disabled={costLoading}
+                      className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 w-40"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="submit"
+                      disabled={costLoading}
+                      className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                    >
+                      {costLoading ? "…" : "Speichern"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={costLoading}
+                      onClick={handleUnitCostCancel}
+                      className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+                {editingCostId ? (
+                  <p className="text-xs text-slate-500">
+                    Bearbeitung: Eintrag wird aktualisiert.
+                  </p>
+                ) : null}
+              </form>
+            </SectionCard>
+          </div>
         </div>
 
         <SectionCard
