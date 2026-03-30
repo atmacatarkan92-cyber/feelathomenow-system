@@ -2,15 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { fetchAdminLandlord } from "../../api/adminData";
 
-const labelStyle = { display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600, color: "#64748B" };
-const valueStyle = { fontSize: "15px", color: "#0F172A", marginBottom: "12px" };
-const sectionStyle = {
-  marginBottom: "24px",
-  padding: "16px",
-  border: "1px solid #E5E7EB",
-  borderRadius: "10px",
-  background: "#FAFAFA",
-};
+function dash(s) {
+  const t = s != null ? String(s).trim() : "";
+  return t || "—";
+}
 
 function formatDateTime(iso) {
   if (!iso) return "—";
@@ -52,25 +47,17 @@ function AdminLandlordDetailPage() {
   }, [id]);
 
   if (loading) {
-    return <p style={{ padding: "0 8px" }}>Lade Verwaltung …</p>;
+    return <p className="px-2 text-slate-500">Lade Verwaltung …</p>;
   }
 
   if (error || !row) {
     return (
-      <div style={{ padding: "0 8px" }}>
-        <p style={{ color: "#B91C1C", marginBottom: "12px" }}>{error || "Nicht gefunden."}</p>
+      <div className="px-2">
+        <p className="text-red-700 mb-3">{error || "Nicht gefunden."}</p>
         <button
           type="button"
           onClick={() => navigate("/admin/landlords")}
-          style={{
-            padding: "8px 14px",
-            background: "#0F172A",
-            color: "#FFF",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
+          className="px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800"
         >
           Zurück zur Liste
         </button>
@@ -79,105 +66,110 @@ function AdminLandlordDetailPage() {
   }
 
   const title = row.company_name?.trim() || row.contact_name?.trim() || "Verwaltung";
-  const statusLabel = row.status === "inactive" ? "Inaktiv" : "Aktiv";
+  const isInactive = row.status === "inactive";
+  const statusLabel = isInactive ? "Inaktiv" : "Aktiv";
+
+  const addrLine1 = row.address_line1?.trim() || "";
+  const plz = row.postal_code?.trim() || "";
+  const city = row.city?.trim() || "";
+  const addrLine2 = [plz, city].filter(Boolean).join(" ");
+  const addrLine3 = row.canton?.trim() || "";
 
   return (
-    <div style={{ padding: "0 8px", maxWidth: "720px" }}>
-      <p style={{ marginBottom: "12px" }}>
-        <Link to="/admin/landlords" style={{ color: "#0F172A", fontWeight: 600, textDecoration: "none" }}>
+    <div className="px-2 max-w-3xl">
+      <p className="mb-4">
+        <Link to="/admin/landlords" className="text-sm font-semibold text-slate-900 hover:underline">
           ← Verwaltungen
         </Link>
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: "12px",
-          marginBottom: "24px",
-        }}
-      >
-        <h1 style={{ fontSize: "22px", fontWeight: 800, margin: 0, color: "#0F172A" }}>{title}</h1>
-        <span
-          style={{
-            padding: "4px 10px",
-            borderRadius: "999px",
-            fontSize: "13px",
-            fontWeight: 600,
-            background: row.status === "inactive" ? "#F1F5F9" : "#DCFCE7",
-            color: row.status === "inactive" ? "#475569" : "#166534",
-          }}
-        >
-          {statusLabel}
-        </span>
-      </div>
+      <header className="mb-8 pb-2 border-b border-slate-200/80">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 pr-4">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 leading-tight">
+              {title}
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                isInactive ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-800"
+              }`}
+            >
+              {statusLabel}
+            </span>
+            {/* Reserved for future actions (edit / delete) */}
+            <div className="flex items-center gap-2 min-h-[36px] min-w-[88px]" aria-hidden />
+          </div>
+        </div>
+      </header>
 
-      <div style={sectionStyle}>
-        <h2 style={{ fontSize: "15px", fontWeight: 700, margin: "0 0 12px 0", color: "#0F172A" }}>Kontakt</h2>
-        <div>
-          <span style={labelStyle}>Kontaktperson</span>
-          <div style={valueStyle}>{row.contact_name?.trim() || "—"}</div>
-        </div>
-        <div>
-          <span style={labelStyle}>E-Mail</span>
-          <div style={valueStyle}>{row.email?.trim() || "—"}</div>
-        </div>
-        <div>
-          <span style={labelStyle}>Telefon</span>
-          <div style={valueStyle}>{row.phone?.trim() || "—"}</div>
-        </div>
-      </div>
+      <div className="space-y-6">
+        <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Kontakt</h2>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Kontaktperson</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">{dash(row.contact_name)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">E-Mail</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">{dash(row.email)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Telefon</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">{dash(row.phone)}</p>
+            </div>
+          </div>
+        </section>
 
-      <div style={sectionStyle}>
-        <h2 style={{ fontSize: "15px", fontWeight: 700, margin: "0 0 12px 0", color: "#0F172A" }}>Adresse</h2>
-        <div>
-          <span style={labelStyle}>Adresse</span>
-          <div style={valueStyle}>{row.address_line1?.trim() || "—"}</div>
-        </div>
-        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-          <div style={{ minWidth: "100px" }}>
-            <span style={labelStyle}>PLZ</span>
-            <div style={valueStyle}>{row.postal_code?.trim() || "—"}</div>
+        <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Adresse</h2>
+          <div className="text-sm font-medium text-slate-900 space-y-1">
+            <p>{addrLine1 ? addrLine1 : "—"}</p>
+            <p>{addrLine2 ? addrLine2 : "—"}</p>
+            <p>{addrLine3 ? addrLine3 : "—"}</p>
           </div>
-          <div style={{ flex: 1, minWidth: "120px" }}>
-            <span style={labelStyle}>Ort</span>
-            <div style={valueStyle}>{row.city?.trim() || "—"}</div>
-          </div>
-          <div style={{ minWidth: "80px" }}>
-            <span style={labelStyle}>Kanton</span>
-            <div style={valueStyle}>{row.canton?.trim() || "—"}</div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <div style={sectionStyle}>
-        <h2 style={{ fontSize: "15px", fontWeight: 700, margin: "0 0 12px 0", color: "#0F172A" }}>Weitere Angaben</h2>
-        <div>
-          <span style={labelStyle}>Website</span>
-          <div style={valueStyle}>
-            {row.website?.trim() ? (
-              <a href={/^https?:\/\//i.test(row.website.trim()) ? row.website.trim() : `https://${row.website.trim()}`} target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB" }}>
-                {row.website.trim()}
-              </a>
-            ) : (
-              "—"
-            )}
+        <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Weitere Angaben</h2>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Website</p>
+              <div className="text-sm font-medium text-slate-900 mt-1">
+                {row.website?.trim() ? (
+                  <a
+                    href={
+                      /^https?:\/\//i.test(row.website.trim())
+                        ? row.website.trim()
+                        : `https://${row.website.trim()}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {row.website.trim()}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Notizen</p>
+              <p className="text-sm font-medium text-slate-900 mt-1 whitespace-pre-wrap">{dash(row.notes)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Erstellt</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">{formatDateTime(row.created_at)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Zuletzt aktualisiert</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">{formatDateTime(row.updated_at)}</p>
+            </div>
           </div>
-        </div>
-        <div>
-          <span style={labelStyle}>Notizen</span>
-          <div style={{ ...valueStyle, whiteSpace: "pre-wrap" }}>{row.notes?.trim() || "—"}</div>
-        </div>
-        <div>
-          <span style={labelStyle}>Erstellt</span>
-          <div style={valueStyle}>{formatDateTime(row.created_at)}</div>
-        </div>
-        <div>
-          <span style={labelStyle}>Zuletzt aktualisiert</span>
-          <div style={valueStyle}>{formatDateTime(row.updated_at)}</div>
-        </div>
+        </section>
       </div>
     </div>
   );
