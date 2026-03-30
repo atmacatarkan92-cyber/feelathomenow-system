@@ -1,15 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   createAdminLandlordNote,
   deleteAdminLandlord,
+  deleteAdminLandlordDocument,
   fetchAdminLandlord,
+  fetchAdminLandlordDocumentDownloadUrl,
+  fetchAdminLandlordDocuments,
   fetchAdminLandlordNotes,
   fetchAdminLandlordPropertyManagers,
   fetchAdminLandlordProperties,
   restoreAdminLandlord,
   updateAdminLandlordNote,
+  uploadAdminLandlordDocument,
 } from "../../api/adminData";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 
@@ -55,6 +59,82 @@ function propertyManagerDisplayName(pm) {
   return n || "Unbenannter Bewirtschafter";
 }
 
+function formatLandlordDocumentDate(iso) {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+}
+
+function formatLandlordDocumentType(doc) {
+  const mime = String(doc.mime_type || "").toLowerCase();
+  const name = String(doc.file_name || "");
+  const ext = name.includes(".") ? (name.split(".").pop() || "").toLowerCase() : "";
+
+  if (mime.includes("pdf") || ext === "pdf") return "PDF";
+  if (mime.includes("jpeg") || mime.includes("jpg") || ext === "jpg" || ext === "jpeg") return "JPG";
+  if (mime.includes("png") || ext === "png") return "PNG";
+  if (
+    mime.includes("wordprocessingml") ||
+    mime.includes("msword") ||
+    ext === "docx" ||
+    ext === "doc"
+  ) {
+    return "DOCX";
+  }
+  if (ext && /^[a-z0-9]+$/i.test(ext)) return ext.toUpperCase();
+  return "Datei";
+}
+
+const LANDLORD_DOCUMENT_CATEGORY_LABELS = {
+  rent_contract: "Mietvertrag",
+  id_document: "Ausweis",
+  debt_register: "Betreibungsregister",
+  insurance: "Versicherung",
+  other: "Sonstiges",
+};
+
+function formatLandlordDocumentCategoryLabel(category) {
+  if (category == null || String(category).trim() === "") return "—";
+  const k = String(category).trim();
+  return LANDLORD_DOCUMENT_CATEGORY_LABELS[k] || k;
+}
+
+const thCell = {
+  textAlign: "left",
+  padding: "10px 12px",
+  borderBottom: "1px solid #E5E7EB",
+  color: "#64748B",
+  fontWeight: 600,
+};
+
+const tdCell = {
+  padding: "10px 12px",
+  borderBottom: "1px solid #F1F5F9",
+  verticalAlign: "top",
+};
+
+const sectionCard = {
+  background: "#FFFFFF",
+  border: "1px solid #E5E7EB",
+  borderRadius: "14px",
+  padding: "16px",
+  marginBottom: "12px",
+};
+
+const sectionTitle = {
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#f97316",
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  margin: "0 0 10px 0",
+};
+
 function AdminLandlordDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -78,6 +158,12 @@ function AdminLandlordDetailPage() {
   const [editDraft, setEditDraft] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [editErr, setEditErr] = useState(null);
+  const [landlordDocuments, setLandlordDocuments] = useState([]);
+  const [landlordDocsLoading, setLandlordDocsLoading] = useState(true);
+  const [landlordDocUploading, setLandlordDocUploading] = useState(false);
+  const [landlordDocUploadError, setLandlordDocUploadError] = useState("");
+  const [landlordDocCategory, setLandlordDocCategory] = useState("");
+  const landlordDocFileInputRef = useRef(null);
 
   useEffect(() => {
     if (!id) return;
@@ -142,6 +228,15 @@ function AdminLandlordDetailPage() {
     fetchAdminLandlordNotes(id)
       .then((d) => setNotes(d?.items || []))
       .catch(() => setNotes([]));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setLandlordDocsLoading(true);
+    fetchAdminLandlordDocuments(id)
+      .then((items) => setLandlordDocuments(Array.isArray(items) ? items : []))
+      .catch(() => setLandlordDocuments([]))
+      .finally(() => setLandlordDocsLoading(false));
   }, [id]);
 
   if (loading) {
@@ -228,6 +323,50 @@ function AdminLandlordDetailPage() {
       })
       .finally(() => setEditSaving(false));
   };
+
+  function handleLandlordDocPick() {
+    landlordDocFileInputRef.current?.click();
+  }
+
+  async function handleLandlordDocSelected(e) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !id) return;
+    setLandlordDocUploading(true);
+    setLandlordDocUploadError("");
+    try {
+      await uploadAdminLandlordDocument(id, f, {
+        category: landlordDocCategory.trim() || undefined,
+      });
+      setLandlordDocCategory("");
+      const items = await fetchAdminLandlordDocuments(id);
+      setLandlordDocuments(Array.isArray(items) ? items : []);
+    } catch (err) {
+      setLandlordDocUploadError(err.message || "Upload fehlgeschlagen.");
+    } finally {
+      setLandlordDocUploading(false);
+    }
+  }
+
+  async function handleOpenLandlordDocument(docId) {
+    try {
+      const data = await fetchAdminLandlordDocumentDownloadUrl(docId);
+      if (data?.url) window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      window.alert(err.message || "Download konnte nicht gestartet werden.");
+    }
+  }
+
+  async function handleDeleteLandlordDocument(docId) {
+    if (!window.confirm("Dokument wirklich löschen?")) return;
+    try {
+      await deleteAdminLandlordDocument(docId);
+      const items = await fetchAdminLandlordDocuments(id);
+      setLandlordDocuments(Array.isArray(items) ? items : []);
+    } catch (err) {
+      window.alert(err.message || "Löschen fehlgeschlagen.");
+    }
+  }
 
   return (
     <div className="px-2 max-w-3xl">
@@ -489,6 +628,178 @@ function AdminLandlordDetailPage() {
             )}
           </div>
         </section>
+
+        <div style={sectionCard}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: "12px",
+              marginBottom: "10px",
+            }}
+          >
+            <div style={sectionTitle}>Dokumente</div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: "10px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "13px",
+                  color: "#64748B",
+                }}
+              >
+                <span>Kategorie</span>
+                <select
+                  value={landlordDocCategory}
+                  onChange={(e) => setLandlordDocCategory(e.target.value)}
+                  disabled={landlordDocUploading || !id}
+                  style={{
+                    fontSize: "13px",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "8px",
+                    padding: "6px 8px",
+                    color: "#0F172A",
+                    background: landlordDocUploading || !id ? "#F1F5F9" : "#FFFFFF",
+                  }}
+                >
+                  <option value="">—</option>
+                  <option value="rent_contract">Mietvertrag</option>
+                  <option value="id_document">Ausweis</option>
+                  <option value="debt_register">Betreibungsregister</option>
+                  <option value="insurance">Versicherung</option>
+                  <option value="other">Sonstiges</option>
+                </select>
+              </label>
+              <input
+                ref={landlordDocFileInputRef}
+                type="file"
+                style={{ display: "none" }}
+                onChange={handleLandlordDocSelected}
+              />
+              <button
+                type="button"
+                onClick={handleLandlordDocPick}
+                disabled={landlordDocUploading || !id}
+                style={{
+                  fontSize: "13px",
+                  border: "1px solid #CBD5E1",
+                  background: landlordDocUploading || !id ? "#F1F5F9" : "#FFFFFF",
+                  color: "#334155",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  fontWeight: 600,
+                  cursor: landlordDocUploading || !id ? "not-allowed" : "pointer",
+                }}
+              >
+                {landlordDocUploading ? "Wird hochgeladen …" : "Hochladen"}
+              </button>
+            </div>
+          </div>
+          {landlordDocUploadError ? (
+            <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#DC2626" }}>
+              {landlordDocUploadError}
+            </p>
+          ) : null}
+          {landlordDocsLoading ? (
+            <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Lade Dokumente …</p>
+          ) : landlordDocuments.length === 0 ? (
+            <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>
+              Keine Dokumente vorhanden
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "14px",
+                  color: "#0F172A",
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={thCell}>Datei</th>
+                    <th style={thCell}>Typ</th>
+                    <th style={thCell}>Kategorie</th>
+                    <th style={thCell}>Datum</th>
+                    <th style={thCell}>Von</th>
+                    <th style={thCell}>Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {landlordDocuments.map((doc) => (
+                    <tr key={String(doc.id)}>
+                      <td style={{ ...tdCell, fontWeight: 600 }}>{doc.file_name || "—"}</td>
+                      <td style={{ ...tdCell, color: "#64748B" }}>{formatLandlordDocumentType(doc)}</td>
+                      <td style={{ ...tdCell, color: "#64748B" }}>
+                        {formatLandlordDocumentCategoryLabel(doc.category)}
+                      </td>
+                      <td style={{ ...tdCell, color: "#64748B" }}>
+                        {formatLandlordDocumentDate(doc.created_at)}
+                      </td>
+                      <td style={{ ...tdCell, color: "#64748B" }}>
+                        {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
+                          ? doc.uploaded_by_name
+                          : "—"}
+                      </td>
+                      <td style={tdCell}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            gap: "12px",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleOpenLandlordDocument(doc.id)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              color: "#EA580C",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            Öffnen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLandlordDocument(doc.id)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              color: "#64748B",
+                              fontSize: "13px",
+                              cursor: "pointer",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            Löschen
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Zugeordnete Liegenschaften</h2>

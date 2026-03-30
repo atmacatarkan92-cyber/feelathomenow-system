@@ -1016,3 +1016,58 @@ export async function deleteAdminTenantDocument(documentId) {
   }
   return res.json();
 }
+
+export function fetchAdminLandlordDocuments(landlordId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/landlord-documents?landlord_id=${encodeURIComponent(landlordId)}`,
+    { headers: getApiHeaders() }
+  )
+    .then((res) => {
+      if (!res.ok) throw new Error("Dokumente konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => {
+      if (data != null && typeof data === "object" && Array.isArray(data.items)) {
+        return data.items;
+      }
+      throw new Error('Ungültige Antwort: erwartet { items: [] }.');
+    });
+}
+
+export async function uploadAdminLandlordDocument(landlordId, file, options = {}) {
+  const fd = new FormData();
+  fd.append("landlord_id", landlordId);
+  fd.append("file", file);
+  const cat = options.category != null ? String(options.category).trim() : "";
+  if (cat) fd.append("category", cat);
+  const res = await fetch(`${API_BASE_URL}/api/admin/landlord-documents`, {
+    method: "POST",
+    headers: getApiHeadersMultipart(),
+    body: fd,
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export function fetchAdminLandlordDocumentDownloadUrl(documentId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/landlord-documents/${encodeURIComponent(documentId)}/download`,
+    { headers: getApiHeaders() }
+  ).then(async (res) => {
+    if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+    return res.json();
+  });
+}
+
+export async function deleteAdminLandlordDocument(documentId) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/landlord-documents/${encodeURIComponent(documentId)}`, {
+    method: "DELETE",
+    headers: getApiHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
