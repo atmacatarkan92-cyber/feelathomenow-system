@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAdminUnits, normalizeUnit } from "../../api/adminData";
+import { fetchAdminUnits, fetchAdminUnitCosts, normalizeUnit } from "../../api/adminData";
 import { isLandlordContractLeaseStarted, parseIsoDate } from "../../utils/unitOccupancyStatus";
+import {
+  getUnitCostsTotal,
+  sumUnitCostsByType,
+} from "../../utils/adminUnitRunningCosts";
 
 function formatCurrency(value, currency = "CHF") {
   const amount = Number(value || 0);
@@ -44,18 +48,9 @@ function SummaryCard({ title, value, hint, accentColor }) {
   );
 }
 
-function getRunningMonthlyCosts(unit) {
-  if (!isLandlordContractLeaseStarted(unit)) return 0;
-
-  return (
-    Number(unit.landlordRentMonthly || 0) +
-    Number(unit.utilitiesMonthly || 0) +
-    Number(unit.cleaningCostMonthly || 0)
-  );
-}
-
 function AdminExpensesPage() {
   const [units, setUnits] = useState([]);
+  const [unitCostsByUnitId, setUnitCostsByUnitId] = useState({});
 
   useEffect(() => {
     fetchAdminUnits()
@@ -63,12 +58,35 @@ function AdminExpensesPage() {
       .catch(() => setUnits([]));
   }, []);
 
+  useEffect(() => {
+    if (!Array.isArray(units) || units.length === 0) {
+      setUnitCostsByUnitId({});
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all(
+      units.map((u) =>
+        fetchAdminUnitCosts(u.id)
+          .then((rows) => [String(u.id), Array.isArray(rows) ? rows : []])
+          .catch(() => [String(u.id), []])
+      )
+    ).then((entries) => {
+      if (cancelled) return;
+      setUnitCostsByUnitId(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [units]);
+
   const expenseRows = useMemo(() => {
     return units.map((unit) => {
-      const rent = Number(unit.landlordRentMonthly || 0);
-      const utilities = Number(unit.utilitiesMonthly || 0);
-      const cleaning = Number(unit.cleaningCostMonthly || 0);
-      const total = getRunningMonthlyCosts(unit);
+      const rows = unitCostsByUnitId[String(unit.id)] ?? unitCostsByUnitId[unit.id] ?? [];
+      const leaseStarted = isLandlordContractLeaseStarted(unit);
+      const rent = leaseStarted ? sumUnitCostsByType(rows, "Miete") : 0;
+      const utilities = leaseStarted ? sumUnitCostsByType(rows, "Nebenkosten") : 0;
+      const cleaning = leaseStarted ? sumUnitCostsByType(rows, "Reinigung") : 0;
+      const total = leaseStarted ? getUnitCostsTotal(rows) : 0;
 
       return {
         id: unit.id,
@@ -79,12 +97,12 @@ function AdminExpensesPage() {
         utilities,
         cleaning,
         total,
-        leaseStarted: isLandlordContractLeaseStarted(unit),
+        leaseStarted,
         leaseStartDate:
           parseIsoDate(unit?.leaseStartDate ?? unit?.lease_start_date) || "—",
       };
     });
-  }, [units]);
+  }, [units, unitCostsByUnitId]);
 
   const summary = useMemo(() => {
     const totalExpenses = expenseRows.reduce((sum, row) => sum + row.total, 0);
@@ -221,7 +239,7 @@ function AdminExpensesPage() {
             <tbody>
               {expenseRows.map((row) => (
                 <tr
-                  key={row.unitId}
+                  key={row.id}
                   style={{ borderBottom: "1px solid #F1F5F9" }}
                 >
                   <td style={{ padding: "12px", fontWeight: 700, color: "#0F172A" }}>

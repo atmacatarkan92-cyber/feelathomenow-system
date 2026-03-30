@@ -4,10 +4,11 @@
  */
 
 import { getCoLivingMetrics } from "./adminUnitCoLivingMetrics";
-import { getRunningMonthlyCosts } from "./adminUnitRunningCosts";
+import { getUnitCostsTotal } from "./adminUnitRunningCosts";
 import {
   sumActiveTenancyMonthlyRentForUnit,
   getUnitOccupancyStatus,
+  isLandlordContractLeaseStarted,
 } from "./unitOccupancyStatus";
 import { getDisplayUnitId } from "./unitDisplayId";
 
@@ -57,8 +58,9 @@ export function getPortfolioUnitLabel(unit, listIndex) {
  * @param {object[]} units
  * @param {object[]|null|undefined} rooms
  * @param {object[]|null|undefined} tenancies — null = data not loaded yet
+ * @param {Record<string, object[]>} [unitCostsByUnitId] — unit_costs rows per unit id
  */
-export function getPortfolioMetrics(units, rooms, tenancies) {
+export function getPortfolioMetrics(units, rooms, tenancies, unitCostsByUnitId = {}) {
   if (!Array.isArray(units)) return null;
   if (tenancies == null) return null;
 
@@ -73,7 +75,11 @@ export function getPortfolioMetrics(units, rooms, tenancies) {
   const rows = [];
 
   units.forEach((unit, listIndex) => {
-    const runningCosts = getRunningMonthlyCosts(unit);
+    const costRows =
+      unitCostsByUnitId[String(unit.id)] ?? unitCostsByUnitId[unit.id] ?? [];
+    const runningCosts = isLandlordContractLeaseStarted(unit)
+      ? getUnitCostsTotal(costRows)
+      : 0;
     const type = String(unit.type || "").trim();
     const isCoLiving = type === "Co-Living";
 

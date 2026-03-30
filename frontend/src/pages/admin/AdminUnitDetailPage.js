@@ -44,7 +44,7 @@ import {
   getPhase4OperationalWarnings,
 } from "../../utils/unitOperationalIntelligence";
 import {
-  getRunningMonthlyCosts,
+  getUnitCostsTotal,
   landlordDepositInsuranceMonthly,
 } from "../../utils/adminUnitRunningCosts";
 
@@ -1086,7 +1086,7 @@ function AdminUnitDetailPage() {
       unitTenancies
     );
     const tenancyRevenueKpi = activeRentSum;
-    const runningCosts = getRunningMonthlyCosts(safeUnit);
+    const runningCosts = getUnitCostsTotal(unitCosts);
 
     if (isApt) {
       const occupied = activeUnitTenancies.length > 0;
@@ -1121,7 +1121,7 @@ function AdminUnitDetailPage() {
           : base.vacancyLoss,
       apartmentTenanciesLoaded: true,
     };
-  }, [safeUnit, rooms, unitTenancies, activeUnitTenancies]);
+  }, [safeUnit, rooms, unitTenancies, activeUnitTenancies, unitCosts]);
 
   const occupancyRate =
     metrics.totalRooms > 0

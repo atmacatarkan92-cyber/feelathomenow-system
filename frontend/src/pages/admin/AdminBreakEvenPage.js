@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAdminUnits, normalizeUnit } from "../../api/adminData";
+import { fetchAdminUnits, fetchAdminUnitCosts, normalizeUnit } from "../../api/adminData";
+import { getUnitCostsTotal } from "../../utils/adminUnitRunningCosts";
 
 function formatCurrency(value) {
   const amount = Number(value || 0);
@@ -8,6 +9,7 @@ function formatCurrency(value) {
 
 function AdminBreakEvenPage() {
   const [units, setUnits] = useState([]);
+  const [unitCostsByUnitId, setUnitCostsByUnitId] = useState({});
 
   useEffect(() => {
     fetchAdminUnits()
@@ -15,31 +17,45 @@ function AdminBreakEvenPage() {
       .catch(() => setUnits([]));
   }, []);
 
+  useEffect(() => {
+    if (!Array.isArray(units) || units.length === 0) {
+      setUnitCostsByUnitId({});
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all(
+      units.map((u) =>
+        fetchAdminUnitCosts(u.id)
+          .then((rows) => [String(u.id), Array.isArray(rows) ? rows : []])
+          .catch(() => [String(u.id), []])
+      )
+    ).then((entries) => {
+      if (cancelled) return;
+      setUnitCostsByUnitId(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [units]);
+
   const rows = useMemo(() => {
-
-    return units.map(unit => {
-
+    return units.map((unit) => {
       const revenue = Number(unit.tenantPriceMonthly || 0);
+      const rowsCosts =
+        unitCostsByUnitId[String(unit.id)] ?? unitCostsByUnitId[unit.id] ?? [];
+      const costs = getUnitCostsTotal(rowsCosts);
 
-      const costs =
-        Number(unit.landlordRentMonthly || 0) +
-        Number(unit.utilitiesMonthly || 0) +
-        Number(unit.cleaningCostMonthly || 0);
-
-      const breakEvenOccupancy =
-        revenue === 0 ? null : costs / revenue;
+      const breakEvenOccupancy = revenue === 0 ? null : costs / revenue;
 
       return {
         id: unit.unitId,
         city: unit.place,
         revenue,
         costs,
-        breakEvenOccupancy
+        breakEvenOccupancy,
       };
-
     });
-
-  }, [units]);
+  }, [units, unitCostsByUnitId]);
 
   return (
     <div style={{display:"grid",gap:"24px"}}>

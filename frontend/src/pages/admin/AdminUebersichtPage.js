@@ -20,6 +20,7 @@ import {
   fetchAdminDashboardKpis,
   fetchAdminInvoices,
   fetchAdminTenanciesAll,
+  fetchAdminUnitCosts,
   normalizeFetchError,
   sanitizeClientErrorMessage,
 } from "../../api/adminData";
@@ -297,6 +298,7 @@ export default function AdminUebersichtPage() {
   const [invoiceLoading, setInvoiceLoading] = useState(true);
   const [invoiceError, setInvoiceError] = useState("");
   const [units, setUnits] = useState([]);
+  const [unitCostsByUnitId, setUnitCostsByUnitId] = useState({});
   const [rooms, setRooms] = useState([]);
   const [tenancies, setTenancies] = useState(null);
   const [profitApi, setProfitApi] = useState({ summary: null, units: [], year: null, month: null });
@@ -346,6 +348,27 @@ export default function AdminUebersichtPage() {
         );
       });
   }, []);
+
+  useEffect(() => {
+    if (!Array.isArray(units) || units.length === 0) {
+      setUnitCostsByUnitId({});
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all(
+      units.map((u) =>
+        fetchAdminUnitCosts(u.id)
+          .then((rows) => [String(u.id), Array.isArray(rows) ? rows : []])
+          .catch(() => [String(u.id), []])
+      )
+    ).then((entries) => {
+      if (cancelled) return;
+      setUnitCostsByUnitId(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [units]);
 
   useEffect(() => {
     let cancelled = false;
@@ -514,8 +537,8 @@ export default function AdminUebersichtPage() {
   const latestInvoices = useMemo(() => [...invoices].slice(0, 5), [invoices]);
 
   const portfolio = useMemo(
-    () => getPortfolioMetrics(units, rooms, tenancies),
-    [units, rooms, tenancies]
+    () => getPortfolioMetrics(units, rooms, tenancies, unitCostsByUnitId),
+    [units, rooms, tenancies, unitCostsByUnitId]
   );
 
   const weakestUnitDisplayLabel = useMemo(() => {

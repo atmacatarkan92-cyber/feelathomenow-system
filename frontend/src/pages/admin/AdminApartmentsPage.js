@@ -28,6 +28,7 @@ import {
   getCoLivingMetrics,
   getRoomsForUnit,
 } from "../../utils/adminUnitCoLivingMetrics";
+import { getUnitCostsTotal } from "../../utils/adminUnitRunningCosts";
 
 function landlordSelectLabel(l) {
   const c = String(l.company_name || "").trim();
@@ -234,20 +235,14 @@ function buildValidModalCostRows(rows) {
   return out;
 }
 
-function getRunningMonthlyCosts(unit) {
+function runningMonthlyCostsForUnit(unit, unitCostsRows) {
   if (!isLandlordContractLeaseStarted(unit)) return 0;
-
-  return (
-    Number(unit.landlordRentMonthly || 0) +
-    Number(unit.utilitiesMonthly || 0) +
-    Number(unit.cleaningCostMonthly || 0)
-  );
+  return getUnitCostsTotal(unitCostsRows);
 }
 
-function calculateApartmentProfit(unit) {
+function calculateApartmentProfit(unit, unitCostsRows) {
   const tenantPrice = Number(unit.tenantPriceMonthly || 0);
-  const runningCosts = getRunningMonthlyCosts(unit);
-  return tenantPrice - runningCosts;
+  return tenantPrice - runningMonthlyCostsForUnit(unit, unitCostsRows);
 }
 
 function SectionCard({ title, subtitle, children }) {
@@ -262,7 +257,7 @@ function SectionCard({ title, subtitle, children }) {
   );
 }
 
-function ApartmentTable({ items, rooms, tenancies, onEdit, onDelete }) {
+function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onDelete }) {
   return (
     <SectionCard
       title="Business Apartments / klassische Apartments"
@@ -295,6 +290,10 @@ function ApartmentTable({ items, rooms, tenancies, onEdit, onDelete }) {
               const leaseEnded =
                 String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
                 "ended";
+              const unitCosts =
+                unitCostsByUnitId?.[String(unit.id)] ??
+                unitCostsByUnitId?.[unit.id] ??
+                [];
               return (
               <tr
                 key={unit.id}
@@ -336,10 +335,10 @@ function ApartmentTable({ items, rooms, tenancies, onEdit, onDelete }) {
                   {formatCurrency(unit.tenantPriceMonthly)}
                 </td>
                 <td className="py-4 pr-4">
-                  {formatCurrency(unit.landlordRentMonthly)}
+                  {formatCurrency(runningMonthlyCostsForUnit(unit, unitCosts))}
                 </td>
                 <td className="py-4 pr-4 font-medium">
-                  {formatCurrency(calculateApartmentProfit(unit))}
+                  {formatCurrency(calculateApartmentProfit(unit, unitCosts))}
                 </td>
                 <td className="py-4 pr-4">{unit.availableFrom}</td>
                 <td className="py-4 pr-4">
@@ -379,7 +378,7 @@ function ApartmentTable({ items, rooms, tenancies, onEdit, onDelete }) {
   );
 }
 
-function CoLivingTable({ items, rooms, tenancies, onEdit, onDelete }) {
+function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onDelete }) {
   return (
     <SectionCard
       title="Co-Living Units"
@@ -410,9 +409,13 @@ function CoLivingTable({ items, rooms, tenancies, onEdit, onDelete }) {
           <tbody>
             {items.map((unit, index) => {
               const metrics = getCoLivingMetrics(unit, rooms, tenancies);
+              const unitCosts =
+                unitCostsByUnitId?.[String(unit.id)] ??
+                unitCostsByUnitId?.[unit.id] ??
+                [];
               const currentProfit =
                 Number(metrics.currentRevenue ?? 0) -
-                getRunningMonthlyCosts(unit);
+                runningMonthlyCostsForUnit(unit, unitCosts);
               const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
               const leaseEnded =
                 String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
@@ -529,6 +532,7 @@ function AdminApartmentsPage() {
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [unitCostsByUnitId, setUnitCostsByUnitId] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -605,6 +609,27 @@ function AdminApartmentsPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!Array.isArray(units) || units.length === 0) {
+      setUnitCostsByUnitId({});
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all(
+      units.map((u) =>
+        fetchAdminUnitCosts(u.id)
+          .then((rows) => [String(u.id), Array.isArray(rows) ? rows : []])
+          .catch(() => [String(u.id), []])
+      )
+    ).then((entries) => {
+      if (cancelled) return;
+      setUnitCostsByUnitId(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [units]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [propertyFilter, setPropertyFilter] = useState("");
@@ -738,10 +763,11 @@ function AdminApartmentsPage() {
       return sum + Number(metrics.currentRevenue || 0);
     }, 0);
 
-    const runningCosts = filteredUnits.reduce(
-      (sum, unit) => sum + getRunningMonthlyCosts(unit),
-      0
-    );
+    const runningCosts = filteredUnits.reduce((sum, unit) => {
+      const rows =
+        unitCostsByUnitId[String(unit.id)] ?? unitCostsByUnitId[unit.id] ?? [];
+      return sum + runningMonthlyCostsForUnit(unit, rows);
+    }, 0);
 
     return {
       totalUnits,
@@ -751,7 +777,14 @@ function AdminApartmentsPage() {
       runningCosts,
       currentProfit: currentRevenue - runningCosts,
     };
-  }, [filteredUnits, apartmentUnits.length, coLivingUnits.length, rooms, tenancies]);
+  }, [
+    filteredUnits,
+    apartmentUnits.length,
+    coLivingUnits.length,
+    rooms,
+    tenancies,
+    unitCostsByUnitId,
+  ]);
 
   function handleOpenCreateModal() {
     setEditingId(null);
@@ -1299,6 +1332,7 @@ function AdminApartmentsPage() {
               items={apartmentUnits}
               rooms={rooms}
               tenancies={tenancies}
+              unitCostsByUnitId={unitCostsByUnitId}
               onEdit={handleOpenEditModal}
               onDelete={handleDelete}
             />
@@ -1307,6 +1341,7 @@ function AdminApartmentsPage() {
               items={coLivingUnits}
               rooms={rooms}
               tenancies={tenancies}
+              unitCostsByUnitId={unitCostsByUnitId}
               onEdit={handleOpenEditModal}
               onDelete={handleDelete}
             />
