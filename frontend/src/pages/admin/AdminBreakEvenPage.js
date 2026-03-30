@@ -26,7 +26,8 @@ function AdminBreakEvenPage() {
         Number(unit.utilitiesMonthly || 0) +
         Number(unit.cleaningCostMonthly || 0);
 
-      const breakEvenOccupancy = costs / revenue;
+      const breakEvenOccupancy =
+        revenue === 0 ? null : costs / revenue;
 
       return {
         id: unit.unitId,
@@ -98,7 +99,11 @@ function AdminBreakEvenPage() {
 
             {rows.map(row => {
 
-              const percent = (row.breakEvenOccupancy * 100).toFixed(1);
+              const occ = row.breakEvenOccupancy;
+              const pctNum =
+                occ != null && Number.isFinite(occ) ? occ * 100 : null;
+              const percentStr =
+                pctNum != null ? `${pctNum.toFixed(1)} %` : "—";
 
               return (
                 <tr key={row.id} style={{borderBottom:"1px solid #F1F5F9"}}>
@@ -122,9 +127,14 @@ function AdminBreakEvenPage() {
                   <td style={{
                     padding:"10px",
                     fontWeight:700,
-                    color: percent > 90 ? "#DC2626" : "#16A34A"
+                    color:
+                      pctNum == null
+                        ? "#64748B"
+                        : pctNum > 90
+                          ? "#DC2626"
+                          : "#16A34A"
                   }}>
-                    {percent} %
+                    {percentStr}
                   </td>
 
                 </tr>

@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAdminUnits, fetchAdminRevenueForecast, normalizeUnit } from "../../api/adminData";
+import {
+  fetchAdminUnits,
+  fetchAdminRevenueForecast,
+  fetchAdminProfit,
+  normalizeUnit,
+} from "../../api/adminData";
 
 function formatCurrencyMaybe(value) {
   if (value === null || value === undefined) return "-";
@@ -9,6 +14,7 @@ function formatCurrencyMaybe(value) {
 function AdminForecastPage() {
   const [units, setUnits] = useState([]);
   const [revenueForecast, setRevenueForecast] = useState(null);
+  const [profitMonth, setProfitMonth] = useState(null);
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -20,6 +26,9 @@ function AdminForecastPage() {
     fetchAdminRevenueForecast({ year: currentYear, month: currentMonth })
       .then((data) => setRevenueForecast(data))
       .catch(() => setRevenueForecast(null));
+    fetchAdminProfit({ year: currentYear, month: currentMonth })
+      .then((data) => setProfitMonth(data))
+      .catch(() => setProfitMonth(null));
   }, [currentYear, currentMonth]);
 
   const forecast = useMemo(() => {
@@ -31,24 +40,32 @@ function AdminForecastPage() {
       api.summary.expected_revenue != null
         ? api.summary.expected_revenue
         : null;
+    const totalProfit =
+      profitMonth?.summary?.total_profit != null
+        ? profitMonth.summary.total_profit
+        : null;
+    const profitByUnit = new Map(
+      (profitMonth?.units || []).map((p) => [String(p.unit_id), p])
+    );
     const unitRows = Array.isArray(api.units) ? api.units : [];
     const rows = unitRows.map((rec) => {
       const u = units.find((x) => String(x.id) === String(rec.unit_id));
+      const p = profitByUnit.get(String(rec.unit_id));
       return {
         id: u?.unitId || rec.unit_id,
         city: u?.place ?? "-",
         revenue: rec.expected_revenue != null ? rec.expected_revenue : null,
-        costs: null,
-        profit: null,
+        costs: p != null && p.costs != null ? p.costs : null,
+        profit: p != null && p.profit != null ? p.profit : null,
         risk: null,
       };
     });
     return {
       rows,
       totalRevenue,
-      totalProfit: null,
+      totalProfit,
     };
-  }, [units, revenueForecast]);
+  }, [units, revenueForecast, profitMonth]);
 
   return (
     <div style={{display:"grid",gap:"24px"}}>

@@ -3,12 +3,11 @@ import {
   fetchAdminUnits,
   fetchAdminRooms,
   fetchAdminTenanciesAll,
+  fetchAdminProfit,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
-import { getRunningMonthlyCosts } from "../../utils/adminUnitRunningCosts";
 import {
-  sumActiveTenancyMonthlyRentForUnit,
   getUnitOccupancyStatus,
   formatOccupancyStatusDe,
   getTodayIsoForOccupancy,
@@ -16,7 +15,8 @@ import {
 import { getDisplayUnitId } from "../../utils/unitDisplayId";
 
 function formatCurrency(value) {
-  const amount = Number(value || 0);
+  const n = Number(value);
+  const amount = Number.isFinite(n) ? n : 0;
   return `CHF ${amount.toLocaleString("de-CH")}`;
 }
 
@@ -66,11 +66,15 @@ function AdminPerformancePage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [tenancies, setTenancies] = useState([]);
+  const [profitMonth, setProfitMonth] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
     Promise.all([
       fetchAdminUnits()
         .then((data) => (Array.isArray(data) ? data.map(normalizeUnit) : []))
@@ -79,12 +83,14 @@ function AdminPerformancePage() {
         .then((data) => (Array.isArray(data) ? data.map(normalizeRoom) : []))
         .catch(() => []),
       fetchAdminTenanciesAll().catch(() => []),
+      fetchAdminProfit({ year, month }).catch(() => null),
     ])
-      .then(([u, r, t]) => {
+      .then(([u, r, t, profit]) => {
         if (cancelled) return;
         setUnits(u);
         setRooms(r);
         setTenancies(Array.isArray(t) ? t : []);
+        setProfitMonth(profit);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -96,14 +102,15 @@ function AdminPerformancePage() {
 
   const stats = useMemo(() => {
     const todayIso = getTodayIsoForOccupancy();
+    const byUnitId = new Map(
+      (profitMonth?.units || []).map((row) => [String(row.unit_id), row])
+    );
     const results = units.map((unit, listIndex) => {
-      const revenue = sumActiveTenancyMonthlyRentForUnit(
-        unit,
-        tenancies,
-        todayIso
-      );
-      const costs = getRunningMonthlyCosts(unit);
-      const profit = revenue - costs;
+      const uid = String(unit.id ?? unit.unitId);
+      const prow = byUnitId.get(uid);
+      const revenue = prow != null ? Number(prow.revenue) : 0;
+      const costs = prow != null ? Number(prow.costs) : 0;
+      const profit = prow != null ? Number(prow.profit) : 0;
       const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
       return {
         id: unit.id ?? unit.unitId,
@@ -132,7 +139,7 @@ function AdminPerformancePage() {
       totalRevenue,
       totalProfit,
     };
-  }, [units, rooms, tenancies]);
+  }, [units, rooms, tenancies, profitMonth]);
 
   if (loading) {
     return (

@@ -12,7 +12,16 @@ import {
   Bar,
 } from "recharts";
 import { API_BASE_URL, getApiHeaders } from "../../config";
-import { fetchAdminUnits, fetchAdminRooms, fetchAdminOccupancy, fetchAdminOccupancyRooms, fetchAdminRevenueForecast, normalizeUnit, normalizeRoom } from "../../api/adminData";
+import {
+  fetchAdminUnits,
+  fetchAdminRooms,
+  fetchAdminOccupancy,
+  fetchAdminOccupancyRooms,
+  fetchAdminRevenueForecast,
+  fetchAdminProfit,
+  normalizeUnit,
+  normalizeRoom,
+} from "../../api/adminData";
 import OccupancyMap from "../../components/OccupancyMap";
 
 const DEFAULT_MIN_STAY_MONTHS = 3;
@@ -623,6 +632,28 @@ function AdminCoLivingDashboardPage() {
   const [occupancyApi, setOccupancyApi] = useState(null);
   const [revenueForecastApi, setRevenueForecastApi] = useState(null);
   const [occupancyRoomsMap, setOccupancyRoomsMap] = useState(null);
+  const [profitForHeroMonth, setProfitForHeroMonth] = useState(null);
+  const [profitForHeroLoading, setProfitForHeroLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const y = activeMonth.getFullYear();
+    const m = activeMonth.getMonth() + 1;
+    setProfitForHeroLoading(true);
+    fetchAdminProfit({ year: y, month: m })
+      .then((data) => {
+        if (!cancelled) setProfitForHeroMonth(data);
+      })
+      .catch(() => {
+        if (!cancelled) setProfitForHeroMonth(null);
+      })
+      .finally(() => {
+        if (!cancelled) setProfitForHeroLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMonth]);
 
   useEffect(() => {
     fetchAdminUnits()
@@ -672,6 +703,22 @@ function AdminCoLivingDashboardPage() {
       .then((data) => setOccupancyRoomsMap(data))
       .catch(() => setOccupancyRoomsMap(null));
   }, [firstFilteredUnit]);
+
+  /** Hero "Aktueller Umsatz": backend prorated tenancy revenue for selected month (filtered Co-Living units only). */
+  const heroCurrentRevenueBackend = useMemo(() => {
+    if (profitForHeroLoading) return null;
+    if (!profitForHeroMonth || !Array.isArray(profitForHeroMonth.units)) return null;
+    const allowed = new Set(
+      filteredUnits.map((u) => String(u.id ?? u.unitId))
+    );
+    let sum = 0;
+    for (const row of profitForHeroMonth.units) {
+      if (allowed.has(String(row.unit_id))) {
+        sum += Number(row.revenue ?? 0);
+      }
+    }
+    return sum;
+  }, [profitForHeroMonth, profitForHeroLoading, filteredUnits]);
 
   const dashboard = useMemo(() => {
     const totals = {
@@ -1052,8 +1099,8 @@ function AdminCoLivingDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
           <HeroCard
             title="Aktueller Umsatz"
-            value={formatChfOrDash(dashboard.currentRevenue)}
-            subtitle="Nur belegte Rooms werden als Umsatz gerechnet"
+            value={formatChfOrDash(heroCurrentRevenueBackend)}
+            subtitle="Prorierter Mietumsatz (Backend) für den gewählten Monat"
             accent="orange"
             trend={revenueTrend}
           />
