@@ -19,7 +19,17 @@ export function parseIsoDate(raw) {
   return s.slice(0, 10);
 }
 
-export function isTenancyActiveByDates(t, todayIso) {
+function normalizeTenancyStatus(t) {
+  return String(t?.status ?? "").trim().toLowerCase();
+}
+
+/**
+ * ACTIVE: status active, move_in <= today, move_out null or >= today.
+ * Ignores ended / unknown statuses (aligned with backend occupancy/revenue).
+ */
+export function isTenancyActiveByDates(t, todayIso = getTodayIsoForOccupancy()) {
+  if (!t) return false;
+  if (normalizeTenancyStatus(t) !== "active") return false;
   const moveIn = parseIsoDate(t?.move_in_date);
   if (!moveIn || moveIn > todayIso) return false;
   const moveOut = t?.move_out_date ? parseIsoDate(t.move_out_date) : null;
@@ -27,9 +37,24 @@ export function isTenancyActiveByDates(t, todayIso) {
   return true;
 }
 
-export function isTenancyFuture(t, todayIso) {
+/**
+ * FUTURE (upcoming active tenancy): status active, move_in > today.
+ */
+export function isTenancyFuture(t, todayIso = getTodayIsoForOccupancy()) {
+  if (!t) return false;
+  if (normalizeTenancyStatus(t) !== "active") return false;
   const moveIn = parseIsoDate(t?.move_in_date);
-  return moveIn != null && moveIn > todayIso;
+  if (!moveIn || moveIn <= todayIso) return false;
+  return true;
+}
+
+/** RESERVED: status reserved, move_in > today. */
+function isTenancyReservedSlot(t, todayIso = getTodayIsoForOccupancy()) {
+  if (!t) return false;
+  if (normalizeTenancyStatus(t) !== "reserved") return false;
+  const moveIn = parseIsoDate(t?.move_in_date);
+  if (!moveIn || moveIn <= todayIso) return false;
+  return true;
 }
 
 /** Monthly rent from tenancy row (frontend field variants). */
@@ -91,8 +116,9 @@ export function getFutureTenancyForRoom(
   todayIso = getTodayIsoForOccupancy()
 ) {
   return (
-    tenanciesForRoom(room, tenancies).find((t) =>
-      isTenancyFuture(t, todayIso)
+    tenanciesForRoom(room, tenancies).find(
+      (t) =>
+        isTenancyReservedSlot(t, todayIso) || isTenancyFuture(t, todayIso)
     ) || null
   );
 }
@@ -103,6 +129,7 @@ export function getRoomOccupancyStatus(room, tenancies) {
   const today = getTodayIsoForOccupancy();
   const roomT = tenanciesForRoom(room, tenancies);
   if (roomT.some((t) => isTenancyActiveByDates(t, today))) return "belegt";
+  if (roomT.some((t) => isTenancyReservedSlot(t, today))) return "reserviert";
   if (roomT.some((t) => isTenancyFuture(t, today))) return "reserviert";
   return "frei";
 }
@@ -130,7 +157,9 @@ export function getUnitOccupancyStatus(unit, rooms, tenancies) {
     let hasFuture = false;
     for (const t of unitTenancies) {
       if (isTenancyActiveByDates(t, today)) hasActive = true;
-      if (isTenancyFuture(t, today)) hasFuture = true;
+      if (isTenancyReservedSlot(t, today) || isTenancyFuture(t, today)) {
+        hasFuture = true;
+      }
     }
     if (hasActive) return "belegt";
     if (hasFuture) return "reserviert";

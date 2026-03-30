@@ -12,6 +12,11 @@ import {
 } from "../../api/adminData";
 import TenantCreateModal from "../../components/admin/tenants/TenantCreateModal";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
+import {
+  getTodayIsoForOccupancy,
+  isTenancyActiveByDates,
+  parseIsoDate,
+} from "../../utils/unitOccupancyStatus";
 
 function formatCurrency(value) {
   const amount = Number(value || 0);
@@ -109,20 +114,38 @@ function rowMatchesStatusFilter(row, filterKey) {
   return true;
 }
 
+/** Reserved + move_in in the future (upcoming / planned). Matches unit occupancy rules. */
+function isTenancyReservedUpcoming(t, todayIso) {
+  if (!t) return false;
+  const s = String(t?.status ?? "").trim().toLowerCase();
+  if (s !== "reserved") return false;
+  const moveIn = parseIsoDate(t?.move_in_date);
+  if (!moveIn || moveIn <= todayIso) return false;
+  return true;
+}
+
 function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
+  const todayIso = getTodayIsoForOccupancy();
   return tenants.map((tenant) => {
     const tenantTenancies = tenancies.filter(
       (tenancy) => String(tenancy.tenant_id) === String(tenant.id)
     );
 
-    const activeTenancy =
-      tenantTenancies.find((tenancy) => {
-        const status = String(tenancy.status || "").toLowerCase();
-        return status === "active" || status === "aktiv";
-      }) || tenantTenancies[0];
+    const activeTenancy = tenantTenancies.find((t) =>
+      isTenancyActiveByDates(t, todayIso)
+    );
+    const reservedTenancy = tenantTenancies.find(
+      (t) => isTenancyReservedUpcoming(t, todayIso)
+    );
+    const currentTenancy = activeTenancy || reservedTenancy || null;
 
-    const room = activeTenancy
-      ? rooms.find((item) => String(item.id) === String(activeTenancy.room_id))
+    let rowStatus;
+    if (activeTenancy) rowStatus = "active";
+    else if (reservedTenancy) rowStatus = "reserved";
+    else rowStatus = "ausgezogen";
+
+    const room = currentTenancy
+      ? rooms.find((item) => String(item.id) === String(currentTenancy.room_id))
       : null;
 
     const unit = room
@@ -136,7 +159,7 @@ function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
     const tenantInvoices = invoices.filter(
       (invoice) =>
         String(invoice.tenant_id || "") === String(tenant.id) ||
-        String(invoice.tenancy_id || "") === String(activeTenancy?.id || "")
+        String(invoice.tenancy_id || "") === String(currentTenancy?.id || "")
     );
 
     const openInvoices = tenantInvoices.filter((invoice) => {
@@ -164,36 +187,38 @@ function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
       fullName: tenantDisplayName(tenant) || `Mieter ${tenant.id}`,
       email: tenant.email || "-",
       phone: tenant.phone || tenant.mobile || "-",
-      status: activeTenancy?.status || tenant.status || "Offen",
-      unitId: unit?.unitId || unit?.unit_id || "-",
-      unitAddress: unit?.address || "-",
-      roomName: room?.roomName || room?.name || room?.room_number || "-",
-      startDate:
-        activeTenancy?.move_in_date ||
-        activeTenancy?.start_date ||
-        tenant.move_in_date ||
-        "-",
-      endDate:
-        activeTenancy?.move_out_date ||
-        activeTenancy?.end_date ||
-        tenant.move_out_date ||
-        "-",
+      status: rowStatus,
+      unitId: currentTenancy ? unit?.unitId || unit?.unit_id || "—" : "—",
+      unitAddress: currentTenancy ? unit?.address || "—" : "—",
+      roomName: currentTenancy
+        ? room?.roomName || room?.name || room?.room_number || "—"
+        : "—",
+      startDate: currentTenancy
+        ? currentTenancy.move_in_date || currentTenancy.start_date || null
+        : null,
+      endDate: currentTenancy
+        ? currentTenancy.move_out_date || currentTenancy.end_date || null
+        : null,
       monthlyRent:
-        activeTenancy?.rent_chf ??
-        activeTenancy?.monthly_rent ??
-        tenant.monthly_rent ??
-        0,
+        currentTenancy != null
+          ? Number(
+              currentTenancy.rent_chf ??
+                currentTenancy.monthly_rent ??
+                tenant.monthly_rent ??
+                0
+            )
+          : null,
       depositAmount:
-        activeTenancy?.deposit_chf ??
-        activeTenancy?.deposit_amount ??
+        currentTenancy?.deposit_chf ??
+        currentTenancy?.deposit_amount ??
         tenant.deposit_amount ??
         0,
-      billingCycle: activeTenancy?.billing_cycle || "-",
+      billingCycle: currentTenancy?.billing_cycle || "-",
       openInvoicesCount: openInvoices.length,
       paidInvoicesCount: paidInvoices.length,
       totalOpenAmount,
       totalPaidAmount,
-      notes: activeTenancy?.notes || tenant.notes || "",
+      notes: currentTenancy?.notes || tenant.notes || "",
     };
   });
 }
@@ -299,7 +324,8 @@ function AdminTenantsPage() {
     }).length;
 
     const totalMonthlyRent = rows.reduce(
-      (sum, row) => sum + Number(row.monthlyRent || 0),
+      (sum, row) =>
+        sum + (row.monthlyRent == null ? 0 : Number(row.monthlyRent)),
       0
     );
 
@@ -646,7 +672,7 @@ function AdminTenantsPage() {
                     <td style={{ padding: "12px" }}>{formatDate(row.startDate)}</td>
                     <td style={{ padding: "12px" }}>{formatDate(row.endDate)}</td>
                     <td style={{ padding: "12px", fontWeight: 700 }}>
-                      {formatCurrency(row.monthlyRent)}
+                      {row.monthlyRent == null ? "—" : formatCurrency(row.monthlyRent)}
                     </td>
                     <td style={{ padding: "12px" }}>{row.openInvoicesCount}</td>
                     <td style={{ padding: "12px", fontWeight: 700 }}>

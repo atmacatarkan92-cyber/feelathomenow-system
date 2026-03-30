@@ -22,7 +22,12 @@ import {
 import { API_BASE_URL, getApiHeaders } from "../../config";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
 import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
-import { UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE } from "../../utils/unitOccupancyStatus";
+import {
+  UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE,
+  getTodayIsoForOccupancy,
+  isTenancyActiveByDates,
+  parseIsoDate,
+} from "../../utils/unitOccupancyStatus";
 
 async function parseAdminErrorFromResponse(res) {
   const text = await res.text();
@@ -252,6 +257,15 @@ function getStatusMeta(status) {
     color: "#475569",
     border: "#CBD5E1",
   };
+}
+
+function isTenancyReservedUpcoming(t, todayIso) {
+  if (!t) return false;
+  const s = String(t?.status ?? "").trim().toLowerCase();
+  if (s !== "reserved") return false;
+  const moveIn = parseIsoDate(t?.move_in_date);
+  if (!moveIn || moveIn <= todayIso) return false;
+  return true;
 }
 
 const gridTwoCol = {
@@ -842,9 +856,18 @@ export default function AdminTenantDetailPage() {
   };
 
   const statusMeta = useMemo(() => {
-    const t = tenancies.find((x) => String(x.tenant_id) === String(tenantId));
-    return getStatusMeta(t?.status || tenant?.status || "");
-  }, [tenancies, tenant, tenantId]);
+    const todayIso = getTodayIsoForOccupancy();
+    const mine = Array.isArray(tenancies)
+      ? tenancies.filter((x) => String(x.tenant_id) === String(tenantId))
+      : [];
+    if (mine.some((t) => isTenancyActiveByDates(t, todayIso))) {
+      return getStatusMeta("active");
+    }
+    if (mine.some((t) => isTenancyReservedUpcoming(t, todayIso))) {
+      return getStatusMeta("reserved");
+    }
+    return getStatusMeta("ausgezogen");
+  }, [tenancies, tenantId]);
 
   const applyUpdate = (updated) => {
     setTenant(updated);

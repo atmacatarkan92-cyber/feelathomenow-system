@@ -14,7 +14,17 @@ from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Unit, Room, Property, Landlord, PropertyManager, User, Tenancy, UnitCost
+from db.models import (
+    Unit,
+    Room,
+    Property,
+    Landlord,
+    PropertyManager,
+    User,
+    Tenancy,
+    TenancyStatus,
+    UnitCost,
+)
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
 
@@ -589,7 +599,10 @@ def admin_delete_unit(
         select(func.count()).select_from(Room).where(Room.unit_id == unit_id)
     ).scalar()
     _tenancy_count_row = session.execute(
-        select(func.count()).select_from(Tenancy).where(Tenancy.unit_id == unit_id)
+        select(func.count())
+        .select_from(Tenancy)
+        .where(Tenancy.unit_id == unit_id)
+        .where(Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved]))
     ).scalar()
     room_count = int(_room_count_row) if _room_count_row is not None else 0
     tenancy_count = int(_tenancy_count_row) if _tenancy_count_row is not None else 0
