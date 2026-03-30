@@ -91,6 +91,7 @@ export default function AppRouter() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="login" element={<AdminLoginPage />} />
               <Route index element={<AdminUebersichtPage />} />
+              <Route path="dashboard" element={<AdminUebersichtPage />} />
               <Route path="operations" element={<AdminCoLivingDashboardPage />} />
               <Route path="business-apartments-dashboard" element={<AdminBusinessApartmentsDashboardPage />} />
               <Route path="objekte-dashboard" element={<AdminObjektePage />} />

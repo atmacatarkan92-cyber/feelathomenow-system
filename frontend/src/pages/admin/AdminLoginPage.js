@@ -48,7 +48,7 @@ function AdminLoginPage() {
         const token = data.access_token;
         if (token) {
           login(token);
-          navigate("/admin/listings", { replace: true });
+          navigate("/admin/dashboard", { replace: true });
         } else {
           setError("Kein Token in der Antwort.");
         }
