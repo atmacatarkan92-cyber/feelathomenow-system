@@ -59,6 +59,25 @@ class Landlord(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
 
 
+class LandlordNote(SQLModel, table=True):
+    """Internal CRM note on a landlord (organization-scoped)."""
+
+    __tablename__ = "landlord_notes"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    landlord_id: str = Field(foreign_key="landlords.id", index=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    content: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_by_user_id: Optional[str] = Field(
+        default=None, foreign_key="users.id", index=True, nullable=True
+    )
+    updated_at: Optional[datetime] = Field(default=None, nullable=True)
+    updated_by_user_id: Optional[str] = Field(
+        default=None, foreign_key="users.id", index=True, nullable=True
+    )
+
+
 class PropertyManager(SQLModel, table=True):
     """
     Bewirtschafter (property manager contact). Org-scoped; optional link to a Verwaltung (Landlord).

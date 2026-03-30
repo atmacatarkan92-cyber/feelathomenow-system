@@ -7,13 +7,14 @@ from datetime import datetime
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import not_
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+from sqlalchemy import desc, not_
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Landlord, Property, User
+from db.models import Landlord, LandlordNote, Property, User
 from app.core.rate_limit import limiter
+from app.services.tenant_crm import author_display, load_users_by_ids
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-landlords"])
@@ -68,6 +69,56 @@ class LandlordUpdate(BaseModel):
     website: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
+
+
+class LandlordNoteCreate(BaseModel):
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def _trim_nonempty(cls, v: str) -> str:
+        s = (v or "").strip()
+        if not s:
+            raise ValueError("Notiz darf nicht leer sein.")
+        return s
+
+
+class LandlordNoteUpdate(BaseModel):
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def _trim_nonempty(cls, v: str) -> str:
+        s = (v or "").strip()
+        if not s:
+            raise ValueError("Notiz darf nicht leer sein.")
+        return s
+
+
+def _landlord_in_org_or_404(session, landlord_id: str, org_id: str) -> Landlord:
+    landlord = session.get(Landlord, landlord_id)
+    if not landlord or str(landlord.organization_id) != org_id:
+        raise HTTPException(status_code=404, detail="Landlord not found")
+    return landlord
+
+
+def _landlord_note_to_dict(
+    note: LandlordNote,
+    author_user: Optional[User],
+    editor_user: Optional[User],
+) -> dict:
+    return {
+        "id": note.id,
+        "content": note.content,
+        "created_at": note.created_at.isoformat(),
+        "created_by_user_id": note.created_by_user_id,
+        "author_name": author_display(author_user, note.created_by_user_id),
+        "updated_at": note.updated_at.isoformat() if note.updated_at else None,
+        "updated_by_user_id": note.updated_by_user_id,
+        "editor_name": author_display(editor_user, note.updated_by_user_id)
+        if note.updated_at
+        else None,
+    }
 
 
 def _validate_address_create(body: LandlordCreate) -> None:
@@ -266,3 +317,97 @@ def admin_put_landlord(
     session.commit()
     session.refresh(landlord)
     return _landlord_to_dict(landlord)
+
+
+@router.get("/landlords/{landlord_id}/notes", response_model=dict)
+def admin_list_landlord_notes(
+    landlord_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    _landlord_in_org_or_404(session, landlord_id, org_id)
+    rows = session.exec(
+        select(LandlordNote)
+        .where(
+            LandlordNote.landlord_id == landlord_id,
+            LandlordNote.organization_id == org_id,
+        )
+        .order_by(desc(LandlordNote.created_at))
+        .limit(200)
+    ).all()
+    uids = set()
+    for n in rows:
+        if n.created_by_user_id:
+            uids.add(n.created_by_user_id)
+        if n.updated_by_user_id:
+            uids.add(n.updated_by_user_id)
+    users = load_users_by_ids(session, uids)
+    items = [
+        _landlord_note_to_dict(
+            n,
+            users.get(n.created_by_user_id),
+            users.get(n.updated_by_user_id) if n.updated_by_user_id else None,
+        )
+        for n in rows
+    ]
+    return {"items": items}
+
+
+@router.post("/landlords/{landlord_id}/notes", response_model=dict)
+@limiter.limit("30/minute")
+def admin_create_landlord_note(
+    request: Request,
+    landlord_id: str,
+    body: LandlordNoteCreate,
+    org_id: str = Depends(get_current_organization),
+    current_user: User = Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    _landlord_in_org_or_404(session, landlord_id, org_id)
+    note = LandlordNote(
+        landlord_id=landlord_id,
+        organization_id=org_id,
+        content=body.content,
+        created_by_user_id=str(current_user.id),
+    )
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    u = session.get(User, note.created_by_user_id) if note.created_by_user_id else None
+    return _landlord_note_to_dict(note, u, None)
+
+
+@router.put("/landlords/{landlord_id}/notes/{note_id}", response_model=dict)
+@limiter.limit("30/minute")
+def admin_update_landlord_note(
+    request: Request,
+    landlord_id: str,
+    note_id: str,
+    body: LandlordNoteUpdate,
+    org_id: str = Depends(get_current_organization),
+    current_user: User = Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    _landlord_in_org_or_404(session, landlord_id, org_id)
+    note = session.get(LandlordNote, note_id)
+    if (
+        not note
+        or str(note.landlord_id) != landlord_id
+        or str(note.organization_id) != org_id
+    ):
+        raise HTTPException(status_code=404, detail="Note not found")
+    now = datetime.utcnow()
+    note.content = body.content
+    note.updated_at = now
+    note.updated_by_user_id = str(current_user.id)
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    author_u = (
+        session.get(User, note.created_by_user_id) if note.created_by_user_id else None
+    )
+    editor_u = (
+        session.get(User, note.updated_by_user_id) if note.updated_by_user_id else None
+    )
+    return _landlord_note_to_dict(note, author_u, editor_u)

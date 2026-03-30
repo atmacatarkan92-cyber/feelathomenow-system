@@ -2,10 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  createAdminLandlordNote,
   deleteAdminLandlord,
   fetchAdminLandlord,
+  fetchAdminLandlordNotes,
   fetchAdminLandlordProperties,
   restoreAdminLandlord,
+  updateAdminLandlordNote,
 } from "../../api/adminData";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 
@@ -57,6 +60,15 @@ function AdminLandlordDetailPage() {
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [linkedProperties, setLinkedProperties] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [newNoteDraft, setNewNoteDraft] = useState("");
+  const [newNoteSaving, setNewNoteSaving] = useState(false);
+  const [newNoteErr, setNewNoteErr] = useState(null);
+  const [newNoteSubmitErr, setNewNoteSubmitErr] = useState(null);
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editErr, setEditErr] = useState(null);
 
   useEffect(() => {
     if (!id) return;
@@ -80,6 +92,19 @@ function AdminLandlordDetailPage() {
     fetchAdminLandlordProperties(id)
       .then(setLinkedProperties)
       .catch(() => setLinkedProperties([]));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setEditingNoteId(null);
+    setEditDraft("");
+    setEditErr(null);
+    setNewNoteDraft("");
+    setNewNoteErr(null);
+    setNewNoteSubmitErr(null);
+    fetchAdminLandlordNotes(id)
+      .then((d) => setNotes(d?.items || []))
+      .catch(() => setNotes([]));
   }, [id]);
 
   if (loading) {
@@ -111,6 +136,61 @@ function AdminLandlordDetailPage() {
   const city = row.city?.trim() || "";
   const addrLine2 = [plz, city].filter(Boolean).join(" ");
   const addrLine3 = row.canton?.trim() || "";
+
+  const saveNewNote = () => {
+    const text = newNoteDraft.trim();
+    if (!text) {
+      setNewNoteErr("Bitte eine Notiz eingeben.");
+      return;
+    }
+    setNewNoteErr(null);
+    setNewNoteSubmitErr(null);
+    setNewNoteSaving(true);
+    createAdminLandlordNote(id, text)
+      .then(() => fetchAdminLandlordNotes(id))
+      .then((d) => {
+        setNotes(d?.items || []);
+        setNewNoteDraft("");
+      })
+      .catch((err) => {
+        setNewNoteSubmitErr(err?.message || "Notiz konnte nicht gespeichert werden.");
+      })
+      .finally(() => setNewNoteSaving(false));
+  };
+
+  const startEditNote = (n) => {
+    setEditingNoteId(n.id);
+    setEditDraft(n.content || "");
+    setEditErr(null);
+  };
+
+  const cancelEditNote = () => {
+    setEditingNoteId(null);
+    setEditDraft("");
+    setEditErr(null);
+  };
+
+  const saveEditNote = () => {
+    const text = editDraft.trim();
+    if (!text) {
+      setEditErr("Bitte eine Notiz eingeben.");
+      return;
+    }
+    if (!editingNoteId) return;
+    setEditErr(null);
+    setEditSaving(true);
+    updateAdminLandlordNote(id, editingNoteId, text)
+      .then(() => fetchAdminLandlordNotes(id))
+      .then((d) => {
+        setNotes(d?.items || []);
+        setEditingNoteId(null);
+        setEditDraft("");
+      })
+      .catch((err) => {
+        setEditErr(err?.message || "Speichern fehlgeschlagen.");
+      })
+      .finally(() => setEditSaving(false));
+  };
 
   return (
     <div className="px-2 max-w-3xl">
@@ -256,9 +336,121 @@ function AdminLandlordDetailPage() {
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Notizen</p>
+              <p className="text-xs font-medium text-slate-500">Allgemeine Notizen</p>
               <p className="text-sm font-medium text-slate-900 mt-1 whitespace-pre-wrap">{dash(row.notes)}</p>
             </div>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Notizen</h2>
+          {!isArchived ? (
+            <form
+              className="mb-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveNewNote();
+              }}
+            >
+              <label htmlFor="landlord-new-note" className="text-xs font-medium text-slate-500 block mb-1.5">
+                Neue Notiz
+              </label>
+              <textarea
+                id="landlord-new-note"
+                value={newNoteDraft}
+                onChange={(e) => {
+                  setNewNoteDraft(e.target.value);
+                  setNewNoteErr(null);
+                }}
+                disabled={newNoteSaving}
+                placeholder="Interne Notiz …"
+                rows={3}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-60"
+              />
+              {newNoteErr ? (
+                <p className="mt-2 text-sm text-red-700">{newNoteErr}</p>
+              ) : null}
+              {newNoteSubmitErr ? (
+                <p className="mt-2 text-sm text-red-700">{newNoteSubmitErr}</p>
+              ) : null}
+              <div className="mt-3">
+                <button
+                  type="submit"
+                  disabled={newNoteSaving}
+                  className="inline-flex items-center rounded-lg bg-orange-500 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {newNoteSaving ? "Speichern …" : "Notiz speichern"}
+                </button>
+              </div>
+            </form>
+          ) : null}
+          <div className={!isArchived ? "border-t border-slate-100 pt-5" : ""}>
+            <p className="text-xs font-medium text-slate-500 mb-3">Alle Notizen</p>
+            {!notes.length ? (
+              <p className="text-sm text-slate-500">Noch keine Notizen</p>
+            ) : (
+              <ul className="space-y-4">
+                {notes.map((n) => (
+                  <li key={n.id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+                    {editingNoteId === n.id ? (
+                      <div>
+                        <textarea
+                          value={editDraft}
+                          onChange={(e) => {
+                            setEditDraft(e.target.value);
+                            setEditErr(null);
+                          }}
+                          disabled={editSaving}
+                          rows={4}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-60"
+                        />
+                        {editErr ? <p className="mt-2 text-sm text-red-700">{editErr}</p> : null}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={editSaving}
+                            onClick={saveEditNote}
+                            className="rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          >
+                            {editSaving ? "Speichern …" : "Speichern"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={editSaving}
+                            onClick={cancelEditNote}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
+                          >
+                            Abbrechen
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-slate-900 whitespace-pre-wrap">{n.content}</p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          {formatDateTime(n.created_at)} · {n.author_name || "—"}
+                        </p>
+                        {n.updated_at ? (
+                          <p className="mt-1 text-xs text-slate-500">
+                            Bearbeitet {formatDateTime(n.updated_at)}
+                            {n.editor_name ? ` · ${n.editor_name}` : ""}
+                          </p>
+                        ) : null}
+                        {!isArchived ? (
+                          <button
+                            type="button"
+                            onClick={() => startEditNote(n)}
+                            className="mt-2 text-sm font-semibold text-slate-700 hover:text-slate-900 underline-offset-2 hover:underline"
+                          >
+                            Bearbeiten
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 

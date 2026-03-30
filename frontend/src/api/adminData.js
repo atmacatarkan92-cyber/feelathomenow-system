@@ -691,6 +691,61 @@ export function fetchAdminLandlordProperties(landlordId) {
   });
 }
 
+export function fetchAdminLandlordNotes(landlordId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(landlordId)}/notes`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return { items: [] };
+      throw new Error("Notizen konnten nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
+export async function createAdminLandlordNote(landlordId, content) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(landlordId)}/notes`,
+    {
+      method: "POST",
+      headers: getApiHeaders(),
+      body: JSON.stringify({ content }),
+    }
+  );
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(parseAdminErrorBodyText(text));
+  }
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch (e) {
+    console.warn("createAdminLandlordNote: unexpected response body", e);
+    throw new Error("Notiz konnte nicht gespeichert werden.");
+  }
+}
+
+export async function updateAdminLandlordNote(landlordId, noteId, content) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(landlordId)}/notes/${encodeURIComponent(noteId)}`,
+    {
+      method: "PUT",
+      headers: getApiHeaders(),
+      body: JSON.stringify({ content }),
+    }
+  );
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(parseAdminErrorBodyText(text));
+  }
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch (e) {
+    console.warn("updateAdminLandlordNote: unexpected response body", e);
+    throw new Error("Notiz konnte nicht gespeichert werden.");
+  }
+}
+
 export function verifyAdminAddress(body) {
   return fetch(`${API_BASE_URL}/api/admin/address/verify`, {
     method: "POST",
