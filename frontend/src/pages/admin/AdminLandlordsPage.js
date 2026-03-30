@@ -26,6 +26,11 @@ function AdminLandlordsPage() {
     contact_name: "",
     email: "",
     phone: "",
+    address_line1: "",
+    postal_code: "",
+    city: "",
+    canton: "",
+    website: "",
     notes: "",
     status: "active",
   });
@@ -62,6 +67,11 @@ function AdminLandlordsPage() {
         contact_name: row.contact_name || "",
         email: row.email || "",
         phone: row.phone || "",
+        address_line1: row.address_line1 || "",
+        postal_code: row.postal_code || "",
+        city: row.city || "",
+        canton: row.canton || "",
+        website: row.website || "",
         notes: row.notes || "",
         status: row.status || "active",
       });
@@ -98,6 +108,11 @@ function AdminLandlordsPage() {
       contact_name: "",
       email: "",
       phone: "",
+      address_line1: "",
+      postal_code: "",
+      city: "",
+      canton: "",
+      website: "",
       notes: "",
       status: "active",
     });
@@ -111,6 +126,11 @@ function AdminLandlordsPage() {
       contact_name: row.contact_name || "",
       email: row.email || "",
       phone: row.phone || "",
+      address_line1: row.address_line1 || "",
+      postal_code: row.postal_code || "",
+      city: row.city || "",
+      canton: row.canton || "",
+      website: row.website || "",
       notes: row.notes || "",
       status: row.status || "active",
     });
@@ -126,6 +146,11 @@ function AdminLandlordsPage() {
       contact_name: form.contact_name.trim() || "—",
       email: form.email.trim() || "",
       phone: form.phone.trim() || null,
+      address_line1: form.address_line1.trim() || null,
+      postal_code: form.postal_code.trim() || null,
+      city: form.city.trim() || null,
+      canton: form.canton.trim() || null,
+      website: form.website.trim() || null,
       notes: form.notes.trim() || null,
       status: form.status.trim() || "active",
     };
@@ -235,7 +260,7 @@ function AdminLandlordsPage() {
               background: "#FFF",
               padding: "24px",
               borderRadius: "12px",
-              maxWidth: "420px",
+              maxWidth: "480px",
               width: "100%",
               boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
             }}
@@ -281,6 +306,54 @@ function AdminLandlordsPage() {
                   value={form.phone}
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                   style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Adresse (optional)</label>
+                <input
+                  type="text"
+                  value={form.address_line1}
+                  onChange={(e) => setForm((f) => ({ ...f, address_line1: e.target.value }))}
+                  style={inputStyle}
+                  placeholder="Strasse Nr."
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>PLZ (optional)</label>
+                <input
+                  type="text"
+                  value={form.postal_code}
+                  onChange={(e) => setForm((f) => ({ ...f, postal_code: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Ort (optional)</label>
+                <input
+                  type="text"
+                  value={form.city}
+                  onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Kanton (optional)</label>
+                <input
+                  type="text"
+                  value={form.canton}
+                  onChange={(e) => setForm((f) => ({ ...f, canton: e.target.value }))}
+                  style={inputStyle}
+                  placeholder="z.B. ZH"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Website (optional)</label>
+                <input
+                  type="text"
+                  value={form.website}
+                  onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
+                  style={inputStyle}
+                  placeholder="https://"
                 />
               </div>
               <div>

@@ -25,6 +25,11 @@ def _landlord_to_dict(l: Landlord) -> dict:
         "contact_name": getattr(l, "contact_name", "") or "",
         "email": getattr(l, "email", "") or "",
         "phone": getattr(l, "phone", None),
+        "address_line1": getattr(l, "address_line1", None),
+        "postal_code": getattr(l, "postal_code", None),
+        "city": getattr(l, "city", None),
+        "canton": getattr(l, "canton", None),
+        "website": getattr(l, "website", None),
         "notes": getattr(l, "notes", None),
         "status": getattr(l, "status", "active"),
         "created_at": l.created_at.isoformat() if getattr(l, "created_at", None) else None,
@@ -39,6 +44,11 @@ class LandlordCreate(BaseModel):
     contact_name: str = ""
     email: EmailStr
     phone: Optional[str] = None
+    address_line1: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    canton: Optional[str] = None
+    website: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = "active"
 
@@ -49,6 +59,11 @@ class LandlordUpdate(BaseModel):
     contact_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
+    address_line1: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    canton: Optional[str] = None
+    website: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
 
@@ -105,6 +120,11 @@ def admin_create_landlord(
         contact_name=(body.contact_name or "").strip() or "—",
         email=(body.email or "").strip() or "",
         phone=body.phone,
+        address_line1=body.address_line1,
+        postal_code=body.postal_code,
+        city=body.city,
+        canton=body.canton,
+        website=body.website,
         notes=body.notes,
         status=(body.status or "active").strip() or "active",
     )
