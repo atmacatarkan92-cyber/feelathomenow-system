@@ -46,6 +46,40 @@ function profitRowsByUnitId(profitResponse) {
   return m;
 }
 
+/** Sum GET /api/admin/occupancy `units[]` rows whose unit_id is in filtered Co-Living units (same scope as the page). */
+function aggregateOccupancyForFilter(occupancyApi, filteredUnits) {
+  if (!occupancyApi?.units || !Array.isArray(occupancyApi.units)) return null;
+  const allowed = new Set(
+    filteredUnits.map((u) => String(u.id ?? u.unitId))
+  );
+  let totalRooms = 0;
+  let occupiedRooms = 0;
+  let reservedRooms = 0;
+  let freeRooms = 0;
+  for (const row of occupancyApi.units) {
+    if (!allowed.has(String(row.unit_id))) continue;
+    totalRooms += Number(row.total_rooms ?? 0);
+    occupiedRooms += Number(row.occupied_rooms ?? 0);
+    reservedRooms += Number(row.reserved_rooms ?? 0);
+    freeRooms += Number(row.free_rooms ?? 0);
+  }
+  const occupiedRate =
+    totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
+  const reservedRate =
+    totalRooms > 0 ? (reservedRooms / totalRooms) * 100 : 0;
+  const freeRate = totalRooms > 0 ? (freeRooms / totalRooms) * 100 : 0;
+  const round1 = (n) => Math.round(n * 10) / 10;
+  return {
+    totalRooms,
+    occupiedRooms,
+    reservedRooms,
+    freeRooms,
+    occupiedRate: round1(occupiedRate),
+    reservedRate: round1(reservedRate),
+    freeRate: round1(freeRate),
+  };
+}
+
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
 }
@@ -734,16 +768,19 @@ function AdminCoLivingDashboardPage() {
 
   const dashboardDisplay = useMemo(() => {
     const base = dashboard;
-    if (!occupancyApi || !occupancyApi.summary) return base;
+    const agg = aggregateOccupancyForFilter(occupancyApi, filteredUnits);
+    if (agg == null) return base;
     return {
       ...base,
-      totalRooms: occupancyApi.summary.total_rooms ?? base.totalRooms,
-      occupiedRooms: occupancyApi.summary.occupied_rooms ?? base.occupiedRooms,
-      reservedRooms: occupancyApi.summary.reserved_rooms ?? base.reservedRooms,
-      freeRooms: occupancyApi.summary.free_rooms ?? base.freeRooms,
-      occupiedRate: occupancyApi.summary.occupancy_rate ?? base.occupiedRate,
+      totalRooms: agg.totalRooms,
+      occupiedRooms: agg.occupiedRooms,
+      reservedRooms: agg.reservedRooms,
+      freeRooms: agg.freeRooms,
+      occupiedRate: agg.occupiedRate,
+      reservedRate: agg.reservedRate,
+      freeRate: agg.freeRate,
     };
-  }, [dashboard, occupancyApi]);
+  }, [dashboard, occupancyApi, filteredUnits]);
 
   const forecast = useMemo(() => {
     if (!profitForActiveMonth?.units) {
@@ -778,10 +815,7 @@ function AdminCoLivingDashboardPage() {
       if (!allowed.has(String(row.unit_id))) continue;
       if (Number(row.profit) < 0) criticalUnits += 1;
     }
-    const expectedOccupancyRate =
-      occupancyApi?.summary?.occupancy_rate != null
-        ? Number(occupancyApi.summary.occupancy_rate)
-        : dashboard.occupiedRate;
+    const expectedOccupancyRate = dashboardDisplay.occupiedRate;
 
     return {
       forecastRevenue,
@@ -790,7 +824,7 @@ function AdminCoLivingDashboardPage() {
       expectedOccupancyRate,
       criticalUnits,
     };
-  }, [profitForActiveMonth, filteredUnits, occupancyApi, dashboard.occupiedRate]);
+  }, [profitForActiveMonth, filteredUnits, dashboardDisplay.occupiedRate]);
 
   const monthlyRevenueForecast = useMemo(() => {
     if (!profitSixMonth || profitSixMonth.length !== 6) {
@@ -1148,12 +1182,12 @@ function AdminCoLivingDashboardPage() {
               <SmallStatCard
                 label="Reserviert"
                 value={dashboardDisplay.reservedRooms}
-                hint={`${formatPercent(dashboard.reservedRate)} reserviert`}
+                hint={`${formatPercent(dashboardDisplay.reservedRate)} reserviert`}
               />
               <SmallStatCard
                 label="Frei"
                 value={dashboardDisplay.freeRooms}
-                hint={`${formatPercent(dashboard.freeRate)} frei`}
+                hint={`${formatPercent(dashboardDisplay.freeRate)} frei`}
               />
             </div>
           </SectionCard>
@@ -1180,13 +1214,13 @@ function AdminCoLivingDashboardPage() {
                 />
                 <ProgressRow
                   label="Reserviert"
-                  value={dashboard.reservedRate}
+                  value={dashboardDisplay.reservedRate}
                   count={`${dashboardDisplay.reservedRooms} Rooms`}
                   colorClass="bg-amber-400"
                 />
                 <ProgressRow
                   label="Frei"
-                  value={dashboard.freeRate}
+                  value={dashboardDisplay.freeRate}
                   count={`${dashboardDisplay.freeRooms} Rooms`}
                   colorClass="bg-rose-500"
                 />
