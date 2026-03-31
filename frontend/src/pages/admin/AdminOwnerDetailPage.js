@@ -167,8 +167,7 @@ function AdminOwnerDetailPage() {
     setEditOpen(true);
   };
 
-  const submitEdit = (e) => {
-    e.preventDefault();
+  const submitEdit = () => {
     if (!id) return;
     if (!editForm.name.trim()) {
       setEditErr("Name ist erforderlich.");
@@ -466,7 +465,7 @@ function AdminOwnerDetailPage() {
             <h2 id="owner-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
               Eigentümer bearbeiten
             </h2>
-            <form noValidate onSubmit={submitEdit} className="space-y-4">
+            <div className="space-y-4">
               <div>
                 <label htmlFor="owner-edit-name" className="block text-xs font-medium text-slate-500 mb-1">
                   Name *
@@ -646,7 +645,8 @@ function AdminOwnerDetailPage() {
               {editErr ? <p className="text-sm text-red-700">{editErr}</p> : null}
               <div className="flex gap-2 pt-2">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={submitEdit}
                   disabled={editSaving}
                   className="flex-1 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
                 >
@@ -661,7 +661,7 @@ function AdminOwnerDetailPage() {
                   Abbrechen
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
