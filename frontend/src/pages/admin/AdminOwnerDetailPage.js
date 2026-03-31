@@ -170,6 +170,10 @@ function AdminOwnerDetailPage() {
   const submitEdit = (e) => {
     e.preventDefault();
     if (!id) return;
+    if (!editForm.name.trim()) {
+      setEditErr("Name ist erforderlich.");
+      return;
+    }
     const addr1 = editForm.address_line1.trim();
     const plz = editForm.postal_code.trim();
     const ort = editForm.city.trim();
@@ -462,7 +466,7 @@ function AdminOwnerDetailPage() {
             <h2 id="owner-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
               Eigentümer bearbeiten
             </h2>
-            <form onSubmit={submitEdit} className="space-y-4">
+            <form noValidate onSubmit={submitEdit} className="space-y-4">
               <div>
                 <label htmlFor="owner-edit-name" className="block text-xs font-medium text-slate-500 mb-1">
                   Name *
@@ -470,7 +474,6 @@ function AdminOwnerDetailPage() {
                 <input
                   id="owner-edit-name"
                   type="text"
-                  required
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                   disabled={editSaving}
