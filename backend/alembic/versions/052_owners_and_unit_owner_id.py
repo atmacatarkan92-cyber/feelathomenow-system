@@ -27,7 +27,6 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["organization_id"], ["organization.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_owners_organization_id", "owners", ["organization_id"])
