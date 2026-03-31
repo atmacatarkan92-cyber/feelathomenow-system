@@ -669,7 +669,9 @@ export function fetchAdminLandlords(status = "active") {
 }
 
 export function fetchAdminLandlord(id) {
-  return fetch(`${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(id)}`, {
+  const base = `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(id)}`;
+  const sep = base.includes("?") ? "&" : "?";
+  return fetch(`${base}${sep}_=${Date.now()}`, {
     headers: getApiHeaders(),
   }).then((res) => {
     if (!res.ok) {
@@ -855,7 +857,9 @@ export function fetchAdminPropertyManagers() {
 }
 
 export function fetchAdminPropertyManager(id) {
-  return fetch(`${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(id)}`, {
+  const base = `${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(id)}`;
+  const sep = base.includes("?") ? "&" : "?";
+  return fetch(`${base}${sep}_=${Date.now()}`, {
     headers: getApiHeaders(),
   }).then((res) => {
     if (!res.ok) {
@@ -972,7 +976,9 @@ export function fetchAdminOwnerUnits(ownerId) {
 }
 
 export function fetchAdminOwner(id) {
-  return fetch(`${API_BASE_URL}/api/admin/owners/${encodeURIComponent(id)}`, {
+  const base = `${API_BASE_URL}/api/admin/owners/${encodeURIComponent(id)}`;
+  const sep = base.includes("?") ? "&" : "?";
+  return fetch(`${base}${sep}_=${Date.now()}`, {
     headers: getApiHeaders(),
   }).then((res) => {
     if (!res.ok) {
