@@ -7,6 +7,7 @@ import {
   deleteAdminLandlordDocument,
   fetchAdminAuditLogs,
   fetchAdminLandlord,
+  fetchAdminLandlords,
   fetchAdminLandlordDocumentDownloadUrl,
   fetchAdminLandlordDocuments,
   fetchAdminLandlordNotes,
@@ -18,6 +19,7 @@ import {
   uploadAdminLandlordDocument,
 } from "../../api/adminData";
 import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
+import { resolveAuditFkDisplay } from "../../utils/auditFkDisplay";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
@@ -127,7 +129,16 @@ const LANDLORD_FIELD_LABELS = {
   deleted_at: "Archivierung",
 };
 
-function formatLandlordAuditDisplayValue(field, value) {
+/** Display label for a landlord row (matches list/get shape). */
+function landlordRowLabelForUser(ll) {
+  if (!ll) return "";
+  const c = String(ll.company_name || "").trim();
+  const n = String(ll.contact_name || "").trim();
+  if (c && n) return `${c} — ${n}`;
+  return c || n || String(ll.email || "").trim() || ll.id;
+}
+
+function formatLandlordAuditDisplayValue(field, value, userNameById) {
   if (field === "deleted_at") {
     return value == null || value === "" ? "Aktiv" : "Archiviert";
   }
@@ -137,7 +148,7 @@ function formatLandlordAuditDisplayValue(field, value) {
     return s === "inactive" ? "Inaktiv" : "Aktiv";
   }
   if (field === "user_id") {
-    return value == null || value === "" ? "—" : String(value);
+    return resolveAuditFkDisplay(value, userNameById);
   }
   if (value == null || value === "") return "—";
   return String(value);
@@ -209,6 +220,9 @@ function AdminLandlordDetailPage() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(true);
   const [auditError, setAuditError] = useState(null);
+  /** user id -> label (from org landlords linked to that portal user) */
+  const [userNameById, setUserNameById] = useState({});
+  const userIdLookupFetchedRef = useRef(false);
 
   const loadAuditLogs = useCallback(
     (opts = {}) => {
@@ -239,6 +253,39 @@ function AdminLandlordDetailPage() {
   useEffect(() => {
     loadAuditLogs();
   }, [loadAuditLogs, location.key]);
+
+  useEffect(() => {
+    const needs =
+      auditLogs.some((log) => {
+        if (log.action !== "update") return false;
+        const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
+        const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
+        return (
+          Object.prototype.hasOwnProperty.call(ov, "user_id") ||
+          Object.prototype.hasOwnProperty.call(nv, "user_id")
+        );
+      }) || (row?.user_id && String(row.user_id).trim());
+    if (!needs) return;
+    if (userIdLookupFetchedRef.current) return;
+    userIdLookupFetchedRef.current = true;
+    let cancelled = false;
+    fetchAdminLandlords("all")
+      .then((list) => {
+        if (cancelled || !Array.isArray(list)) return;
+        const map = {};
+        for (const ll of list) {
+          const uid = ll.user_id;
+          if (uid == null || String(uid).trim() === "") continue;
+          const label = landlordRowLabelForUser(ll);
+          if (label) map[String(uid)] = label;
+        }
+        setUserNameById(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [auditLogs, row?.user_id]);
 
   useEffect(() => {
     if (!id) return;
@@ -1050,8 +1097,8 @@ function AdminLandlordDetailPage() {
                   );
                 }
                 const label = LANDLORD_FIELD_LABELS[field] || field;
-                const oldD = formatLandlordAuditDisplayValue(field, ov[field]);
-                const newD = formatLandlordAuditDisplayValue(field, nv[field]);
+                const oldD = formatLandlordAuditDisplayValue(field, ov[field], userNameById);
+                const newD = formatLandlordAuditDisplayValue(field, nv[field], userNameById);
                 return (
                   <li key={log.id}>
                     <p className="text-sm text-slate-900">

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createAdminPropertyManagerNote,
@@ -11,6 +11,7 @@ import {
   patchAdminPropertyManager,
 } from "../../api/adminData";
 import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
+import { resolveAuditFkDisplay } from "../../utils/auditFkDisplay";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 function landlordLabel(l) {
@@ -68,14 +69,14 @@ const PM_FIELD_LABELS = {
   landlord_id: "Verwaltung",
 };
 
-function formatPmAuditDisplayValue(field, value) {
+function formatPmAuditDisplayValue(field, value, landlordNameById) {
   if (field === "status") {
     if (value == null || value === "") return "—";
     const s = String(value).toLowerCase();
     return s === "inactive" ? "Inaktiv" : "Aktiv";
   }
   if (field === "landlord_id") {
-    return value == null || value === "" ? "—" : String(value);
+    return resolveAuditFkDisplay(value, landlordNameById);
   }
   if (value == null || value === "") return "—";
   return String(value);
@@ -103,6 +104,52 @@ function AdminPropertyManagerDetailPage() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(true);
   const [auditError, setAuditError] = useState(null);
+  /** landlord id -> display label for audit FK resolution */
+  const [landlordNameById, setLandlordNameById] = useState({});
+
+  const landlordIdsFromAudit = useMemo(() => {
+    const ids = new Set();
+    if (pm?.landlord_id) ids.add(String(pm.landlord_id));
+    for (const log of auditLogs) {
+      if (log.action !== "update") continue;
+      const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
+      const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
+      if (Object.prototype.hasOwnProperty.call(ov, "landlord_id") && ov.landlord_id != null && String(ov.landlord_id).trim()) {
+        ids.add(String(ov.landlord_id));
+      }
+      if (Object.prototype.hasOwnProperty.call(nv, "landlord_id") && nv.landlord_id != null && String(nv.landlord_id).trim()) {
+        ids.add(String(nv.landlord_id));
+      }
+    }
+    return [...ids];
+  }, [auditLogs, pm?.landlord_id]);
+
+  useEffect(() => {
+    if (!landlordIdsFromAudit.length) return;
+    let cancelled = false;
+
+    landlordIdsFromAudit.forEach((lid) => {
+      if (!lid) return;
+      if (landlordRow && String(landlordRow.id) === lid) {
+        const label = landlordLabel(landlordRow);
+        if (!label) return;
+        setLandlordNameById((prev) => (prev[lid] === label ? prev : { ...prev, [lid]: label }));
+        return;
+      }
+      fetchAdminLandlord(lid)
+        .then((row) => {
+          if (cancelled || !row) return;
+          const label = landlordLabel(row);
+          if (!label) return;
+          setLandlordNameById((prev) => (prev[lid] === label ? prev : { ...prev, [lid]: label }));
+        })
+        .catch(() => {});
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [landlordIdsFromAudit, landlordRow]);
 
   const loadAuditLogs = useCallback(
     (opts = {}) => {
@@ -456,8 +503,8 @@ function AdminPropertyManagerDetailPage() {
                 );
               }
               const label = PM_FIELD_LABELS[field] || field;
-              const oldD = formatPmAuditDisplayValue(field, ov[field]);
-              const newD = formatPmAuditDisplayValue(field, nv[field]);
+              const oldD = formatPmAuditDisplayValue(field, ov[field], landlordNameById);
+              const newD = formatPmAuditDisplayValue(field, nv[field], landlordNameById);
               return (
                 <li key={log.id}>
                   <p className="text-sm text-slate-900">
