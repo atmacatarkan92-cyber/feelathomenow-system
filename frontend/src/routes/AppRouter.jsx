@@ -28,6 +28,7 @@ import AdminPerformancePage from "../pages/admin/AdminPerformancePage";
 import AdminBreakEvenPage from "../pages/admin/AdminBreakEvenPage";
 import AdminForecastPage from "../pages/admin/AdminForecastPage";
 import AdminPropertyManagersPage from "../pages/admin/AdminPropertyManagersPage";
+import AdminPropertyManagerDetailPage from "../pages/admin/AdminPropertyManagerDetailPage";
 import AdminListingsPage from "../pages/admin/AdminListingsPage";
 import AdminPropertiesPage from "../pages/admin/AdminPropertiesPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
@@ -106,6 +107,7 @@ export default function AppRouter() {
               <Route path="landlords" element={<AdminLandlordsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
               <Route path="properties" element={<AdminPropertiesPage />} />
+              <Route path="bewirtschafter/:id" element={<AdminPropertyManagerDetailPage />} />
               <Route path="bewirtschafter" element={<AdminPropertyManagersPage />} />
               <Route path="invoices" element={<AdminInvoicesPage />} />
               <Route path="invoices/:id" element={<AdminInvoiceDetailPage />} />

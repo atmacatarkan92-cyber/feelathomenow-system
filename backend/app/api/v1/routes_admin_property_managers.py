@@ -1,5 +1,5 @@
 """
-Admin property managers (Bewirtschafter): list, create, update.
+Admin property managers (Bewirtschafter): list, get, create, update, units.
 Protected by require_roles("admin", "manager").
 """
 
@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Landlord, PropertyManager
+from db.models import Landlord, Property, PropertyManager, Unit
+from app.api.v1.routes_admin_units import _unit_to_dict
 from app.core.rate_limit import limiter
 
 
@@ -64,6 +65,42 @@ def admin_list_property_managers(
         ).all()
     )
     return [_pm_to_dict(p) for p in rows]
+
+
+@router.get("/property-managers/{pm_id}", response_model=dict)
+def admin_get_property_manager(
+    pm_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    pm = session.get(PropertyManager, pm_id)
+    if not pm or str(getattr(pm, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Property manager not found")
+    return _pm_to_dict(pm)
+
+
+@router.get("/property-managers/{pm_id}/units", response_model=List[dict])
+def admin_list_property_manager_units(
+    pm_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """Units with property_manager_id == pm_id (org-scoped)."""
+    pm = session.get(PropertyManager, pm_id)
+    if not pm or str(getattr(pm, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Property manager not found")
+    stmt = (
+        select(Unit, Property)
+        .select_from(Unit)
+        .outerjoin(Property, Unit.property_id == Property.id)
+        .where(Unit.organization_id == org_id)
+        .where(Unit.property_manager_id == pm_id)
+        .order_by(Unit.title)
+    )
+    rows = list(session.exec(stmt).all())
+    return [_unit_to_dict(u, p.title if p else None) for u, p in rows]
 
 
 @router.post("/property-managers", response_model=dict)

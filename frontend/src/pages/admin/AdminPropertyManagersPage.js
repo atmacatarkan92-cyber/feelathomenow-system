@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchAdminPropertyManagers,
   fetchAdminLandlords,
@@ -393,7 +393,7 @@ function AdminPropertyManagersPage() {
                 <th style={{ padding: "12px" }}>Telefon</th>
                 <th style={{ padding: "12px" }}>Verwaltung</th>
                 <th style={{ padding: "12px" }}>Erstellt</th>
-                <th style={{ padding: "12px" }}></th>
+                <th style={{ padding: "12px", whiteSpace: "nowrap" }}>Aktionen</th>
               </tr>
             </thead>
 
@@ -412,20 +412,44 @@ function AdminPropertyManagersPage() {
                     </td>
                     <td style={{ padding: "12px" }}>{formatDate(item.created_at)}</td>
                     <td style={{ padding: "12px" }}>
-                      <button
-                        type="button"
-                        onClick={() => openEdit(item)}
+                      <div
                         style={{
-                          padding: "6px 12px",
-                          background: "#F1F5F9",
-                          border: "1px solid #E2E8F0",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          fontSize: "13px",
+                          display: "flex",
+                          flexWrap: "wrap",
+                          alignItems: "center",
+                          gap: "8px",
                         }}
                       >
-                        Bearbeiten
-                      </button>
+                        <Link
+                          to={`/admin/bewirtschafter/${encodeURIComponent(item.id)}`}
+                          style={{
+                            display: "inline-block",
+                            padding: "6px 12px",
+                            background: "#0F172A",
+                            color: "#FFF",
+                            borderRadius: "6px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                          }}
+                        >
+                          Öffnen
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(item)}
+                          style={{
+                            padding: "6px 12px",
+                            background: "#F1F5F9",
+                            border: "1px solid #E2E8F0",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                          }}
+                        >
+                          Bearbeiten
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

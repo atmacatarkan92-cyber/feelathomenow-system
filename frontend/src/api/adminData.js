@@ -852,6 +852,31 @@ export function fetchAdminPropertyManagers() {
   });
 }
 
+export function fetchAdminPropertyManager(id) {
+  return fetch(`${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(id)}`, {
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error("Bewirtschafter konnte nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
+export function fetchAdminPropertyManagerUnits(propertyManagerId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(propertyManagerId)}/units`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return [];
+      throw new Error("Units konnten nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
 export async function createAdminPropertyManager(body) {
   const res = await fetch(`${API_BASE_URL}/api/admin/property-managers`, {
     method: "POST",
