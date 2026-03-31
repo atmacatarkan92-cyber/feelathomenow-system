@@ -4,6 +4,7 @@ import {
   createAdminPropertyManagerNote,
   fetchAdminAuditLogs,
   fetchAdminLandlord,
+  fetchAdminLandlords,
   fetchAdminPropertyManager,
   fetchAdminPropertyManagerNotes,
   fetchAdminPropertyManagerUnits,
@@ -106,6 +107,18 @@ function AdminPropertyManagerDetailPage() {
   const [auditError, setAuditError] = useState(null);
   /** landlord id -> display label for audit FK resolution */
   const [landlordNameById, setLandlordNameById] = useState({});
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editErr, setEditErr] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    landlord_id: "",
+    status: "active",
+  });
+  const [landlordsForEdit, setLandlordsForEdit] = useState([]);
+  const [landlordsEditLoading, setLandlordsEditLoading] = useState(false);
 
   const landlordIdsFromAudit = useMemo(() => {
     const ids = new Set();
@@ -287,6 +300,57 @@ function AdminPropertyManagerDetailPage() {
       .finally(() => setNewNoteSaving(false));
   };
 
+  const openEditModal = () => {
+    if (!pm) return;
+    setEditErr(null);
+    setEditForm({
+      name: pm.name || "",
+      email: pm.email || "",
+      phone: pm.phone || "",
+      landlord_id: pm.landlord_id || "",
+      status: String(pm.status || "active").toLowerCase() === "inactive" ? "inactive" : "active",
+    });
+    setEditOpen(true);
+    setLandlordsEditLoading(true);
+    fetchAdminLandlords()
+      .then((lls) => setLandlordsForEdit(Array.isArray(lls) ? lls : []))
+      .catch(() => setLandlordsForEdit([]))
+      .finally(() => setLandlordsEditLoading(false));
+  };
+
+  const submitEdit = () => {
+    if (!id) return;
+    const name = editForm.name.trim();
+    if (!name) {
+      setEditErr("Name ist erforderlich.");
+      return;
+    }
+    setEditSaving(true);
+    setEditErr(null);
+    patchAdminPropertyManager(id, {
+      name,
+      email: editForm.email.trim() || null,
+      phone: editForm.phone.trim() || null,
+      landlord_id: editForm.landlord_id.trim() || null,
+      status: editForm.status === "inactive" ? "inactive" : "active",
+    })
+      .then(() => fetchAdminPropertyManager(id))
+      .then((row) => {
+        if (!row) return;
+        setPm(row);
+        const lid = row.landlord_id;
+        if (lid) {
+          setLandlordRow(undefined);
+          return fetchAdminLandlord(lid).then((ll) => setLandlordRow(ll ?? null));
+        }
+        setLandlordRow(null);
+      })
+      .then(() => loadAuditLogs({ silent: true }))
+      .then(() => setEditOpen(false))
+      .catch((e) => setEditErr(e?.message || "Speichern fehlgeschlagen."))
+      .finally(() => setEditSaving(false));
+  };
+
   const handleToggleStatus = () => {
     if (!id) return;
     const next = isPmActive ? "inactive" : "active";
@@ -338,7 +402,7 @@ function AdminPropertyManagerDetailPage() {
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => navigate(`/admin/bewirtschafter?edit=${encodeURIComponent(id)}`)}
+            onClick={openEditModal}
             className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
           >
             Bearbeiten
@@ -596,6 +660,123 @@ function AdminPropertyManagerDetailPage() {
           </ul>
         )}
       </section>
+
+      {editOpen && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+          onClick={() => !editSaving && setEditOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pm-edit-title"
+          >
+            <h2 id="pm-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
+              Bewirtschafter bearbeiten
+            </h2>
+            {landlordsEditLoading ? (
+              <p className="text-sm text-slate-500 mb-4">Lade Verwaltungen …</p>
+            ) : null}
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="pm-edit-name" className="block text-xs font-medium text-slate-500 mb-1">
+                  Name *
+                </label>
+                <input
+                  id="pm-edit-name"
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  disabled={editSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="pm-edit-email" className="block text-xs font-medium text-slate-500 mb-1">
+                  E-Mail
+                </label>
+                <input
+                  id="pm-edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  disabled={editSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="pm-edit-phone" className="block text-xs font-medium text-slate-500 mb-1">
+                  Telefon
+                </label>
+                <input
+                  id="pm-edit-phone"
+                  type="text"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  disabled={editSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="pm-edit-landlord" className="block text-xs font-medium text-slate-500 mb-1">
+                  Verwaltung
+                </label>
+                <select
+                  id="pm-edit-landlord"
+                  value={editForm.landlord_id}
+                  onChange={(e) => setEditForm((f) => ({ ...f, landlord_id: e.target.value }))}
+                  disabled={editSaving || landlordsEditLoading}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white disabled:opacity-60"
+                >
+                  <option value="">—</option>
+                  {landlordsForEdit.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {landlordLabel(l)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="pm-edit-status" className="block text-xs font-medium text-slate-500 mb-1">
+                  Status
+                </label>
+                <select
+                  id="pm-edit-status"
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                  disabled={editSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white disabled:opacity-60"
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                </select>
+              </div>
+              {editErr ? <p className="text-sm text-red-700">{editErr}</p> : null}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={submitEdit}
+                  disabled={editSaving || landlordsEditLoading}
+                  className="flex-1 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
+                >
+                  {editSaving ? "Speichern …" : "Speichern"}
+                </button>
+                <button
+                  type="button"
+                  disabled={editSaving}
+                  onClick={() => setEditOpen(false)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
