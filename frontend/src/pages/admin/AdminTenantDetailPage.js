@@ -24,8 +24,8 @@ import { tenantDisplayName } from "../../utils/tenantDisplayName";
 import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 import {
   UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE,
+  deriveTenantOperationalStatus,
   getTodayIsoForOccupancy,
-  isTenancyActiveByDates,
   parseIsoDate,
 } from "../../utils/unitOccupancyStatus";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
@@ -252,21 +252,20 @@ function getStatusMeta(status) {
       border: "#D1D5DB",
     };
   }
+  if (normalized === "inactive" || normalized === "inaktiv") {
+    return {
+      label: "Inaktiv",
+      bg: "#F1F5F9",
+      color: "#475569",
+      border: "#CBD5E1",
+    };
+  }
   return {
     label: status || "Offen",
     bg: "#F1F5F9",
     color: "#475569",
     border: "#CBD5E1",
   };
-}
-
-function isTenancyReservedUpcoming(t, todayIso) {
-  if (!t) return false;
-  const s = String(t?.status ?? "").trim().toLowerCase();
-  if (s !== "reserved") return false;
-  const moveIn = parseIsoDate(t?.move_in_date);
-  if (!moveIn || moveIn <= todayIso) return false;
-  return true;
 }
 
 const gridTwoCol = {
@@ -861,13 +860,7 @@ export default function AdminTenantDetailPage() {
     const mine = Array.isArray(tenancies)
       ? tenancies.filter((x) => String(x.tenant_id) === String(tenantId))
       : [];
-    if (mine.some((t) => isTenancyActiveByDates(t, todayIso))) {
-      return getStatusMeta("active");
-    }
-    if (mine.some((t) => isTenancyReservedUpcoming(t, todayIso))) {
-      return getStatusMeta("reserved");
-    }
-    return getStatusMeta("ausgezogen");
+    return getStatusMeta(deriveTenantOperationalStatus(mine, todayIso));
   }, [tenancies, tenantId]);
 
   const applyUpdate = (updated) => {

@@ -49,12 +49,40 @@ export function isTenancyFuture(t, todayIso = getTodayIsoForOccupancy()) {
 }
 
 /** RESERVED: status reserved, move_in > today. */
-function isTenancyReservedSlot(t, todayIso = getTodayIsoForOccupancy()) {
+export function isTenancyReservedSlot(t, todayIso = getTodayIsoForOccupancy()) {
   if (!t) return false;
   if (normalizeTenancyStatus(t) !== "reserved") return false;
   const moveIn = parseIsoDate(t?.move_in_date);
   if (!moveIn || moveIn <= todayIso) return false;
   return true;
+}
+
+/**
+ * CRM tenant status from all tenancies for one tenant (caller passes tenant-scoped rows).
+ * Aligns with unit/room occupancy: active today → active; future reserved or future active → reserved;
+ * no tenancies → inactive; otherwise ended (past-only / no current slot).
+ *
+ * @returns {"active"|"reserved"|"ended"|"inactive"}
+ */
+export function deriveTenantOperationalStatus(
+  tenantTenancies,
+  todayIso = getTodayIsoForOccupancy()
+) {
+  const list = Array.isArray(tenantTenancies) ? tenantTenancies : [];
+  if (list.some((t) => isTenancyActiveByDates(t, todayIso))) {
+    return "active";
+  }
+  if (
+    list.some(
+      (t) => isTenancyReservedSlot(t, todayIso) || isTenancyFuture(t, todayIso)
+    )
+  ) {
+    return "reserved";
+  }
+  if (list.length === 0) {
+    return "inactive";
+  }
+  return "ended";
 }
 
 /** Monthly rent from tenancy row (frontend field variants). */

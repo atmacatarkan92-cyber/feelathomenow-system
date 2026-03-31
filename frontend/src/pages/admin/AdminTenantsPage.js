@@ -13,9 +13,11 @@ import {
 import TenantCreateModal from "../../components/admin/tenants/TenantCreateModal";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
 import {
+  deriveTenantOperationalStatus,
   getTodayIsoForOccupancy,
   isTenancyActiveByDates,
-  parseIsoDate,
+  isTenancyFuture,
+  isTenancyReservedSlot,
 } from "../../utils/unitOccupancyStatus";
 
 function formatCurrency(value) {
@@ -80,6 +82,15 @@ function getStatusMeta(status) {
     };
   }
 
+  if (normalized === "inactive" || normalized === "inaktiv") {
+    return {
+      label: "Inaktiv",
+      bg: "#F1F5F9",
+      color: "#475569",
+      border: "#CBD5E1",
+    };
+  }
+
   return {
     label: status || "Offen",
     bg: "#F1F5F9",
@@ -114,16 +125,6 @@ function rowMatchesStatusFilter(row, filterKey) {
   return true;
 }
 
-/** Reserved + move_in in the future (upcoming / planned). Matches unit occupancy rules. */
-function isTenancyReservedUpcoming(t, todayIso) {
-  if (!t) return false;
-  const s = String(t?.status ?? "").trim().toLowerCase();
-  if (s !== "reserved") return false;
-  const moveIn = parseIsoDate(t?.move_in_date);
-  if (!moveIn || moveIn <= todayIso) return false;
-  return true;
-}
-
 function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
   const todayIso = getTodayIsoForOccupancy();
   return tenants.map((tenant) => {
@@ -135,14 +136,12 @@ function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
       isTenancyActiveByDates(t, todayIso)
     );
     const reservedTenancy = tenantTenancies.find(
-      (t) => isTenancyReservedUpcoming(t, todayIso)
+      (t) =>
+        isTenancyReservedSlot(t, todayIso) || isTenancyFuture(t, todayIso)
     );
     const currentTenancy = activeTenancy || reservedTenancy || null;
 
-    let rowStatus;
-    if (activeTenancy) rowStatus = "active";
-    else if (reservedTenancy) rowStatus = "reserved";
-    else rowStatus = "ausgezogen";
+    const rowStatus = deriveTenantOperationalStatus(tenantTenancies, todayIso);
 
     const room = currentTenancy
       ? rooms.find((item) => String(item.id) === String(currentTenancy.room_id))
