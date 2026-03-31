@@ -34,6 +34,42 @@ router = APIRouter(prefix="/api/admin", tags=["admin-units"])
 
 logger = logging.getLogger(__name__)
 
+# Fields to record as separate audit rows on PATCH (matches UnitPatch; name is merged to title before loop).
+_UNIT_PATCH_AUDIT_FIELDS = frozenset(
+    {
+        "title",
+        "address",
+        "city",
+        "city_id",
+        "type",
+        "rooms",
+        "property_id",
+        "landlord_id",
+        "property_manager_id",
+        "owner_id",
+        "tenant_price_monthly_chf",
+        "landlord_rent_monthly_chf",
+        "utilities_monthly_chf",
+        "cleaning_cost_monthly_chf",
+        "landlord_lease_start_date",
+        "available_from",
+        "occupancy_status",
+        "occupied_rooms",
+        "postal_code",
+        "landlord_deposit_type",
+        "landlord_deposit_amount",
+        "landlord_deposit_annual_premium",
+        "lease_type",
+        "lease_start_date",
+        "lease_end_date",
+        "notice_given_date",
+        "termination_effective_date",
+        "returned_to_landlord_date",
+        "lease_status",
+        "lease_notes",
+    }
+)
+
 _UNIT_DELETE_BLOCKED_FALLBACK = (
     "Unit kann nicht gelöscht werden, da noch verknüpfte Daten vorhanden sind."
 )
@@ -590,8 +626,14 @@ def admin_create_unit(
     session.flush()
     _create_initial_rooms_for_unit(session, unit, body)
     create_audit_log(
-        session, str(current_user.id), "create", "unit", str(unit.id),
-        old_values=None, new_values=model_snapshot(unit),
+        session,
+        str(current_user.id),
+        "create",
+        "unit",
+        str(unit.id),
+        old_values=None,
+        new_values=model_snapshot(unit),
+        organization_id=org_id,
     )
     session.commit()
     session.refresh(unit)
@@ -647,10 +689,23 @@ def admin_patch_unit(
     if data:
         unit.updated_at = datetime.utcnow()
     session.add(unit)
-    create_audit_log(
-        session, str(current_user.id), "update", "unit", str(unit_id),
-        old_values=old_snapshot, new_values=model_snapshot(unit),
-    )
+    new_snapshot = model_snapshot(unit)
+    for key in data:
+        if key not in _UNIT_PATCH_AUDIT_FIELDS:
+            continue
+        ov = old_snapshot.get(key)
+        nv = new_snapshot.get(key)
+        if ov != nv:
+            create_audit_log(
+                session,
+                str(current_user.id),
+                "update",
+                "unit",
+                unit_id,
+                old_values={key: ov},
+                new_values={key: nv},
+                organization_id=org_id,
+            )
     session.commit()
     session.refresh(unit)
     return _unit_enriched_dict(session, unit)
@@ -709,8 +764,14 @@ def admin_delete_unit(
     try:
         session.delete(unit)
         create_audit_log(
-            session, str(current_user.id), "delete", "unit", str(unit_id),
-            old_values=old_snapshot, new_values=None,
+            session,
+            str(current_user.id),
+            "delete",
+            "unit",
+            str(unit_id),
+            old_values=old_snapshot,
+            new_values=None,
+            organization_id=org_id,
         )
         session.commit()
     except IntegrityError:

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import RoomMap from "../../components/RoomMap";
 import RoomCalendar from "../../components/RoomCalendar";
@@ -11,6 +11,9 @@ import {
   fetchAdminTenancies,
   fetchAdminTenant,
   fetchAdminLandlord,
+  fetchAdminLandlords,
+  fetchAdminOwners,
+  fetchAdminProperties,
   fetchAdminPropertyManagers,
   fetchAdminAuditLogs,
   fetchAdminUnitDocuments,
@@ -21,6 +24,7 @@ import {
   createAdminUnitCost,
   updateAdminUnitCost,
   deleteAdminUnitCost,
+  updateAdminUnit,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -839,6 +843,22 @@ function AdminUnitDetailPage() {
   const [verwaltungLabel, setVerwaltungLabel] = useState("");
   const [bewirtschafterLabel, setBewirtschafterLabel] = useState("");
   const [linksResolving, setLinksResolving] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [assignErr, setAssignErr] = useState(null);
+  const [assignForm, setAssignForm] = useState({
+    property_id: "",
+    landlord_id: "",
+    property_manager_id: "",
+    owner_id: "",
+  });
+  const [assignLists, setAssignLists] = useState({
+    properties: [],
+    landlords: [],
+    pms: [],
+    owners: [],
+  });
+  const [assignListsLoading, setAssignListsLoading] = useState(false);
 
   useEffect(() => {
     if (!unitId) {
@@ -923,11 +943,11 @@ function AdminUnitDetailPage() {
       .catch(() => setRooms([]));
   }, [unitId]);
 
-  useEffect(() => {
-    if (!unitId) return;
+  const reloadAuditLogs = useCallback(() => {
+    if (!unitId) return Promise.resolve();
     setAuditLogLoading(true);
     setAuditLogError("");
-    fetchAdminAuditLogs({ entity_type: "unit", entity_id: unitId })
+    return fetchAdminAuditLogs({ entity_type: "unit", entity_id: unitId })
       .then((data) => setAuditLogs(Array.isArray(data.items) ? data.items : []))
       .catch((e) => {
         setAuditLogError(e.message || "Fehler beim Laden des Verlaufs.");
@@ -935,6 +955,10 @@ function AdminUnitDetailPage() {
       })
       .finally(() => setAuditLogLoading(false));
   }, [unitId]);
+
+  useEffect(() => {
+    reloadAuditLogs();
+  }, [unitId, reloadAuditLogs, location.key]);
 
   useEffect(() => {
     if (!unitId) {
@@ -973,6 +997,69 @@ function AdminUnitDetailPage() {
     }
     return { landlordById, pmById, propertyById, ownerById };
   }, [unit, verwaltungLabel, bewirtschafterLabel]);
+
+  const openAssignModal = () => {
+    if (!unit) return;
+    setAssignErr(null);
+    setAssignForm({
+      property_id: unit.property_id != null ? String(unit.property_id) : "",
+      landlord_id: unit.landlord_id != null ? String(unit.landlord_id) : "",
+      property_manager_id:
+        unit.property_manager_id != null ? String(unit.property_manager_id) : "",
+      owner_id: unit.owner_id != null ? String(unit.owner_id) : "",
+    });
+    setAssignOpen(true);
+    setAssignListsLoading(true);
+    Promise.all([
+      fetchAdminProperties().catch(() => []),
+      fetchAdminLandlords("active").catch(() => []),
+      fetchAdminPropertyManagers().catch(() => []),
+      fetchAdminOwners()
+        .then((r) => (Array.isArray(r.items) ? r.items : []))
+        .catch(() => []),
+    ])
+      .then(([props, landlords, pms, owners]) => {
+        const propList = Array.isArray(props) ? props : [];
+        const filteredProps = propList.filter((p) => !p.deleted_at);
+        filteredProps.sort((a, b) =>
+          String(a.title || "").localeCompare(String(b.title || ""), "de")
+        );
+        const ll = Array.isArray(landlords) ? landlords : [];
+        ll.sort((a, b) => {
+          const la = `${a.company_name || ""} ${a.contact_name || ""}`.trim();
+          const lb = `${b.company_name || ""} ${b.contact_name || ""}`.trim();
+          return la.localeCompare(lb, "de");
+        });
+        const pm = Array.isArray(pms) ? pms : [];
+        pm.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "de"));
+        const ow = Array.isArray(owners) ? owners : [];
+        ow.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "de"));
+        setAssignLists({ properties: filteredProps, landlords: ll, pms: pm, owners: ow });
+      })
+      .finally(() => setAssignListsLoading(false));
+  };
+
+  const saveAssignModal = () => {
+    if (!unitId) return;
+    setAssignSaving(true);
+    setAssignErr(null);
+    updateAdminUnit(unitId, {
+      property_id: assignForm.property_id.trim() || null,
+      landlord_id: assignForm.landlord_id.trim() || null,
+      property_manager_id: assignForm.property_manager_id.trim() || null,
+      owner_id: assignForm.owner_id.trim() || null,
+    })
+      .then(() => fetchAdminUnit(unitId))
+      .then((u) => setUnit(u ? normalizeUnit(u) : null))
+      .then(() => reloadAuditLogs())
+      .then(() => {
+        setAssignOpen(false);
+      })
+      .catch((e) => {
+        setAssignErr(e?.message || "Speichern fehlgeschlagen.");
+      })
+      .finally(() => setAssignSaving(false));
+  };
 
   const [occupancyRoomsData, setOccupancyRoomsData] = useState(null);
   useEffect(() => {
@@ -1629,6 +1716,15 @@ function AdminUnitDetailPage() {
             subtitle="Grunddaten und aktuelle Struktur dieser Unit"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-700">
+              <div className="md:col-span-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={openAssignModal}
+                  className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  Zuordnungen bearbeiten
+                </button>
+              </div>
               <div>
                 <p className="text-sm text-slate-500">Unit ID</p>
                 <p className="font-medium">{unit.unitId}</p>
@@ -2861,6 +2957,139 @@ function AdminUnitDetailPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {assignOpen && (
+          <div
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+            onClick={() => !assignSaving && setAssignOpen(false)}
+            role="presentation"
+          >
+            <div
+              className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="unit-assign-title"
+            >
+              <h2 id="unit-assign-title" className="text-lg font-semibold text-slate-900 mb-1">
+                Zuordnungen
+              </h2>
+              <p className="text-sm text-slate-500 mb-4">
+                Eigentümer, Verwaltung, Bewirtschafter und Liegenschaft für diese Unit.
+              </p>
+              {assignListsLoading ? (
+                <p className="text-sm text-slate-500 py-4">Lade Auswahl …</p>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="unit-assign-property" className="block text-xs font-medium text-slate-500 mb-1">
+                      Liegenschaft
+                    </label>
+                    <select
+                      id="unit-assign-property"
+                      value={assignForm.property_id}
+                      onChange={(e) =>
+                        setAssignForm((f) => ({ ...f, property_id: e.target.value }))
+                      }
+                      disabled={assignSaving}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                    >
+                      <option value="">—</option>
+                      {assignLists.properties.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {String(p.title || "").trim() || p.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="unit-assign-landlord" className="block text-xs font-medium text-slate-500 mb-1">
+                      Verwaltung
+                    </label>
+                    <select
+                      id="unit-assign-landlord"
+                      value={assignForm.landlord_id}
+                      onChange={(e) =>
+                        setAssignForm((f) => ({ ...f, landlord_id: e.target.value }))
+                      }
+                      disabled={assignSaving}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                    >
+                      <option value="">—</option>
+                      {assignLists.landlords.map((ll) => (
+                        <option key={ll.id} value={ll.id}>
+                          {landlordDisplayName(ll)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="unit-assign-pm" className="block text-xs font-medium text-slate-500 mb-1">
+                      Bewirtschafter
+                    </label>
+                    <select
+                      id="unit-assign-pm"
+                      value={assignForm.property_manager_id}
+                      onChange={(e) =>
+                        setAssignForm((f) => ({ ...f, property_manager_id: e.target.value }))
+                      }
+                      disabled={assignSaving}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                    >
+                      <option value="">—</option>
+                      {assignLists.pms.map((pm) => (
+                        <option key={pm.id} value={pm.id}>
+                          {propertyManagerDisplayName(pm)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="unit-assign-owner" className="block text-xs font-medium text-slate-500 mb-1">
+                      Eigentümer
+                    </label>
+                    <select
+                      id="unit-assign-owner"
+                      value={assignForm.owner_id}
+                      onChange={(e) =>
+                        setAssignForm((f) => ({ ...f, owner_id: e.target.value }))
+                      }
+                      disabled={assignSaving}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                    >
+                      <option value="">—</option>
+                      {assignLists.owners.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {String(o.name || "").trim() ||
+                            String(o.email || "").trim() ||
+                            o.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+              {assignErr ? <p className="mt-3 text-sm text-red-700">{assignErr}</p> : null}
+              <div className="flex gap-2 justify-end mt-6">
+                <button
+                  type="button"
+                  disabled={assignSaving}
+                  onClick={() => setAssignOpen(false)}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  disabled={assignSaving || assignListsLoading}
+                  onClick={saveAssignModal}
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+                >
+                  {assignSaving ? "Speichern …" : "Speichern"}
+                </button>
+              </div>
             </div>
           </div>
         )}
