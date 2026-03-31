@@ -12,6 +12,7 @@ from sqlalchemy import desc
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
+from db.audit import create_audit_log, model_snapshot
 from app.api.v1.routes_admin_units import _unit_to_dict, load_owner_names_map
 from app.core.rate_limit import limiter
 from app.services.tenant_crm import load_users_by_ids
@@ -47,6 +48,9 @@ def _pm_to_dict(p: PropertyManager) -> dict:
         if getattr(p, "updated_at", None)
         else None,
     }
+
+
+_PM_PATCH_AUDIT_FIELDS = frozenset({"name", "email", "phone", "landlord_id", "status"})
 
 
 def _pm_in_org_or_404(session, pm_id: str, org_id: str) -> PropertyManager:
@@ -225,7 +229,7 @@ def admin_create_property_manager(
     request: Request,
     body: PropertyManagerCreate,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     name = (body.name or "").strip()
@@ -247,6 +251,17 @@ def admin_create_property_manager(
         updated_at=now,
     )
     session.add(pm)
+    session.flush()
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "create",
+        "property_manager",
+        str(pm.id),
+        old_values=None,
+        new_values=model_snapshot(pm),
+        organization_id=org_id,
+    )
     session.commit()
     session.refresh(pm)
     return _pm_to_dict(pm)
@@ -259,12 +274,13 @@ def admin_patch_property_manager(
     pm_id: str,
     body: PropertyManagerPatch,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     pm = session.get(PropertyManager, pm_id)
     if not pm or str(getattr(pm, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Property manager not found")
+    old_snapshot = model_snapshot(pm)
     data = body.model_dump(exclude_unset=True)
     if "landlord_id" in data:
         lid = data["landlord_id"] if data["landlord_id"] else None
@@ -290,6 +306,25 @@ def admin_patch_property_manager(
         if hasattr(pm, k):
             setattr(pm, k, v)
     session.add(pm)
+    new_snapshot = model_snapshot(pm)
+    for key in data:
+        if key == "updated_at":
+            continue
+        if key not in _PM_PATCH_AUDIT_FIELDS:
+            continue
+        ov = old_snapshot.get(key)
+        nv = new_snapshot.get(key)
+        if ov != nv:
+            create_audit_log(
+                session,
+                str(current_user.id),
+                "update",
+                "property_manager",
+                pm_id,
+                old_values={key: ov},
+                new_values={key: nv},
+                organization_id=org_id,
+            )
     session.commit()
     session.refresh(pm)
     return _pm_to_dict(pm)

@@ -12,6 +12,7 @@ from sqlalchemy import and_, desc, not_, or_
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
+from db.audit import create_audit_log, model_snapshot
 from db.models import Landlord, LandlordNote, Property, PropertyManager, Unit, User
 from app.api.v1.routes_admin_units import _unit_to_dict, load_owner_names_map
 from app.core.rate_limit import limiter
@@ -94,6 +95,25 @@ class LandlordNoteUpdate(BaseModel):
         if not s:
             raise ValueError("Notiz darf nicht leer sein.")
         return s
+
+
+# Fields logged per PUT (excludes updated_at; deleted_at uses archive/restore endpoints).
+_LANDLORD_PUT_AUDIT_FIELDS = frozenset(
+    {
+        "user_id",
+        "company_name",
+        "contact_name",
+        "email",
+        "phone",
+        "address_line1",
+        "postal_code",
+        "city",
+        "canton",
+        "website",
+        "notes",
+        "status",
+    }
+)
 
 
 def _landlord_in_org_or_404(session, landlord_id: str, org_id: str) -> Landlord:
@@ -308,7 +328,7 @@ def admin_create_landlord(
     request: Request,
     body: LandlordCreate,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Create a new landlord."""
@@ -333,6 +353,17 @@ def admin_create_landlord(
         status=(body.status or "active").strip() or "active",
     )
     session.add(landlord)
+    session.flush()
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "create",
+        "landlord",
+        str(landlord.id),
+        old_values=None,
+        new_values=model_snapshot(landlord),
+        organization_id=org_id,
+    )
     session.commit()
     session.refresh(landlord)
     return _landlord_to_dict(landlord)
@@ -389,7 +420,7 @@ def admin_put_landlord(
     landlord_id: str,
     body: LandlordUpdate,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Update a landlord (partial)."""
@@ -400,6 +431,7 @@ def admin_put_landlord(
         or getattr(landlord, "deleted_at", None) is not None
     ):
         raise HTTPException(status_code=404, detail="Landlord not found")
+    old_snapshot = model_snapshot(landlord)
     data = body.model_dump(exclude_unset=True)
     _validate_address_update(data)
     if "user_id" in data and data["user_id"]:
@@ -412,6 +444,23 @@ def admin_put_landlord(
     if data:
         landlord.updated_at = datetime.utcnow()
     session.add(landlord)
+    new_snapshot = model_snapshot(landlord)
+    for key in data:
+        if key not in _LANDLORD_PUT_AUDIT_FIELDS:
+            continue
+        ov = old_snapshot.get(key)
+        nv = new_snapshot.get(key)
+        if ov != nv:
+            create_audit_log(
+                session,
+                str(current_user.id),
+                "update",
+                "landlord",
+                landlord_id,
+                old_values={key: ov},
+                new_values={key: nv},
+                organization_id=org_id,
+            )
     session.commit()
     session.refresh(landlord)
     return _landlord_to_dict(landlord)

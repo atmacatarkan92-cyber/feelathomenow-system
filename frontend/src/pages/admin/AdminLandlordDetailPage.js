@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   createAdminLandlordNote,
   deleteAdminLandlord,
   deleteAdminLandlordDocument,
+  fetchAdminAuditLogs,
   fetchAdminLandlord,
   fetchAdminLandlordDocumentDownloadUrl,
   fetchAdminLandlordDocuments,
@@ -116,6 +117,34 @@ function formatLandlordDocumentCategoryLabel(category) {
   return LANDLORD_DOCUMENT_CATEGORY_LABELS[k] || k;
 }
 
+const LANDLORD_FIELD_LABELS = {
+  user_id: "Portal-Benutzer",
+  company_name: "Firmenname",
+  contact_name: "Kontaktperson",
+  email: "E-Mail",
+  phone: "Telefonnummer",
+  address_line1: "Adresse",
+  postal_code: "PLZ",
+  city: "Ort",
+  canton: "Kanton",
+  website: "Website",
+  notes: "Notizen",
+  status: "Status",
+};
+
+function formatLandlordAuditDisplayValue(field, value) {
+  if (field === "status") {
+    if (value == null || value === "") return "—";
+    const s = String(value).toLowerCase();
+    return s === "inactive" ? "Inaktiv" : "Aktiv";
+  }
+  if (field === "user_id") {
+    return value == null || value === "" ? "—" : String(value);
+  }
+  if (value == null || value === "") return "—";
+  return String(value);
+}
+
 const thCell = {
   textAlign: "left",
   padding: "10px 12px",
@@ -179,6 +208,39 @@ function AdminLandlordDetailPage() {
   const [landlordDocUploadError, setLandlordDocUploadError] = useState("");
   const [landlordDocCategory, setLandlordDocCategory] = useState("");
   const landlordDocFileInputRef = useRef(null);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(true);
+  const [auditError, setAuditError] = useState(null);
+
+  const loadAuditLogs = useCallback(
+    (opts = {}) => {
+      const silent = opts.silent === true;
+      if (!id) return Promise.resolve();
+      if (!silent) {
+        setAuditLoading(true);
+        setAuditError(null);
+      }
+      return fetchAdminAuditLogs({ entity_type: "landlord", entity_id: id })
+        .then((r) => {
+          const items = Array.isArray(r?.items) ? r.items : [];
+          setAuditLogs(items);
+        })
+        .catch(() => {
+          if (!silent) {
+            setAuditError("Verlauf konnte nicht geladen werden.");
+            setAuditLogs([]);
+          }
+        })
+        .finally(() => {
+          if (!silent) setAuditLoading(false);
+        });
+    },
+    [id]
+  );
+
+  useEffect(() => {
+    loadAuditLogs();
+  }, [loadAuditLogs, location.key]);
 
   useEffect(() => {
     if (!id) return;
@@ -945,28 +1007,70 @@ function AdminLandlordDetailPage() {
         <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Historie</h2>
           <p className="text-xs text-slate-500 mb-3">
-            Basierend auf gespeicherten Stammdaten (kein vollständiges Audit-Protokoll).
+            Änderungen an Stammdaten (wer, wann, welches Feld).
           </p>
-          <ul className="space-y-3 border-l-2 border-slate-200 pl-4 ml-1">
-            <li>
-              <p className="text-xs font-medium text-slate-500">Erstellt am</p>
-              <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(row.created_at)}</p>
-            </li>
-            <li>
-              <p className="text-xs font-medium text-slate-500">Zuletzt aktualisiert</p>
-              <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(row.updated_at)}</p>
-            </li>
-            {row.deleted_at ? (
-              <li>
-                <p className="text-xs font-medium text-slate-500">Archiviert am</p>
-                <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(row.deleted_at)}</p>
-              </li>
-            ) : null}
-            <li>
-              <p className="text-xs font-medium text-slate-500">Status</p>
-              <p className="text-sm font-medium text-slate-900 mt-0.5">{isArchived ? "Archiviert" : "Aktiv"}</p>
-            </li>
-          </ul>
+          {auditLoading ? (
+            <p className="text-sm text-slate-500">Lade Verlauf …</p>
+          ) : auditError ? (
+            <p className="text-sm text-red-700">{auditError}</p>
+          ) : auditLogs.length === 0 ? (
+            <p className="text-sm text-slate-600">Noch keine Einträge im Audit-Protokoll.</p>
+          ) : (
+            <ul className="space-y-4 border-l-2 border-slate-200 pl-4 ml-1">
+              {auditLogs.map((log) => {
+                const actor =
+                  (log.actor_name && String(log.actor_name).trim()) ||
+                  (log.actor_email && String(log.actor_email).trim()) ||
+                  null;
+                const actorSuffix = actor ? ` · ${actor}` : "";
+
+                if (log.action === "create") {
+                  return (
+                    <li key={log.id}>
+                      <p className="text-sm font-medium text-slate-900">Verwaltung angelegt</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {formatDateTime(log.created_at)}
+                        {actorSuffix}
+                      </p>
+                    </li>
+                  );
+                }
+
+                const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
+                const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
+                const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])];
+                const field = keys[0];
+                if (!field) {
+                  return (
+                    <li key={log.id}>
+                      <p className="text-sm text-slate-700">Eintrag</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {formatDateTime(log.created_at)}
+                        {actorSuffix}
+                      </p>
+                    </li>
+                  );
+                }
+                const label = LANDLORD_FIELD_LABELS[field] || field;
+                const oldD = formatLandlordAuditDisplayValue(field, ov[field]);
+                const newD = formatLandlordAuditDisplayValue(field, nv[field]);
+                return (
+                  <li key={log.id}>
+                    <p className="text-sm text-slate-900">
+                      <span className="font-semibold">{label} geändert:</span>{" "}
+                      <span className="font-medium tabular-nums">{oldD}</span>
+                      <span className="text-slate-400 mx-1">→</span>
+                      <span className="font-medium tabular-nums">{newD}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatDateTime(log.created_at)}
+                      {actorSuffix}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
       </div>
 
@@ -1010,6 +1114,7 @@ function AdminLandlordDetailPage() {
                       setRestoreModalOpen(false);
                       if (data) setRow(data);
                     })
+                    .then(() => loadAuditLogs({ silent: true }))
                     .catch((e) => {
                       toast.error(e.message || "Reaktivieren fehlgeschlagen.");
                     })

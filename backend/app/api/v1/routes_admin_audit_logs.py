@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import AuditLog, Owner, Tenant, Unit, User
+from db.models import AuditLog, Landlord, Owner, PropertyManager, Tenant, Unit, User
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-audit-logs"])
@@ -36,9 +36,18 @@ def admin_list_audit_logs(
         owner = session.get(Owner, entity_id)
         if not owner or str(getattr(owner, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Owner not found")
+    elif entity_type == "landlord":
+        landlord = session.get(Landlord, entity_id)
+        if not landlord or str(getattr(landlord, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=404, detail="Landlord not found")
+    elif entity_type == "property_manager":
+        pm = session.get(PropertyManager, entity_id)
+        if not pm or str(getattr(pm, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=404, detail="Property manager not found")
     else:
         raise HTTPException(
-            status_code=400, detail="entity_type must be unit, tenant, or owner"
+            status_code=400,
+            detail="entity_type must be unit, tenant, owner, landlord, or property_manager",
         )
 
     logs: List[AuditLog] = list(
