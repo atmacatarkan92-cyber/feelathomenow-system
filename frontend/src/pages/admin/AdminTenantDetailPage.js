@@ -28,6 +28,7 @@ import {
   isTenancyActiveByDates,
   parseIsoDate,
 } from "../../utils/unitOccupancyStatus";
+import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 
 async function parseAdminErrorFromResponse(res) {
   const text = await res.text();
@@ -1015,6 +1016,11 @@ export default function AdminTenantDetailPage() {
   };
 
   const displayName = tenant ? tenantDisplayName(tenant) : "—";
+  const tenantAddrLine1 = tenant?.street?.trim() || "";
+  const tenantPlz = tenant?.postal_code?.trim() || "";
+  const tenantCity = tenant?.city?.trim() || "";
+  const tenantAddrLine2 = [tenantPlz, tenantCity].filter(Boolean).join(" ");
+  const tenantAddrLine3 = tenant?.country?.trim() || "";
   const permitReadLabel = (t) => {
     const p = t?.residence_permit;
     if (!p) return "—";
@@ -1186,15 +1192,51 @@ export default function AdminTenantDetailPage() {
                       <Row label="Firma" value={tenant.company} />
                     </div>
                   </div>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Adresse</div>
-                    <div style={gridTwoCol}>
-                      <Row label="Strasse" value={tenant.street} />
-                      <Row label="PLZ" value={tenant.postal_code} />
-                      <Row label="Ort" value={tenant.city} />
-                      <Row label="Land" value={tenant.country} />
+                  <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-3">
+                    <h2 className="text-sm font-semibold text-slate-900 mb-4">Adresse</h2>
+                    <div className="flex items-start gap-2">
+                      <div className="text-sm font-medium text-slate-900 space-y-1 flex-1 min-w-0">
+                        <p>{tenantAddrLine1 ? tenantAddrLine1 : "—"}</p>
+                        <p>{tenantAddrLine2 ? tenantAddrLine2 : "—"}</p>
+                        <p>{tenantAddrLine3 ? tenantAddrLine3 : "—"}</p>
+                      </div>
+                      {tenantAddrLine1 || tenantPlz || tenantCity ? (
+                        <button
+                          type="button"
+                          title="In Google Maps öffnen"
+                          aria-label="In Google Maps öffnen"
+                          onClick={() =>
+                            window.open(
+                              buildGoogleMapsSearchUrl(
+                                tenant.street,
+                                tenant.postal_code,
+                                tenant.city
+                              ),
+                              "_blank",
+                              "noopener,noreferrer"
+                            )
+                          }
+                          className="shrink-0 p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 inline-flex items-center justify-center"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden
+                          >
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
+                        </button>
+                      ) : null}
                     </div>
-                  </div>
+                  </section>
                 </>
               ) : (
                 <form onSubmit={handleSave}>
