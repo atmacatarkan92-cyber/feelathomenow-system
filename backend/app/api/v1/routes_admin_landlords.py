@@ -373,7 +373,7 @@ def admin_create_landlord(
 def admin_archive_landlord(
     landlord_id: str,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Soft-delete (archive) a landlord: sets deleted_at; does not remove related rows."""
@@ -384,10 +384,25 @@ def admin_archive_landlord(
         or getattr(landlord, "deleted_at", None) is not None
     ):
         raise HTTPException(status_code=404, detail="Landlord not found")
+    old_snapshot = model_snapshot(landlord)
     now = datetime.utcnow()
     landlord.deleted_at = now
     landlord.updated_at = now
     session.add(landlord)
+    new_snapshot = model_snapshot(landlord)
+    ov = old_snapshot.get("deleted_at")
+    nv = new_snapshot.get("deleted_at")
+    if ov != nv:
+        create_audit_log(
+            session,
+            str(current_user.id),
+            "update",
+            "landlord",
+            landlord_id,
+            old_values={"deleted_at": ov},
+            new_values={"deleted_at": nv},
+            organization_id=org_id,
+        )
     session.commit()
     session.refresh(landlord)
     return _landlord_to_dict(landlord)
@@ -397,7 +412,7 @@ def admin_archive_landlord(
 def admin_restore_landlord(
     landlord_id: str,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Clear deleted_at (reactivate). No-op if already active."""
@@ -406,10 +421,25 @@ def admin_restore_landlord(
         raise HTTPException(status_code=404, detail="Landlord not found")
     if landlord.deleted_at is None:
         return _landlord_to_dict(landlord)
+    old_snapshot = model_snapshot(landlord)
     now = datetime.utcnow()
     landlord.deleted_at = None
     landlord.updated_at = now
     session.add(landlord)
+    new_snapshot = model_snapshot(landlord)
+    ov = old_snapshot.get("deleted_at")
+    nv = new_snapshot.get("deleted_at")
+    if ov != nv:
+        create_audit_log(
+            session,
+            str(current_user.id),
+            "update",
+            "landlord",
+            landlord_id,
+            old_values={"deleted_at": ov},
+            new_values={"deleted_at": nv},
+            organization_id=org_id,
+        )
     session.commit()
     session.refresh(landlord)
     return _landlord_to_dict(landlord)

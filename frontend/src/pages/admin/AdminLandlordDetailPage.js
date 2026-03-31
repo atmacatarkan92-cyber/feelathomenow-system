@@ -130,9 +130,13 @@ const LANDLORD_FIELD_LABELS = {
   website: "Website",
   notes: "Notizen",
   status: "Status",
+  deleted_at: "Archivierung",
 };
 
 function formatLandlordAuditDisplayValue(field, value) {
+  if (field === "deleted_at") {
+    return value == null || value === "" ? "Aktiv" : "Archiviert";
+  }
   if (field === "status") {
     if (value == null || value === "") return "—";
     const s = String(value).toLowerCase();
