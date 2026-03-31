@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchAdminLandlords,
@@ -16,6 +16,30 @@ const thStyle = { textAlign: "left", padding: "12px 8px", borderBottom: "2px sol
 const tdStyle = { padding: "12px 8px", borderBottom: "1px solid #E5E7EB" };
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #E5E7EB" };
 const labelStyle = { display: "block", marginBottom: "4px", fontSize: "13px", fontWeight: 600 };
+
+function getKpiCardStyle(accentColor) {
+  return {
+    background: "#FFFFFF",
+    border: "1px solid #E5E7EB",
+    borderTop: `4px solid ${accentColor}`,
+    borderRadius: "18px",
+    padding: "20px",
+    boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
+  };
+}
+
+function landlordHasLinkedProperties(l) {
+  if (!l || typeof l !== "object") return false;
+  const plen = l.properties?.length;
+  if (typeof plen === "number" && plen > 0) return true;
+  const n =
+    l.property_count ??
+    l.properties_count ??
+    l.linked_property_count ??
+    l.linked_properties_count;
+  if (typeof n === "number" && n > 0) return true;
+  return false;
+}
 
 function AdminLandlordsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,15 +72,35 @@ function AdminLandlordsPage() {
   const load = useCallback(() => {
     setLoading(true);
     setError("");
-    fetchAdminLandlords(listFilter)
+    fetchAdminLandlords("all")
       .then(setLandlords)
       .catch((e) => setError(e.message || "Fehler beim Laden."))
       .finally(() => setLoading(false));
-  }, [listFilter]);
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const filteredLandlords = useMemo(() => {
+    if (!Array.isArray(landlords)) return [];
+    if (listFilter === "active") return landlords.filter((l) => !l.deleted_at);
+    if (listFilter === "archived") return landlords.filter((l) => l.deleted_at);
+    return landlords;
+  }, [landlords, listFilter]);
+
+  const kpiSummary = useMemo(() => {
+    const arr = Array.isArray(landlords) ? landlords : [];
+    const total = arr.length;
+    const archived = arr.filter((l) => l.deleted_at).length;
+    const active = arr.filter((l) => {
+      if (l.deleted_at) return false;
+      const st = String(l.status || "active").toLowerCase();
+      return st === "active";
+    }).length;
+    const withProperties = arr.filter(landlordHasLinkedProperties).length;
+    return { total, active, archived, withProperties };
+  }, [landlords]);
 
   useEffect(() => {
     setCantonHint("");
@@ -207,6 +251,52 @@ function AdminLandlordsPage() {
       <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>
         Verwaltungen / Vermieter (Landlords)
       </h2>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "16px",
+          marginBottom: "20px",
+        }}
+      >
+        <div style={getKpiCardStyle("#334155")}>
+          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
+            Verwaltungen gesamt
+          </div>
+          <div style={{ fontSize: "34px", fontWeight: 800, color: "#0F172A" }}>{kpiSummary.total}</div>
+          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
+            Alle erfassten Verwaltungen
+          </div>
+        </div>
+
+        <div style={getKpiCardStyle("#16A34A")}>
+          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Aktiv</div>
+          <div style={{ fontSize: "34px", fontWeight: 800, color: "#166534" }}>{kpiSummary.active}</div>
+          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
+            Status aktiv, nicht archiviert
+          </div>
+        </div>
+
+        <div style={getKpiCardStyle("#EA580C")}>
+          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Archiviert</div>
+          <div style={{ fontSize: "34px", fontWeight: 800, color: "#C2410C" }}>{kpiSummary.archived}</div>
+          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
+            Soft-deleted / archiviert
+          </div>
+        </div>
+
+        <div style={getKpiCardStyle("#2563EB")}>
+          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Mit Objekten</div>
+          <div style={{ fontSize: "34px", fontWeight: 800, color: "#1D4ED8" }}>
+            {kpiSummary.withProperties}
+          </div>
+          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
+            Mit Liegenschaft verknüpft
+          </div>
+        </div>
+      </div>
+
       {error && (
         <p style={{ color: "#B91C1C", marginBottom: "12px", fontSize: "14px" }}>{error}</p>
       )}
@@ -259,14 +349,14 @@ function AdminLandlordsPage() {
           </tr>
         </thead>
         <tbody>
-          {landlords.length === 0 ? (
+          {filteredLandlords.length === 0 ? (
             <tr>
               <td colSpan={5} style={{ ...tdStyle, color: "#64748B" }}>
                 Noch keine Einträge. Erstellen Sie eine neue Verwaltung.
               </td>
             </tr>
           ) : (
-            landlords.map((row) => {
+            filteredLandlords.map((row) => {
               const addrDisplay = formatLandlordAddressLine(row);
               const canOpenMap = addrDisplay !== "—";
               return (
