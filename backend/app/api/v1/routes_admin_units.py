@@ -20,6 +20,7 @@ from db.models import (
     Property,
     Landlord,
     PropertyManager,
+    Owner,
     User,
     Tenancy,
     TenancyStatus,
@@ -87,6 +88,48 @@ def _assert_property_manager_in_org(session, property_manager_id: Optional[str],
         raise HTTPException(status_code=404, detail="Property manager not found")
 
 
+def _assert_owner_in_org(session, owner_id: Optional[str], org_id: str) -> None:
+    if not owner_id:
+        return
+    ow = session.get(Owner, owner_id)
+    if not ow or str(getattr(ow, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Owner not found")
+
+
+def _owner_display_name(ow: Optional[Owner]) -> Optional[str]:
+    if ow is None:
+        return None
+    n = (getattr(ow, "name", None) or "").strip()
+    if n:
+        return n
+    em = (getattr(ow, "email", None) or "").strip()
+    if em:
+        return em
+    return None
+
+
+def load_owner_names_map(session, owner_ids: set[str]) -> dict[str, Optional[str]]:
+    """Batch-resolve owner id -> display label for unit serialization."""
+    if not owner_ids:
+        return {}
+    rows = session.exec(select(Owner).where(Owner.id.in_(owner_ids))).all()
+    return {str(o.id): _owner_display_name(o) for o in rows}
+
+
+def _unit_enriched_dict(session, unit: Unit) -> dict:
+    """property_title + owner_name for a single unit (detail/create/patch responses)."""
+    property_title = None
+    if getattr(unit, "property_id", None):
+        prop = session.get(Property, unit.property_id)
+        if prop:
+            property_title = getattr(prop, "title", None)
+    owner_name = None
+    if getattr(unit, "owner_id", None):
+        ow = session.get(Owner, unit.owner_id)
+        owner_name = _owner_display_name(ow)
+    return _unit_to_dict(unit, property_title, owner_name)
+
+
 def _iso_date(d: Optional[date]) -> str:
     if d is None:
         return ""
@@ -103,7 +146,11 @@ def _iso_date_or_none(d: Optional[date]) -> Optional[str]:
     return None
 
 
-def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
+def _unit_to_dict(
+    u: Unit,
+    property_title: Optional[str] = None,
+    owner_name: Optional[str] = None,
+) -> dict:
     tp = float(getattr(u, "tenant_price_monthly_chf", 0) or 0)
     lr = float(getattr(u, "landlord_rent_monthly_chf", 0) or 0)
     ut = float(getattr(u, "utilities_monthly_chf", 0) or 0)
@@ -124,6 +171,8 @@ def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
         "property_id": getattr(u, "property_id", None),
         "landlord_id": getattr(u, "landlord_id", None),
         "property_manager_id": getattr(u, "property_manager_id", None),
+        "owner_id": getattr(u, "owner_id", None),
+        "owner_name": owner_name,
         "property_title": property_title,
         "created_at": u.created_at.isoformat() if getattr(u, "created_at", None) else None,
         "tenantPriceMonthly": tp,
@@ -213,6 +262,7 @@ class UnitCreate(BaseModel):
     property_id: Optional[str] = None
     landlord_id: Optional[str] = None
     property_manager_id: Optional[str] = None
+    owner_id: Optional[str] = None
     co_living_rooms: Optional[List[CoLivingRoomInput]] = None
     tenant_price_monthly_chf: float = Field(default=0, ge=0)
     landlord_rent_monthly_chf: float = Field(default=0, ge=0)
@@ -272,6 +322,7 @@ class UnitPatch(BaseModel):
     property_id: Optional[str] = None
     landlord_id: Optional[str] = None
     property_manager_id: Optional[str] = None
+    owner_id: Optional[str] = None
     tenant_price_monthly_chf: Optional[float] = Field(default=None, ge=0)
     landlord_rent_monthly_chf: Optional[float] = Field(default=None, ge=0)
     utilities_monthly_chf: Optional[float] = Field(default=None, ge=0)
@@ -430,7 +481,20 @@ def admin_list_units(
         paged_rows = session.exec(
             base_query.offset(skip).limit(limit)
         ).all()
-        items = [_unit_to_dict(u, p.title if p else None) for u, p in paged_rows]
+        owner_ids = {
+            str(getattr(u, "owner_id"))
+            for u, _p in paged_rows
+            if getattr(u, "owner_id", None)
+        }
+        owner_labels = load_owner_names_map(session, owner_ids)
+        items = [
+            _unit_to_dict(
+                u,
+                p.title if p else None,
+                owner_labels.get(str(u.owner_id)) if getattr(u, "owner_id", None) else None,
+            )
+            for u, p in paged_rows
+        ]
         return UnitListResponse(
             items=items,
             total=total,
@@ -457,16 +521,11 @@ def admin_get_unit(
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    """Get a single unit by id. Includes property_id and property_title."""
+    """Get a single unit by id. Includes property_title and owner_id/owner_name when set."""
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
-    property_title = None
-    if getattr(unit, "property_id", None):
-        prop = session.get(Property, unit.property_id)
-        if prop:
-            property_title = getattr(prop, "title", None)
-    return _unit_to_dict(unit, property_title)
+    return _unit_enriched_dict(session, unit)
 
 
 @router.post("/units", response_model=dict)
@@ -482,6 +541,7 @@ def admin_create_unit(
     _assert_property_and_landlord_in_org(session, body.property_id, org_id)
     _assert_landlord_in_org(session, body.landlord_id, org_id)
     _assert_property_manager_in_org(session, body.property_manager_id, org_id)
+    _assert_owner_in_org(session, body.owner_id, org_id)
     title = (body.title or body.name or "").strip() or "New Unit"
     unit = Unit(
         organization_id=org_id,
@@ -494,6 +554,7 @@ def admin_create_unit(
         property_id=body.property_id,
         landlord_id=body.landlord_id,
         property_manager_id=body.property_manager_id,
+        owner_id=body.owner_id,
         tenant_price_monthly_chf=body.tenant_price_monthly_chf,
         landlord_rent_monthly_chf=body.landlord_rent_monthly_chf,
         utilities_monthly_chf=body.utilities_monthly_chf,
@@ -552,6 +613,10 @@ def admin_patch_unit(
     if "property_manager_id" in data:
         pmid = data["property_manager_id"] if data["property_manager_id"] else None
         _assert_property_manager_in_org(session, pmid, org_id)
+    if "owner_id" in data:
+        oid = data["owner_id"] if data["owner_id"] else None
+        _assert_owner_in_org(session, oid, org_id)
+        data["owner_id"] = oid
     if "name" in data and "title" not in data:
         data["title"] = data.pop("name")
     elif "title" in data:
@@ -565,6 +630,8 @@ def admin_patch_unit(
         unit.landlord_id = None
     if "property_manager_id" in data and data["property_manager_id"] == "":
         unit.property_manager_id = None
+    if "owner_id" in data and data["owner_id"] == "":
+        unit.owner_id = None
     if "postal_code" in data and data["postal_code"] == "":
         unit.postal_code = None
     session.add(unit)
@@ -574,12 +641,7 @@ def admin_patch_unit(
     )
     session.commit()
     session.refresh(unit)
-    property_title = None
-    if getattr(unit, "property_id", None):
-        prop = session.get(Property, unit.property_id)
-        if prop:
-            property_title = getattr(prop, "title", None)
-    return _unit_to_dict(unit, property_title)
+    return _unit_enriched_dict(session, unit)
 
 
 @router.delete("/units/{unit_id}")

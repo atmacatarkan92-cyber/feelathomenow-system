@@ -52,6 +52,7 @@ import {
 const UNIT_AUDIT_FIELD_LABELS = {
   landlord_id: "Verwaltung",
   property_manager_id: "Bewirtschafter",
+  owner_id: "Eigentümer",
   property_id: "Liegenschaft",
   title: "Titel",
   address: "Adresse",
@@ -76,6 +77,7 @@ const UNIT_AUDIT_FIELD_LABELS = {
 const AUDIT_UPDATE_FIELD_ORDER = [
   "landlord_id",
   "property_manager_id",
+  "owner_id",
   "tenant_price_monthly_chf",
   "landlord_rent_monthly_chf",
   "occupancy_status",
@@ -236,6 +238,11 @@ function formatAuditFieldValue(key, value, resolvers) {
   if (key === "property_manager_id") {
     const s = String(value);
     if (r.pmById && r.pmById[s]) return r.pmById[s];
+    return auditFallbackIdDisplay(s);
+  }
+  if (key === "owner_id") {
+    const s = String(value);
+    if (r.ownerById && r.ownerById[s]) return r.ownerById[s];
     return auditFallbackIdDisplay(s);
   }
   if (key === "property_id") {
@@ -958,7 +965,12 @@ function AdminUnitDetailPage() {
       const title = String(unit.property_title || "").trim();
       if (title) propertyById[String(unit.property_id)] = title;
     }
-    return { landlordById, pmById, propertyById };
+    const ownerById = {};
+    if (unit?.owner_id) {
+      const title = String(unit.ownerName ?? unit.owner_name ?? "").trim();
+      if (title) ownerById[String(unit.owner_id)] = title;
+    }
+    return { landlordById, pmById, propertyById, ownerById };
   }, [unit, verwaltungLabel, bewirtschafterLabel]);
 
   const [occupancyRoomsData, setOccupancyRoomsData] = useState(null);
@@ -1679,6 +1691,15 @@ function AdminUnitDetailPage() {
                   ) : (
                     "—"
                   )}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500">Eigentümer</p>
+                <p className="font-medium">
+                  {unit.owner_id
+                    ? String(unit.ownerName ?? unit.owner_name ?? "").trim() || "—"
+                    : "Kein Eigentümer zugeordnet"}
                 </p>
               </div>
 

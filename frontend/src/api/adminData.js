@@ -488,6 +488,8 @@ export function normalizeUnit(u) {
       u.landlordDepositAnnualPremium ?? u.landlord_deposit_annual_premium ?? "",
     landlord_id: u.landlord_id ?? null,
     property_manager_id: u.property_manager_id ?? null,
+    owner_id: u.owner_id ?? null,
+    ownerName: u.ownerName ?? u.owner_name ?? null,
     leaseType: u.leaseType ?? u.lease_type ?? "",
     leaseStartDate: u.leaseStartDate ?? u.lease_start_date ?? "",
     leaseEndDate: u.leaseEndDate ?? u.lease_end_date ?? "",
@@ -925,6 +927,52 @@ export async function createAdminPropertyManager(body) {
 
 export async function patchAdminPropertyManager(id, body) {
   const res = await fetch(`${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+/**
+ * Owners (Eigentümer). List, get, create, update — minimal API for CRM integration.
+ */
+export function fetchAdminOwners() {
+  return fetch(`${API_BASE_URL}/api/admin/owners`, { headers: getApiHeaders() }).then((res) => {
+    if (!res.ok) throw new Error("Eigentümer konnten nicht geladen werden.");
+    return res.json();
+  });
+}
+
+export function fetchAdminOwner(id) {
+  return fetch(`${API_BASE_URL}/api/admin/owners/${encodeURIComponent(id)}`, {
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error("Eigentümer konnte nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
+export async function createAdminOwner(body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/owners`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export async function patchAdminOwner(id, body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/owners/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: getApiHeaders(),
     body: JSON.stringify(body),

@@ -12,7 +12,7 @@ from sqlalchemy import desc
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from app.api.v1.routes_admin_units import _unit_to_dict
+from app.api.v1.routes_admin_units import _unit_to_dict, load_owner_names_map
 from app.core.rate_limit import limiter
 from app.services.tenant_crm import load_users_by_ids
 from db.models import Landlord, Property, PropertyManager, PropertyManagerNote, Unit, User
@@ -203,7 +203,20 @@ def admin_list_property_manager_units(
         .order_by(Unit.title)
     )
     rows = list(session.exec(stmt).all())
-    return [_unit_to_dict(u, p.title if p else None) for u, p in rows]
+    owner_ids = {
+        str(getattr(u, "owner_id"))
+        for u, _p in rows
+        if getattr(u, "owner_id", None)
+    }
+    owner_labels = load_owner_names_map(session, owner_ids)
+    return [
+        _unit_to_dict(
+            u,
+            p.title if p else None,
+            owner_labels.get(str(u.owner_id)) if getattr(u, "owner_id", None) else None,
+        )
+        for u, p in rows
+    ]
 
 
 @router.post("/property-managers", response_model=dict)
