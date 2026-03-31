@@ -941,8 +941,32 @@ export async function patchAdminPropertyManager(id, body) {
  * Owners (Eigentümer). List, get, create, update — minimal API for CRM integration.
  */
 export function fetchAdminOwners() {
-  return fetch(`${API_BASE_URL}/api/admin/owners`, { headers: getApiHeaders() }).then((res) => {
-    if (!res.ok) throw new Error("Eigentümer konnten nicht geladen werden.");
+  return fetch(`${API_BASE_URL}/api/admin/owners`, { headers: getApiHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error("Eigentümer konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => {
+      if (Array.isArray(data)) {
+        return { items: data, owners_with_units_count: 0 };
+      }
+      return {
+        items: Array.isArray(data.items) ? data.items : [],
+        owners_with_units_count:
+          typeof data.owners_with_units_count === "number" ? data.owners_with_units_count : 0,
+      };
+    });
+}
+
+export function fetchAdminOwnerUnits(ownerId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/owners/${encodeURIComponent(ownerId)}/units`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return [];
+      throw new Error("Units konnten nicht geladen werden.");
+    }
     return res.json();
   });
 }

@@ -184,6 +184,10 @@ function AdminSidebar() {
             Bewirtschafter
           </NavLink>
 
+          <NavLink to="/admin/owners" style={unterLinkStyle}>
+            Eigentümer
+          </NavLink>
+
           <NavLink to="/admin/leads" style={unterLinkStyle}>
             Leads
           </NavLink>

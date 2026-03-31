@@ -11,8 +11,9 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
+from app.api.v1.routes_admin_units import _unit_to_dict, load_owner_names_map
 from app.core.rate_limit import limiter
-from db.models import Owner
+from db.models import Owner, Property, Unit
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-owners"])
@@ -54,7 +55,14 @@ class OwnerPatch(BaseModel):
     notes: Optional[str] = None
 
 
-@router.get("/owners", response_model=List[dict])
+def _owner_in_org_or_404(session, owner_id: str, org_id: str) -> Owner:
+    o = session.get(Owner, owner_id)
+    if not o or str(getattr(o, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Owner not found")
+    return o
+
+
+@router.get("/owners", response_model=dict)
 def admin_list_owners(
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
@@ -67,7 +75,50 @@ def admin_list_owners(
             .order_by(Owner.name)
         ).all()
     )
-    return [_owner_to_dict(o) for o in rows]
+    items = [_owner_to_dict(o) for o in rows]
+    distinct_owner_ids = list(
+        session.exec(
+            select(Unit.owner_id)
+            .where(Unit.organization_id == org_id)
+            .where(Unit.owner_id.isnot(None))
+            .distinct()
+        ).all()
+    )
+    owners_with_units_count = len(distinct_owner_ids)
+    return {"items": items, "owners_with_units_count": owners_with_units_count}
+
+
+@router.get("/owners/{owner_id}/units", response_model=List[dict])
+def admin_list_owner_units(
+    owner_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    _owner_in_org_or_404(session, owner_id, org_id)
+    stmt = (
+        select(Unit, Property)
+        .select_from(Unit)
+        .outerjoin(Property, Unit.property_id == Property.id)
+        .where(Unit.organization_id == org_id)
+        .where(Unit.owner_id == owner_id)
+        .order_by(Unit.title)
+    )
+    rows = list(session.exec(stmt).all())
+    owner_ids = {
+        str(getattr(u, "owner_id"))
+        for u, _p in rows
+        if getattr(u, "owner_id", None)
+    }
+    owner_labels = load_owner_names_map(session, owner_ids)
+    return [
+        _unit_to_dict(
+            u,
+            p.title if p else None,
+            owner_labels.get(str(u.owner_id)) if getattr(u, "owner_id", None) else None,
+        )
+        for u, p in rows
+    ]
 
 
 @router.get("/owners/{owner_id}", response_model=dict)
@@ -77,9 +128,7 @@ def admin_get_owner(
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    o = session.get(Owner, owner_id)
-    if not o or str(getattr(o, "organization_id", "")) != org_id:
-        raise HTTPException(status_code=404, detail="Owner not found")
+    o = _owner_in_org_or_404(session, owner_id, org_id)
     return _owner_to_dict(o)
 
 
@@ -125,9 +174,7 @@ def admin_patch_owner(
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    o = session.get(Owner, owner_id)
-    if not o or str(getattr(o, "organization_id", "")) != org_id:
-        raise HTTPException(status_code=404, detail="Owner not found")
+    o = _owner_in_org_or_404(session, owner_id, org_id)
     data = body.model_dump(exclude_unset=True)
     if "name" in data and data["name"] is not None:
         n = str(data["name"]).strip()
