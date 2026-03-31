@@ -46,6 +46,7 @@ function AdminPropertyManagersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [listFilter, setListFilter] = useState("active");
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
@@ -53,6 +54,7 @@ function AdminPropertyManagersPage() {
     email: "",
     phone: "",
     landlord_id: "",
+    status: "active",
   });
   const [saving, setSaving] = useState(false);
 
@@ -104,6 +106,7 @@ function AdminPropertyManagersPage() {
         email: row.email || "",
         phone: row.phone || "",
         landlord_id: row.landlord_id || "",
+        status: (row.status || "active").toLowerCase() === "inactive" ? "inactive" : "active",
       });
       setFormOpen(true);
     }
@@ -118,18 +121,7 @@ function AdminPropertyManagersPage() {
       email: "",
       phone: "",
       landlord_id: "",
-    });
-    setFormOpen(true);
-  };
-
-  const openEdit = (row) => {
-    setError("");
-    setEditingId(row.id);
-    setForm({
-      name: row.name || "",
-      email: row.email || "",
-      phone: row.phone || "",
-      landlord_id: row.landlord_id || "",
+      status: "active",
     });
     setFormOpen(true);
   };
@@ -143,6 +135,7 @@ function AdminPropertyManagersPage() {
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
       landlord_id: form.landlord_id.trim() || null,
+      status: form.status === "inactive" ? "inactive" : "active",
     };
     const promise = editingId
       ? patchAdminPropertyManager(editingId, body)
@@ -156,8 +149,18 @@ function AdminPropertyManagersPage() {
       .finally(() => setSaving(false));
   };
 
+  const statusFilteredItems = useMemo(() => {
+    if (!Array.isArray(items)) return [];
+    return items.filter((item) => {
+      const s = String(item.status || "active").toLowerCase();
+      if (listFilter === "active") return s !== "inactive";
+      if (listFilter === "inactive") return s === "inactive";
+      return true;
+    });
+  }, [items, listFilter]);
+
   const filteredRows = useMemo(() => {
-    let result = [...items];
+    let result = [...statusFilteredItems];
     const term = searchTerm.toLowerCase().trim();
     if (!term) return result;
     return result.filter((item) => {
@@ -166,14 +169,14 @@ function AdminPropertyManagersPage() {
       const blob = `${item.name || ""} ${item.email || ""} ${item.phone || ""} ${landlordStr}`.toLowerCase();
       return blob.includes(term);
     });
-  }, [items, searchTerm, landlordById]);
+  }, [statusFilteredItems, searchTerm, landlordById]);
 
   const summary = useMemo(() => {
     const totalCount = items.length;
     const withLandlord = items.filter((i) => i.landlord_id).length;
-    const withEmail = items.filter((i) => String(i.email || "").trim()).length;
-    const withoutLandlord = totalCount - withLandlord;
-    return { totalCount, withLandlord, withEmail, withoutLandlord };
+    const activeCount = items.filter((i) => String(i.status || "active").toLowerCase() !== "inactive").length;
+    const inactiveCount = items.filter((i) => String(i.status || "").toLowerCase() === "inactive").length;
+    return { totalCount, withLandlord, activeCount, inactiveCount };
   }, [items]);
 
   if (loading) {
@@ -241,11 +244,11 @@ function AdminPropertyManagersPage() {
           </div>
         </div>
 
-        <div style={getCardStyle("#16A34A")}>
+        <div style={getCardStyle("#2563EB")}>
           <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
             Mit Verwaltung
           </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#166534" }}>
+          <div style={{ fontSize: "34px", fontWeight: 800, color: "#1D4ED8" }}>
             {summary.withLandlord}
           </div>
           <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
@@ -253,27 +256,19 @@ function AdminPropertyManagersPage() {
           </div>
         </div>
 
-        <div style={getCardStyle("#F59E0B")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Ohne Verwaltung
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#92400E" }}>
-            {summary.withoutLandlord}
-          </div>
+        <div style={getCardStyle("#16A34A")}>
+          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Aktiv</div>
+          <div style={{ fontSize: "34px", fontWeight: 800, color: "#166534" }}>{summary.activeCount}</div>
           <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Noch keine Verwaltung
+            Status aktiv
           </div>
         </div>
 
-        <div style={getCardStyle("#2563EB")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Mit E-Mail
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#1D4ED8" }}>
-            {summary.withEmail}
-          </div>
+        <div style={getCardStyle("#64748B")}>
+          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Inaktiv</div>
+          <div style={{ fontSize: "34px", fontWeight: 800, color: "#334155" }}>{summary.inactiveCount}</div>
           <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            E-Mail hinterlegt
+            Status inaktiv
           </div>
         </div>
       </div>
@@ -296,32 +291,79 @@ function AdminPropertyManagersPage() {
             justifyContent: "space-between",
           }}
         >
-          <div style={{ flex: "1 1 280px", minWidth: 0 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "12px",
-                color: "#64748B",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
-            >
-              Suche
-            </label>
-            <input
-              type="text"
-              placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: "100%",
-                height: "44px",
-                borderRadius: "12px",
-                border: "1px solid #D1D5DB",
-                padding: "0 14px",
-                fontSize: "14px",
-              }}
-            />
+          <div
+            style={{
+              flex: "1 1 280px",
+              minWidth: 0,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "16px",
+              alignItems: "flex-end",
+            }}
+          >
+            <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  color: "#64748B",
+                  marginBottom: "8px",
+                  fontWeight: 600,
+                }}
+              >
+                Suche
+              </label>
+              <input
+                type="text"
+                placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: "44px",
+                  borderRadius: "12px",
+                  border: "1px solid #D1D5DB",
+                  padding: "0 14px",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ flex: "0 1 180px", minWidth: "min(100%, 160px)" }}>
+              <label
+                htmlFor="pm-list-filter"
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  color: "#64748B",
+                  marginBottom: "8px",
+                  fontWeight: 600,
+                }}
+              >
+                Anzeige
+              </label>
+              <select
+                id="pm-list-filter"
+                value={listFilter}
+                onChange={(e) => setListFilter(e.target.value)}
+                aria-label="Anzeige"
+                style={{
+                  width: "100%",
+                  height: "44px",
+                  borderRadius: "12px",
+                  border: "1px solid #D1D5DB",
+                  padding: "0 12px",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
+                  background: "#FFFFFF",
+                  color: "#0F172A",
+                }}
+              >
+                <option value="active">Aktiv</option>
+                <option value="inactive">Inaktiv</option>
+                <option value="all">Alle</option>
+              </select>
+            </div>
           </div>
           <button
             type="button"
@@ -435,20 +477,6 @@ function AdminPropertyManagersPage() {
                         >
                           Öffnen
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(item)}
-                          style={{
-                            padding: "6px 12px",
-                            background: "#F1F5F9",
-                            border: "1px solid #E2E8F0",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "13px",
-                          }}
-                        >
-                          Bearbeiten
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -595,6 +623,34 @@ function AdminPropertyManagersPage() {
                       {landlordLabel(l)}
                     </option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "6px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#475569",
+                  }}
+                >
+                  Status
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "12px",
+                    border: "1px solid #D1D5DB",
+                    fontSize: "14px",
+                    background: "#fff",
+                  }}
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
                 </select>
               </div>
               <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>

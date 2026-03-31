@@ -3,7 +3,7 @@ Admin property managers (Bewirtschafter): list, get, create, update, units.
 Protected by require_roles("admin", "manager").
 """
 
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -26,6 +26,11 @@ def _assert_landlord_in_org(session, landlord_id: Optional[str], org_id: str) ->
         raise HTTPException(status_code=400, detail="Invalid landlord reference")
 
 
+def _pm_status(p: PropertyManager) -> str:
+    s = (getattr(p, "status", None) or "active").strip().lower()
+    return "inactive" if s == "inactive" else "active"
+
+
 def _pm_to_dict(p: PropertyManager) -> dict:
     return {
         "id": str(p.id),
@@ -33,6 +38,7 @@ def _pm_to_dict(p: PropertyManager) -> dict:
         "name": (getattr(p, "name", None) or "").strip(),
         "email": getattr(p, "email", None),
         "phone": getattr(p, "phone", None),
+        "status": _pm_status(p),
         "created_at": p.created_at.isoformat() if getattr(p, "created_at", None) else None,
     }
 
@@ -42,6 +48,7 @@ class PropertyManagerCreate(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     landlord_id: Optional[str] = None
+    status: Optional[Literal["active", "inactive"]] = "active"
 
 
 class PropertyManagerPatch(BaseModel):
@@ -49,6 +56,7 @@ class PropertyManagerPatch(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     landlord_id: Optional[str] = None
+    status: Optional[Literal["active", "inactive"]] = None
 
 
 @router.get("/property-managers", response_model=List[dict])
@@ -116,12 +124,16 @@ def admin_create_property_manager(
     if not name:
         raise HTTPException(status_code=400, detail="Name is required")
     _assert_landlord_in_org(session, body.landlord_id, org_id)
+    st = (body.status or "active").strip().lower()
+    if st not in ("active", "inactive"):
+        st = "active"
     pm = PropertyManager(
         organization_id=org_id,
         name=name,
         email=(body.email or "").strip() or None,
         phone=(body.phone or "").strip() or None,
         landlord_id=body.landlord_id or None,
+        status=st,
     )
     session.add(pm)
     session.commit()
@@ -156,6 +168,11 @@ def admin_patch_property_manager(
         data["email"] = (data["email"] or "").strip() or None
     if "phone" in data:
         data["phone"] = (data["phone"] or "").strip() or None
+    if "status" in data and data["status"] is not None:
+        st = str(data["status"]).strip().lower()
+        if st not in ("active", "inactive"):
+            raise HTTPException(status_code=400, detail="status must be active or inactive")
+        data["status"] = st
     for k, v in data.items():
         if hasattr(pm, k):
             setattr(pm, k, v)

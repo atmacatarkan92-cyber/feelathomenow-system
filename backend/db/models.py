@@ -91,6 +91,7 @@ class PropertyManager(SQLModel, table=True):
     name: str = Field(default="")
     email: Optional[str] = Field(default=None)
     phone: Optional[str] = Field(default=None)
+    status: str = Field(default="active", max_length=32)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
