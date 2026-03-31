@@ -13,7 +13,8 @@ from sqlmodel import select
 from auth.dependencies import get_current_organization, get_db_session, require_roles
 from app.api.v1.routes_admin_units import _unit_to_dict, load_owner_names_map
 from app.core.rate_limit import limiter
-from db.models import Owner, Property, Unit
+from db.audit import create_audit_log, model_snapshot
+from db.models import Owner, Property, Unit, User
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-owners"])
@@ -65,6 +66,12 @@ class OwnerPatch(BaseModel):
     canton: Optional[str] = None
     status: Optional[Literal["active", "inactive"]] = None
     notes: Optional[str] = None
+
+
+# Fields to record as separate audit rows on PATCH (excludes updated_at).
+_OWNER_PATCH_AUDIT_FIELDS = frozenset(
+    {"name", "email", "phone", "address_line1", "postal_code", "city", "canton", "status", "notes"}
+)
 
 
 def _owner_in_org_or_404(session, owner_id: str, org_id: str) -> Owner:
@@ -150,7 +157,7 @@ def admin_create_owner(
     request: Request,
     body: OwnerCreate,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     name = (body.name or "").strip()
@@ -175,6 +182,17 @@ def admin_create_owner(
         updated_at=now,
     )
     session.add(o)
+    session.flush()
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "create",
+        "owner",
+        str(o.id),
+        old_values=None,
+        new_values=model_snapshot(o),
+        organization_id=org_id,
+    )
     session.commit()
     session.refresh(o)
     return _owner_to_dict(o)
@@ -187,10 +205,11 @@ def admin_patch_owner(
     owner_id: str,
     body: OwnerPatch,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     o = _owner_in_org_or_404(session, owner_id, org_id)
+    old_snapshot = model_snapshot(o)
     data = body.model_dump(exclude_unset=True)
     if "name" in data and data["name"] is not None:
         n = str(data["name"]).strip()
@@ -222,6 +241,25 @@ def admin_patch_owner(
         if hasattr(o, k):
             setattr(o, k, v)
     session.add(o)
+    new_snapshot = model_snapshot(o)
+    for key in data:
+        if key == "updated_at":
+            continue
+        if key not in _OWNER_PATCH_AUDIT_FIELDS:
+            continue
+        ov = old_snapshot.get(key)
+        nv = new_snapshot.get(key)
+        if ov != nv:
+            create_audit_log(
+                session,
+                str(current_user.id),
+                "update",
+                "owner",
+                owner_id,
+                old_values={key: ov},
+                new_values={key: nv},
+                organization_id=org_id,
+            )
     session.commit()
     session.refresh(o)
     return _owner_to_dict(o)

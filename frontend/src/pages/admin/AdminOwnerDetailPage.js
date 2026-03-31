@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
+  fetchAdminAuditLogs,
   fetchAdminOwner,
   fetchAdminOwnerUnits,
   normalizeUnit,
@@ -54,6 +55,27 @@ function formatDateTime(iso) {
   });
 }
 
+const OWNER_FIELD_LABELS = {
+  name: "Name",
+  email: "E-Mail",
+  phone: "Telefonnummer",
+  address_line1: "Adresse",
+  postal_code: "PLZ",
+  city: "Ort",
+  canton: "Kanton",
+  status: "Status",
+  notes: "Notizen",
+};
+
+function formatOwnerAuditDisplayValue(field, value) {
+  if (value == null || value === "") return "—";
+  if (field === "status") {
+    const s = String(value).toLowerCase();
+    return s === "inactive" ? "Inaktiv" : "Aktiv";
+  }
+  return String(value);
+}
+
 function AdminOwnerDetailPage() {
   const { id } = useParams();
   const location = useLocation();
@@ -82,6 +104,35 @@ function AdminOwnerDetailPage() {
   const [editCantonHint, setEditCantonHint] = useState("");
   const [editCantonLockedByPlz, setEditCantonLockedByPlz] = useState(false);
   const [editPlzNotFound, setEditPlzNotFound] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(true);
+  const [auditError, setAuditError] = useState(null);
+
+  const loadAuditLogs = useCallback(
+    (opts = {}) => {
+      const silent = opts.silent === true;
+      if (!id) return Promise.resolve();
+      if (!silent) {
+        setAuditLoading(true);
+        setAuditError(null);
+      }
+      return fetchAdminAuditLogs({ entity_type: "owner", entity_id: id })
+        .then((r) => {
+          const items = Array.isArray(r?.items) ? r.items : [];
+          setAuditLogs(items);
+        })
+        .catch(() => {
+          if (!silent) {
+            setAuditError("Verlauf konnte nicht geladen werden.");
+            setAuditLogs([]);
+          }
+        })
+        .finally(() => {
+          if (!silent) setAuditLoading(false);
+        });
+    },
+    [id]
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -102,6 +153,10 @@ function AdminOwnerDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [id, location.key]);
+
+  useEffect(() => {
+    loadAuditLogs();
+  }, [loadAuditLogs]);
 
   useEffect(() => {
     if (!id) return;
@@ -194,6 +249,7 @@ function AdminOwnerDetailPage() {
         setOwner(row);
         setEditOpen(false);
       })
+      .then(() => loadAuditLogs({ silent: true }))
       .catch((err) => setEditErr(err?.message || "Speichern fehlgeschlagen."))
       .finally(() => setEditSaving(false));
   };
@@ -240,6 +296,7 @@ function AdminOwnerDetailPage() {
       .then((row) => {
         if (row) setOwner(row);
       })
+      .then(() => loadAuditLogs({ silent: true }))
       .catch((e) => {
         window.alert(e?.message || "Status konnte nicht geändert werden.");
       })
@@ -427,26 +484,70 @@ function AdminOwnerDetailPage() {
       <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
         <h2 className="text-sm font-semibold text-slate-900 mb-4">Historie</h2>
         <p className="text-xs text-slate-500 mb-3">
-          Basierend auf gespeicherten Stammdaten (kein vollständiges Audit-Protokoll).
+          Änderungen an Stammdaten (wer, wann, welches Feld).
         </p>
-        <ul className="space-y-3 border-l-2 border-slate-200 pl-4 ml-1">
-          <li>
-            <p className="text-xs font-medium text-slate-500">Erstellt am</p>
-            <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(owner.created_at)}</p>
-          </li>
-          <li>
-            <p className="text-xs font-medium text-slate-500">Zuletzt aktualisiert</p>
-            <p className="text-sm font-medium text-slate-900 mt-0.5">
-              {formatDateTime(owner.updated_at)}
-            </p>
-          </li>
-          <li>
-            <p className="text-xs font-medium text-slate-500">Status</p>
-            <p className="text-sm font-medium text-slate-900 mt-0.5">
-              {isOwnerActive ? "Aktiv" : "Inaktiv"}
-            </p>
-          </li>
-        </ul>
+        {auditLoading ? (
+          <p className="text-sm text-slate-500">Lade Verlauf …</p>
+        ) : auditError ? (
+          <p className="text-sm text-red-700">{auditError}</p>
+        ) : auditLogs.length === 0 ? (
+          <p className="text-sm text-slate-600">Noch keine Einträge im Audit-Protokoll.</p>
+        ) : (
+          <ul className="space-y-4 border-l-2 border-slate-200 pl-4 ml-1">
+            {auditLogs.map((log) => {
+              const actor =
+                (log.actor_name && String(log.actor_name).trim()) ||
+                (log.actor_email && String(log.actor_email).trim()) ||
+                null;
+              const actorSuffix = actor ? ` · ${actor}` : "";
+
+              if (log.action === "create") {
+                return (
+                  <li key={log.id}>
+                    <p className="text-sm font-medium text-slate-900">Eigentümer angelegt</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatDateTime(log.created_at)}
+                      {actorSuffix}
+                    </p>
+                  </li>
+                );
+              }
+
+              const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
+              const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
+              const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])];
+              const field = keys[0];
+              if (!field) {
+                return (
+                  <li key={log.id}>
+                    <p className="text-sm text-slate-700">Eintrag</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatDateTime(log.created_at)}
+                      {actorSuffix}
+                    </p>
+                  </li>
+                );
+              }
+              const label = OWNER_FIELD_LABELS[field] || field;
+              const oldD = formatOwnerAuditDisplayValue(field, ov[field]);
+              const newD = formatOwnerAuditDisplayValue(field, nv[field]);
+              return (
+                <li key={log.id}>
+                  <p className="text-sm text-slate-900">
+                    <span className="font-semibold">{label} geändert:</span>{" "}
+                    <span className="font-medium tabular-nums">{oldD}</span>
+                    <span className="text-slate-400 mx-1">→</span>
+                    <span className="font-medium tabular-nums">{newD}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {formatDateTime(log.created_at)}
+                    {actorSuffix}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       {editOpen && (
