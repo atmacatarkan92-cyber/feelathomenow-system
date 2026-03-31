@@ -173,19 +173,15 @@ function AdminOwnerDetailPage() {
     const addr1 = editForm.address_line1.trim();
     const plz = editForm.postal_code.trim();
     const ort = editForm.city.trim();
-    if (!addr1 || !plz || !ort) {
-      setEditErr("Bitte Adresse, PLZ und Ort ausfüllen.");
-      return;
-    }
     setEditSaving(true);
     setEditErr(null);
     patchAdminOwner(id, {
       name: editForm.name.trim(),
       email: editForm.email.trim() || null,
       phone: editForm.phone.trim() || null,
-      address_line1: addr1,
-      postal_code: plz,
-      city: ort,
+      address_line1: addr1 || null,
+      postal_code: plz || null,
+      city: ort || null,
       canton: editForm.canton.trim() || null,
       status: editForm.status === "inactive" ? "inactive" : "active",
     })
@@ -514,7 +510,6 @@ function AdminOwnerDetailPage() {
                 <input
                   id="owner-edit-addr"
                   type="text"
-                  required
                   value={editForm.address_line1}
                   onChange={(e) => setEditForm((f) => ({ ...f, address_line1: e.target.value }))}
                   disabled={editSaving}
@@ -529,7 +524,6 @@ function AdminOwnerDetailPage() {
                 <input
                   id="owner-edit-plz"
                   type="text"
-                  required
                   value={editForm.postal_code}
                   onChange={handleEditPostalCodeChange}
                   disabled={editSaving}
@@ -546,7 +540,6 @@ function AdminOwnerDetailPage() {
                 <input
                   id="owner-edit-city"
                   type="text"
-                  required
                   value={editForm.city}
                   onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
                   disabled={editSaving}
