@@ -409,6 +409,8 @@ def admin_put_landlord(
     for k, v in data.items():
         if hasattr(landlord, k):
             setattr(landlord, k, v)
+    if data:
+        landlord.updated_at = datetime.utcnow()
     session.add(landlord)
     session.commit()
     session.refresh(landlord)

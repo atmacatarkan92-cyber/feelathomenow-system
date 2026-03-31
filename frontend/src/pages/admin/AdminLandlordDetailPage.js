@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   createAdminLandlordNote,
@@ -148,6 +148,7 @@ const sectionTitle = {
 
 function AdminLandlordDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [row, setRow] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -193,7 +194,7 @@ function AdminLandlordDetailPage() {
       })
       .catch(() => setError("Verwaltung konnte nicht geladen werden."))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, location.key]);
 
   useEffect(() => {
     if (!id) return;
@@ -1002,10 +1003,11 @@ function AdminLandlordDetailPage() {
                 onClick={() => {
                   setRestoring(true);
                   restoreAdminLandlord(id)
+                    .then(() => fetchAdminLandlord(id))
                     .then((data) => {
                       toast.success("Verwaltung wurde reaktiviert.");
                       setRestoreModalOpen(false);
-                      setRow(data);
+                      if (data) setRow(data);
                     })
                     .catch((e) => {
                       toast.error(e.message || "Reaktivieren fehlgeschlagen.");

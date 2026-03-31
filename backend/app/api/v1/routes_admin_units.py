@@ -4,7 +4,7 @@ Protected by require_roles("admin", "manager").
 """
 
 import logging
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -116,6 +116,14 @@ def load_owner_names_map(session, owner_ids: set[str]) -> dict[str, Optional[str
     return {str(o.id): _owner_display_name(o) for o in rows}
 
 
+def _touch_unit_updated_at(session, unit_id: str) -> None:
+    u = session.get(Unit, unit_id)
+    if u is None:
+        return
+    u.updated_at = datetime.utcnow()
+    session.add(u)
+
+
 def _unit_enriched_dict(session, unit: Unit) -> dict:
     """property_title + owner_name for a single unit (detail/create/patch responses)."""
     property_title = None
@@ -175,6 +183,7 @@ def _unit_to_dict(
         "owner_name": owner_name,
         "property_title": property_title,
         "created_at": u.created_at.isoformat() if getattr(u, "created_at", None) else None,
+        "updated_at": u.updated_at.isoformat() if getattr(u, "updated_at", None) else None,
         "tenantPriceMonthly": tp,
         "landlordRentMonthly": lr,
         "utilitiesMonthly": ut,
@@ -575,6 +584,7 @@ def admin_create_unit(
         returned_to_landlord_date=body.returned_to_landlord_date,
         lease_status=body.lease_status,
         lease_notes=body.lease_notes,
+        updated_at=datetime.utcnow(),
     )
     session.add(unit)
     session.flush()
@@ -634,6 +644,8 @@ def admin_patch_unit(
         unit.owner_id = None
     if "postal_code" in data and data["postal_code"] == "":
         unit.postal_code = None
+    if data:
+        unit.updated_at = datetime.utcnow()
     session.add(unit)
     create_audit_log(
         session, str(current_user.id), "update", "unit", str(unit_id),
@@ -766,6 +778,7 @@ def admin_create_unit_cost(
         amount_chf=float(body.amount_chf),
     )
     session.add(row)
+    _touch_unit_updated_at(session, unit_id)
     session.commit()
     session.refresh(row)
     return _unit_cost_to_dict(row)
@@ -794,6 +807,7 @@ def admin_patch_unit_cost(
     if "amount_chf" in data:
         row.amount_chf = float(data["amount_chf"])
     session.add(row)
+    _touch_unit_updated_at(session, unit_id)
     session.commit()
     session.refresh(row)
     return _unit_cost_to_dict(row)
@@ -816,5 +830,6 @@ def admin_delete_unit_cost(
     if not row or row.unit_id != unit_id:
         raise HTTPException(status_code=404, detail="Cost not found")
     session.delete(row)
+    _touch_unit_updated_at(session, unit_id)
     session.commit()
     return {"status": "ok"}

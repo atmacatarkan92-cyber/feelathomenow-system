@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createAdminPropertyManagerNote,
   fetchAdminLandlord,
@@ -62,6 +62,7 @@ function formatDateTime(iso) {
 
 function AdminPropertyManagerDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [pm, setPm] = useState(null);
   /** undefined = not loaded yet; null = missing / not found */
@@ -108,7 +109,7 @@ function AdminPropertyManagerDetailPage() {
         setLandlordRow(undefined);
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, location.key]);
 
   useEffect(() => {
     if (!id) return;
@@ -195,7 +196,10 @@ function AdminPropertyManagerDetailPage() {
     if (!window.confirm(msg)) return;
     setStatusSaving(true);
     patchAdminPropertyManager(id, { status: next })
-      .then((row) => setPm(row))
+      .then(() => fetchAdminPropertyManager(id))
+      .then((row) => {
+        if (row) setPm(row);
+      })
       .catch((e) => {
         window.alert(e?.message || "Status konnte nicht geändert werden.");
       })

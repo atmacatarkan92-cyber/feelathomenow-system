@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   fetchAdminOwner,
   fetchAdminOwnerUnits,
@@ -55,6 +55,7 @@ function formatDateTime(iso) {
 
 function AdminOwnerDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [owner, setOwner] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -99,7 +100,7 @@ function AdminOwnerDetailPage() {
         setOwner(null);
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, location.key]);
 
   useEffect(() => {
     if (!id) return;
@@ -187,7 +188,9 @@ function AdminOwnerDetailPage() {
       canton: editForm.canton.trim() || null,
       status: editForm.status === "inactive" ? "inactive" : "active",
     })
+      .then(() => fetchAdminOwner(id))
       .then((row) => {
+        if (!row) return;
         setOwner(row);
         setEditOpen(false);
       })
@@ -233,7 +236,10 @@ function AdminOwnerDetailPage() {
     if (!window.confirm(msg)) return;
     setStatusSaving(true);
     patchAdminOwner(id, { status: next })
-      .then((row) => setOwner(row))
+      .then(() => fetchAdminOwner(id))
+      .then((row) => {
+        if (row) setOwner(row);
+      })
       .catch((e) => {
         window.alert(e?.message || "Status konnte nicht geändert werden.");
       })

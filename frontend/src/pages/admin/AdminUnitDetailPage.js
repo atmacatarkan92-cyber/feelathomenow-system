@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import RoomMap from "../../components/RoomMap";
 import RoomCalendar from "../../components/RoomCalendar";
 import OccupancyMap from "../../components/OccupancyMap";
@@ -813,6 +813,7 @@ const UNIT_COST_FIXED_SET = new Set([
 
 function AdminUnitDetailPage() {
   const { unitId } = useParams();
+  const location = useLocation();
   const [unit, setUnit] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -849,7 +850,7 @@ function AdminUnitDetailPage() {
       .then((u) => setUnit(u ? normalizeUnit(u) : null))
       .catch(() => setUnit(null))
       .finally(() => setLoading(false));
-  }, [unitId]);
+  }, [unitId, location.key]);
 
   useEffect(() => {
     if (!unitId) return;
@@ -1446,6 +1447,13 @@ function AdminUnitDetailPage() {
       .catch(() => {});
   };
 
+  const reloadUnitSnapshot = () => {
+    if (!unitId) return Promise.resolve();
+    return fetchAdminUnit(unitId)
+      .then((u) => setUnit(u ? normalizeUnit(u) : null))
+      .catch(() => {});
+  };
+
   function parseCostAmountInput(raw) {
     const n = Number(String(raw).replace(",", ".").trim());
     if (!Number.isFinite(n) || n <= 0) return null;
@@ -1495,6 +1503,7 @@ function AdminUnitDetailPage() {
         await createAdminUnitCost(unitId, { cost_type, amount_chf: amt });
       }
       await reloadUnitCosts();
+      await reloadUnitSnapshot();
       setCostForm({ cost_type: "", custom_type: "", amount_chf: "" });
       setEditingCostId(null);
     } catch (err) {
@@ -1542,6 +1551,7 @@ function AdminUnitDetailPage() {
         setEditingCostId(null);
       }
       await reloadUnitCosts();
+      await reloadUnitSnapshot();
     } catch (err) {
       setCostError(err.message || "Löschen fehlgeschlagen.");
     } finally {

@@ -3,6 +3,7 @@ Admin properties API: list, get, create, update (Phase D table).
 Protected by require_roles("admin", "manager").
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -151,6 +152,8 @@ def admin_put_property(
     for k, v in data.items():
         if hasattr(prop, k):
             setattr(prop, k, v)
+    if data:
+        prop.updated_at = datetime.utcnow()
     session.add(prop)
     session.commit()
     session.refresh(prop)

@@ -193,6 +193,7 @@ class Unit(SQLModel, table=True):
     lease_status: Optional[str] = Field(default=None, max_length=64)
     lease_notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default=None, nullable=True)
 
 
 class UnitDocument(SQLModel, table=True):
