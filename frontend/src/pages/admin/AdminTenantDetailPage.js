@@ -251,6 +251,23 @@ function monthlyEquivalentFromRevenueRows(rows) {
   return sum;
 }
 
+function deriveTenancyStatusFromDates(moveInRaw, moveOutRaw, todayIso = getTodayIsoForOccupancy()) {
+  const today = String(todayIso || "").slice(0, 10);
+  const mi = moveInRaw != null ? String(moveInRaw).slice(0, 10) : "";
+  const mo = moveOutRaw != null ? String(moveOutRaw).slice(0, 10) : "";
+  if (mo && mo < today) return "ended";
+  if (mi && mi > today) return "reserved";
+  if (mi) return "active";
+  return "";
+}
+
+function tenancyStatusLabelFromDerived(key) {
+  if (key === "ended") return "Beendet";
+  if (key === "reserved") return "Reserviert";
+  if (key === "active") return "Aktiv";
+  return "—";
+}
+
 function tenancyDateRangeLabel(tn) {
   const mi = tn.move_in_date;
   const mo = tn.move_out_date;
@@ -594,18 +611,26 @@ export default function AdminTenantDetailPage() {
   const [assignRoomId, setAssignRoomId] = useState("");
   const [assignMoveIn, setAssignMoveIn] = useState("");
   const [assignMoveOut, setAssignMoveOut] = useState("");
-  const [assignMonthlyRent, setAssignMonthlyRent] = useState("");
   const [assignTenantDepositType, setAssignTenantDepositType] = useState("");
   const [assignTenantDepositAmount, setAssignTenantDepositAmount] = useState("");
   const [assignTenantDepositProvider, setAssignTenantDepositProvider] = useState("");
-  const [assignStatus, setAssignStatus] = useState("active");
   const [assignErr, setAssignErr] = useState(null);
   const [assignSaving, setAssignSaving] = useState(false);
   const assignRentUserEditedRef = useRef(false);
+  const [assignRevenueRows, setAssignRevenueRows] = useState([
+    { id: `ar-${Date.now()}`, type: "rent", amount_chf: "", frequency: "monthly", start_date: "", end_date: "", notes: "" },
+  ]);
+  const [assignRevenueForm, setAssignRevenueForm] = useState({
+    type: "rent",
+    amount_chf: "",
+    frequency: "monthly",
+    start_date: "",
+    end_date: "",
+    notes: "",
+  });
 
   const [tenancyEditingId, setTenancyEditingId] = useState(null);
   const [tenancyEditMoveOut, setTenancyEditMoveOut] = useState("");
-  const [tenancyEditStatus, setTenancyEditStatus] = useState("active");
   const [tenancyEditTenantDepositType, setTenancyEditTenantDepositType] = useState("");
   const [tenancyEditTenantDepositAmount, setTenancyEditTenantDepositAmount] = useState("");
   const [tenancyEditTenantDepositProvider, setTenancyEditTenantDepositProvider] = useState("");
@@ -629,8 +654,6 @@ export default function AdminTenantDetailPage() {
     () => assignUnits.find((x) => String(x.id) === String(assignUnitId)),
     [assignUnits, assignUnitId]
   );
-  const assignRentIsReadOnly =
-    assignUnitForRent != null && normalizeUnitTypeLabel(assignUnitForRent.type) === "Apartment";
 
   const mergedHistoryEvents = useMemo(() => {
     const fromAudit = (auditLogs || []).map(auditLogToTenantHistoryEvent).filter(Boolean);
@@ -650,7 +673,16 @@ export default function AdminTenantDetailPage() {
     if (ut === "Apartment") {
       const raw = u.tenantPriceMonthly ?? u.tenant_price_monthly_chf;
       const p = Number(raw);
-      setAssignMonthlyRent(Number.isFinite(p) && p >= 0 ? String(p) : "");
+      const next = Number.isFinite(p) && p >= 0 ? String(p) : "";
+      if (!assignRentUserEditedRef.current) {
+        setAssignRevenueForm((f) => ({ ...f, amount_chf: next }));
+        setAssignRevenueRows((prev) => {
+          if (!Array.isArray(prev) || prev.length === 0) {
+            return [{ id: `ar-${Date.now()}`, type: "rent", amount_chf: next, frequency: "monthly", start_date: "", end_date: "", notes: "" }];
+          }
+          return prev;
+        });
+      }
       return;
     }
     if (!assignRoomId || !assignRooms.length) return;
@@ -659,7 +691,14 @@ export default function AdminTenantDetailPage() {
     if (assignRentUserEditedRef.current) return;
     const raw = room.priceMonthly ?? room.price ?? room.base_rent_chf;
     const p = Number(raw);
-    setAssignMonthlyRent(Number.isFinite(p) && p >= 0 ? String(p) : "");
+    const next = Number.isFinite(p) && p >= 0 ? String(p) : "";
+    setAssignRevenueForm((f) => ({ ...f, amount_chf: next }));
+    setAssignRevenueRows((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) {
+        return [{ id: `ar-${Date.now()}`, type: "rent", amount_chf: next, frequency: "monthly", start_date: "", end_date: "", notes: "" }];
+      }
+      return prev;
+    });
   }, [assignUnitId, assignUnits, assignRoomId, assignRooms]);
 
   const reloadTenanciesForTenant = useCallback(async () => {
@@ -675,7 +714,6 @@ export default function AdminTenantDetailPage() {
     setTenancyEditingId(null);
     setTenancyEditErr(null);
     setTenancyEditMoveOut("");
-    setTenancyEditStatus("active");
     setTenancyEditTenantDepositType("");
     setTenancyEditTenantDepositAmount("");
     setTenancyEditTenantDepositProvider("");
@@ -697,10 +735,6 @@ export default function AdminTenantDetailPage() {
     const raw = tn.move_out_date;
     const s = raw != null && raw !== "" ? String(raw) : "";
     setTenancyEditMoveOut(/^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : "");
-    const st = String(tn.status || "").toLowerCase();
-    if (st === "reserved" || st === "reserviert") setTenancyEditStatus("reserved");
-    else if (st === "ended" || st === "beendet") setTenancyEditStatus("ended");
-    else setTenancyEditStatus("active");
     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
     setTenancyEditTenantDepositType(tdt || "");
     const tda = tn.tenant_deposit_amount;
@@ -744,7 +778,6 @@ export default function AdminTenantDetailPage() {
     const tprov = String(tenancyEditTenantDepositProvider || "").trim().toLowerCase();
     const body = {
       move_out_date: tenancyEditMoveOut.trim() ? tenancyEditMoveOut.trim() : null,
-      status: tenancyEditStatus,
       tenant_deposit_type: tdt || null,
       tenant_deposit_amount: parseOptionalTenantDepositFloat(tenancyEditTenantDepositAmount),
       tenant_deposit_provider:
@@ -1088,12 +1121,22 @@ export default function AdminTenantDetailPage() {
     setAssignRoomId("");
     setAssignMoveIn(today);
     setAssignMoveOut("");
-    setAssignMonthlyRent("");
     setAssignTenantDepositType("");
     setAssignTenantDepositAmount("");
     setAssignTenantDepositProvider("");
-    setAssignStatus("active");
     setAssignErr(null);
+    const rid = `ar-${Date.now()}`;
+    setAssignRevenueRows([
+      { id: rid, type: "rent", amount_chf: "", frequency: "monthly", start_date: "", end_date: "", notes: "" },
+    ]);
+    setAssignRevenueForm({
+      type: "rent",
+      amount_chf: "",
+      frequency: "monthly",
+      start_date: "",
+      end_date: "",
+      notes: "",
+    });
   };
 
   const openAssignForm = () => {
@@ -1108,14 +1151,33 @@ export default function AdminTenantDetailPage() {
       setAssignErr("Einheit, Zimmer und Einzugsdatum sind erforderlich.");
       return;
     }
-    if (assignMonthlyRent === "" || assignMonthlyRent == null) {
-      setAssignErr("Bitte einen gültigen Betrag (≠ 0) angeben.");
+    const rows = Array.isArray(assignRevenueRows) ? assignRevenueRows : [];
+    if (rows.length === 0) {
+      setAssignErr("Bitte mindestens eine Einnahmen-Zeile erfassen.");
       return;
     }
-    const rent = Number(String(assignMonthlyRent).replace(",", "."));
-    if (Number.isNaN(rent) || rent === 0) {
-      setAssignErr("Bitte einen gültigen Betrag (≠ 0) angeben.");
-      return;
+    for (const r of rows) {
+      const type = String(r?.type || "").trim();
+      if (!type) {
+        setAssignErr("Bitte Typ für alle Einnahmen-Zeilen angeben.");
+        return;
+      }
+      const amt = parseRevenueAmount(r?.amount_chf);
+      if (amt == null) {
+        setAssignErr("Bitte für alle Einnahmen-Zeilen einen gültigen Betrag (≠ 0) angeben.");
+        return;
+      }
+      const freq = normalizeRevenueFrequency(r?.frequency);
+      if (!["monthly", "yearly", "one_time"].includes(freq)) {
+        setAssignErr("Bitte eine gültige Frequenz wählen.");
+        return;
+      }
+      const sd = dateOnlyOrNull(r?.start_date);
+      const ed = dateOnlyOrNull(r?.end_date);
+      if (sd && ed && ed < sd) {
+        setAssignErr("Enddatum muss nach dem Startdatum liegen.");
+        return;
+      }
     }
     const assignUnit = assignUnits.find((x) => String(x.id) === String(assignUnitId));
     if (
@@ -1125,7 +1187,7 @@ export default function AdminTenantDetailPage() {
       setAssignErr(UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE);
       return;
     }
-    const apiStatus = assignStatus === "upcoming" ? "reserved" : assignStatus;
+    const derivedStatus = deriveTenancyStatusFromDates(assignMoveIn.trim(), assignMoveOut.trim());
     setAssignSaving(true);
     const tdt = String(assignTenantDepositType || "").trim().toLowerCase();
     const body = {
@@ -1134,7 +1196,7 @@ export default function AdminTenantDetailPage() {
       room_id: String(assignRoomId),
       move_in_date: assignMoveIn.trim(),
       move_out_date: assignMoveOut.trim() ? assignMoveOut.trim() : null,
-      status: apiStatus,
+      status: derivedStatus || "active",
     };
     if (tdt) body.tenant_deposit_type = tdt;
     const tda = parseOptionalTenantDepositFloat(assignTenantDepositAmount);
@@ -1152,11 +1214,18 @@ export default function AdminTenantDetailPage() {
       })
       .then(async (createdTenancy) => {
         const tid = createdTenancy?.id != null ? String(createdTenancy.id) : "";
-        if (tid) {
+        if (!tid) return createdTenancy;
+        const existing = await fetchAdminTenancyRevenue(tid).catch(() => []);
+        if (Array.isArray(existing) && existing.length > 0) return createdTenancy;
+        const rows = Array.isArray(assignRevenueRows) ? assignRevenueRows : [];
+        for (const r of rows) {
           await createAdminTenancyRevenue(tid, {
-            type: "rent",
-            amount_chf: rent,
-            frequency: "monthly",
+            type: String(r.type || "").trim(),
+            amount_chf: Number(String(r.amount_chf).replace(",", ".")),
+            frequency: normalizeRevenueFrequency(r.frequency),
+            start_date: dateOnlyOrNull(r.start_date),
+            end_date: dateOnlyOrNull(r.end_date),
+            notes: String(r.notes || "").trim() || null,
           });
         }
         return createdTenancy;
@@ -1814,17 +1883,41 @@ export default function AdminTenantDetailPage() {
                                         <label htmlFor={`ten-st-${rowKey}`} style={labelStyle}>
                                           Status
                                         </label>
-                                        <select
-                                          id={`ten-st-${rowKey}`}
-                                          style={{ ...inputStyle, cursor: tenancyEditSaving ? "default" : "pointer" }}
-                                          value={tenancyEditStatus}
-                                          onChange={(e) => setTenancyEditStatus(e.target.value)}
-                                          disabled={tenancyEditSaving}
+                                        <div
+                                          style={{
+                                            ...inputStyle,
+                                            background: "#F8FAFC",
+                                            border: "1px solid #E2E8F0",
+                                            display: "flex",
+                                            alignItems: "center",
+                                          }}
                                         >
-                                          <option value="active">Aktiv</option>
-                                          <option value="reserved">Reserviert</option>
-                                          <option value="ended">Beendet</option>
-                                        </select>
+                                          {(() => {
+                                            const key = deriveTenancyStatusFromDates(
+                                              tn.move_in_date,
+                                              tenancyEditMoveOut || tn.move_out_date
+                                            );
+                                            const badge =
+                                              TENANCY_STATUS_BADGE[key === "reserved" ? "upcoming" : key] ||
+                                              TENANCY_STATUS_BADGE.ended;
+                                            return (
+                                              <span
+                                                style={{
+                                                  display: "inline-flex",
+                                                  padding: "4px 8px",
+                                                  borderRadius: "999px",
+                                                  fontSize: "11px",
+                                                  fontWeight: 700,
+                                                  background: badge.bg,
+                                                  color: badge.color,
+                                                  border: `1px solid ${badge.border}`,
+                                                }}
+                                              >
+                                                {tenancyStatusLabelFromDerived(key)}
+                                              </span>
+                                            );
+                                          })()}
+                                        </div>
                                       </div>
                                       <div>
                                         <label htmlFor={`ten-tdt-${rowKey}`} style={labelStyle}>
@@ -2260,38 +2353,165 @@ export default function AdminTenantDetailPage() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="assign-rent" style={labelStyle}>
-                          Monatsmiete (CHF)
-                        </label>
-                        <input
-                          id="assign-rent"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          style={inputStyle}
-                          value={assignMonthlyRent}
-                          onChange={(e) => {
-                            assignRentUserEditedRef.current = true;
-                            setAssignMonthlyRent(e.target.value);
-                          }}
-                          disabled={assignSaving || assignRentIsReadOnly}
-                        />
+                        <label style={labelStyle}>Einnahmen / Monat</label>
+                        <div style={{ ...inputStyle, background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                          {formatChfRent(monthlyEquivalentFromRevenueRows(assignRevenueRows))}
+                        </div>
                       </div>
                       <div>
-                        <label htmlFor="assign-status" style={labelStyle}>
-                          Status
-                        </label>
-                        <select
-                          id="assign-status"
-                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
-                          value={assignStatus}
-                          onChange={(e) => setAssignStatus(e.target.value)}
-                          disabled={assignSaving}
-                        >
-                          <option value="active">Aktiv</option>
-                          <option value="upcoming">Bevorstehend</option>
-                          <option value="ended">Beendet</option>
-                        </select>
+                        <label style={labelStyle}>Status</label>
+                        <div style={{ ...inputStyle, background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                          {tenancyStatusLabelFromDerived(
+                            deriveTenancyStatusFromDates(assignMoveIn, assignMoveOut)
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <div style={{ fontSize: "12px", fontWeight: 800, color: "#334155", marginBottom: "8px" }}>
+                          Einnahmen
+                        </div>
+                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                          <div>
+                            <label style={labelStyle}>Typ</label>
+                            <input
+                              type="text"
+                              style={inputStyle}
+                              value={assignRevenueForm.type}
+                              onChange={(e) => setAssignRevenueForm((f) => ({ ...f, type: e.target.value }))}
+                              disabled={assignSaving}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Betrag (CHF)</label>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              style={inputStyle}
+                              value={assignRevenueForm.amount_chf}
+                              onChange={(e) => {
+                                assignRentUserEditedRef.current = true;
+                                setAssignRevenueForm((f) => ({ ...f, amount_chf: e.target.value }));
+                              }}
+                              disabled={assignSaving}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Frequenz</label>
+                            <select
+                              style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                              value={assignRevenueForm.frequency}
+                              onChange={(e) => setAssignRevenueForm((f) => ({ ...f, frequency: e.target.value }))}
+                              disabled={assignSaving}
+                            >
+                              <option value="monthly">Monatlich</option>
+                              <option value="yearly">Jährlich</option>
+                              <option value="one_time">Einmalig</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Start (optional)</label>
+                            <input
+                              type="date"
+                              style={inputStyle}
+                              value={assignRevenueForm.start_date}
+                              onChange={(e) => setAssignRevenueForm((f) => ({ ...f, start_date: e.target.value }))}
+                              disabled={assignSaving}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Ende (optional)</label>
+                            <input
+                              type="date"
+                              style={inputStyle}
+                              value={assignRevenueForm.end_date}
+                              onChange={(e) => setAssignRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
+                              disabled={assignSaving}
+                            />
+                          </div>
+                          <div style={{ minWidth: "240px", flex: "1 1 240px" }}>
+                            <label style={labelStyle}>Notizen (optional)</label>
+                            <input
+                              type="text"
+                              style={inputStyle}
+                              value={assignRevenueForm.notes}
+                              onChange={(e) => setAssignRevenueForm((f) => ({ ...f, notes: e.target.value }))}
+                              disabled={assignSaving}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={assignSaving}
+                            onClick={() => {
+                              const id = `ar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                              const row = {
+                                id,
+                                type: String(assignRevenueForm.type || "").trim(),
+                                amount_chf: assignRevenueForm.amount_chf,
+                                frequency: normalizeRevenueFrequency(assignRevenueForm.frequency),
+                                start_date: assignRevenueForm.start_date,
+                                end_date: assignRevenueForm.end_date,
+                                notes: assignRevenueForm.notes,
+                              };
+                              setAssignRevenueRows((prev) => [...(Array.isArray(prev) ? prev : []), row]);
+                              setAssignRevenueForm((f) => ({ ...f, amount_chf: "", notes: "" }));
+                            }}
+                            style={{
+                              padding: "8px 12px",
+                              borderRadius: "10px",
+                              border: "1px solid #E2E8F0",
+                              background: "#FFF",
+                              fontWeight: 700,
+                              cursor: assignSaving ? "default" : "pointer",
+                            }}
+                          >
+                            + Einnahme hinzufügen
+                          </button>
+                        </div>
+
+                        <div style={{ marginTop: "10px", overflowX: "auto" }}>
+                          <table style={tableStyle}>
+                            <thead>
+                              <tr>
+                                <th style={thCell}>Typ</th>
+                                <th style={{ ...thCell, textAlign: "right" }}>Betrag</th>
+                                <th style={thCell}>Frequenz</th>
+                                <th style={thCell}>Aktion</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(Array.isArray(assignRevenueRows) ? assignRevenueRows : []).map((rr) => (
+                                <tr key={rr.id}>
+                                  <td style={tdCell}>{rr.type || "—"}</td>
+                                  <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#0F172A" }}>
+                                    {formatChfRent(parseRevenueAmount(rr.amount_chf) ?? rr.amount_chf)}
+                                  </td>
+                                  <td style={tdCell}>{revenueFrequencyLabel(rr.frequency)}</td>
+                                  <td style={tdCell}>
+                                    <button
+                                      type="button"
+                                      disabled={assignSaving}
+                                      onClick={() =>
+                                        setAssignRevenueRows((prev) => (prev || []).filter((x) => x.id !== rr.id))
+                                      }
+                                      style={{
+                                        padding: "4px 10px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #E2E8F0",
+                                        background: "#FFF",
+                                        fontSize: "12px",
+                                        fontWeight: 700,
+                                        color: "#B91C1C",
+                                        cursor: assignSaving ? "default" : "pointer",
+                                      }}
+                                    >
+                                      Löschen
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                       <div>
                         <label htmlFor="assign-tenant-deposit-type" style={labelStyle}>
