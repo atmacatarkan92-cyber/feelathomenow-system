@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   ResponsiveContainer,
   CartesianGrid,
@@ -43,6 +44,19 @@ function formatChfOrDash(value) {
 
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
+}
+
+/** Readable label for lists/cards; UUID only as last resort. */
+function apartmentDisplayLabel(unit) {
+  if (!unit) return "—";
+  const addr = String(unit.address ?? "").trim();
+  const city = String(unit.city ?? "").trim();
+  if (addr && city) return `${addr}, ${city}`;
+  if (addr) return addr;
+  const title = String(unit.title ?? unit.name ?? "").trim();
+  if (title) return title;
+  const id = String(unit.unitId ?? unit.id ?? "").trim();
+  return id || "—";
 }
 
 function HeroCard({
@@ -438,6 +452,7 @@ function AdminBusinessApartmentsDashboardPage() {
 
       return {
         unitId: unit.unitId,
+        displayLabel: apartmentDisplayLabel(unit),
         place: unit.place,
         title: unit.title || unit.unitId,
         revenue: fin.revenue,
@@ -630,7 +645,7 @@ function AdminBusinessApartmentsDashboardPage() {
                 )
                 .map((unit) => (
                   <option key={unit.unitId} value={unit.unitId}>
-                    {unit.unitId}
+                    {apartmentDisplayLabel(unit)}
                   </option>
                 ))}
             </FilterSelect>
@@ -762,7 +777,7 @@ function AdminBusinessApartmentsDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SmallStatCard
               label="Bestes Apartment"
-              value={dashboard.bestUnit ? dashboard.bestUnit.unitId : "-"}
+              value={dashboard.bestUnit ? dashboard.bestUnit.displayLabel : "-"}
               hint={
                 dashboard.bestUnit
                   ? `${dashboard.bestUnit.place} · ${formatChfOrDash(
@@ -773,7 +788,7 @@ function AdminBusinessApartmentsDashboardPage() {
             />
             <SmallStatCard
               label="Schwächstes Apartment"
-              value={dashboard.worstUnit ? dashboard.worstUnit.unitId : "-"}
+              value={dashboard.worstUnit ? dashboard.worstUnit.displayLabel : "-"}
               hint={
                 dashboard.worstUnit
                   ? `${dashboard.worstUnit.place} · ${formatChfOrDash(
@@ -818,6 +833,7 @@ function AdminBusinessApartmentsDashboardPage() {
                   <th className="py-3 pr-4">Umsatz</th>
                   <th className="py-3 pr-4">Ausgaben</th>
                   <th className="py-3 pr-4">Gewinn</th>
+                  <th className="py-3 pr-4">Aktion</th>
                 </tr>
               </thead>
               <tbody>
@@ -827,7 +843,10 @@ function AdminBusinessApartmentsDashboardPage() {
                     className="border-b border-slate-100 text-slate-700 hover:bg-slate-50"
                   >
                     <td className="py-4 pr-4 font-semibold text-slate-900">
-                      {unit.unitId}
+                      <span className="block">{unit.displayLabel}</span>
+                      <span className="block text-[10px] text-slate-400 font-normal font-mono break-all mt-0.5">
+                        {unit.unitId}
+                      </span>
                     </td>
                     <td className="py-4 pr-4">{unit.place}</td>
                     <td className="py-4 pr-4">
@@ -846,12 +865,20 @@ function AdminBusinessApartmentsDashboardPage() {
                     <td className="py-4 pr-4 font-medium">
                       {formatChfOrDash(unit.profit)}
                     </td>
+                    <td className="py-4 pr-4">
+                      <Link
+                        to={`/admin/units/${encodeURIComponent(unit.unitId)}`}
+                        className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50 inline-block text-slate-700"
+                      >
+                        Öffnen
+                      </Link>
+                    </td>
                   </tr>
                 ))}
 
                 {dashboard.performance.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="py-8 text-center text-slate-500">
+                    <td colSpan="7" className="py-8 text-center text-slate-500">
                       Keine Business Apartments gefunden.
                     </td>
                   </tr>
