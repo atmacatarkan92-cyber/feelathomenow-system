@@ -283,25 +283,16 @@ function formatInvoiceAmount(amount, currency) {
   return `${cur} ${num}`;
 }
 
-const INVOICE_STATUS_BADGE = {
-  paid: { bg: "#DCFCE7", color: "#166534", border: "#BBF7D0" },
-  open: { bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE" },
-  overdue: { bg: "#FEE2E2", color: "#991B1B", border: "#FECACA" },
-  unpaid: { bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
-  cancelled: { bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
-};
-
-const TENANCY_STATUS_BADGE = {
-  active: { bg: "#DCFCE7", color: "#166534", border: "#BBF7D0" },
-  upcoming: { bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE" },
-  ended: { bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
-};
-
-const TENANCY_DISPLAY_STATUS_BADGE = {
-  active: TENANCY_STATUS_BADGE.active,
-  notice_given: { bg: "#FEF3C7", color: "#92400E", border: "#FCD34D" },
-  reserved: TENANCY_STATUS_BADGE.upcoming,
-  ended: TENANCY_STATUS_BADGE.ended,
+/** Dark pills for lifecycle preview in tenancy assign/edit UI (keys from deriveTenancyLifecyclePreviewForAssign). */
+const TENANCY_LIFECYCLE_PREVIEW_BADGE_CLASS = {
+  active:
+    "inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400",
+  notice_given:
+    "inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400",
+  reserved:
+    "inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400",
+  ended:
+    "inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold text-red-400",
 };
 
 /** Canonical Mietende for UI: API display_end_date (matches tenancy_lifecycle.tenancy_display_end_date), then synced move_out. */
@@ -566,25 +557,28 @@ const tableStyle = {
   width: "100%",
   borderCollapse: "collapse",
   fontSize: "14px",
+  color: "#eef2ff",
 };
 
 const thCell = {
   textAlign: "left",
   padding: "10px 12px",
-  borderBottom: "1px solid #E5E7EB",
-  color: "#64748B",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  color: "#6b7a9a",
   fontWeight: 600,
+  fontSize: "11px",
 };
 
 const tdCell = {
   padding: "10px 12px",
-  borderBottom: "1px solid #F1F5F9",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
   verticalAlign: "top",
+  color: "#eef2ff",
 };
 
 const sectionCard = {
-  background: "#FFFFFF",
-  border: "1px solid #E5E7EB",
+  background: "#141824",
+  border: "1px solid rgba(255,255,255,0.07)",
   borderRadius: "14px",
   padding: "16px",
   marginBottom: "12px",
@@ -592,19 +586,21 @@ const sectionCard = {
 
 const labelStyle = {
   display: "block",
-  fontSize: "12px",
-  fontWeight: 600,
-  color: "#64748B",
-  marginBottom: "4px",
+  fontSize: "10px",
+  fontWeight: 400,
+  color: "#6b7a9a",
+  marginBottom: "3px",
 };
 
 const inputStyle = {
   width: "100%",
   padding: "8px 10px",
-  borderRadius: "8px",
-  border: "1px solid #E2E8F0",
+  borderRadius: "9px",
+  border: "1px solid rgba(255,255,255,0.08)",
   fontSize: "14px",
   boxSizing: "border-box",
+  background: "#111520",
+  color: "#eef2ff",
 };
 
 const textareaStyle = {
@@ -615,11 +611,11 @@ const textareaStyle = {
 };
 
 const sectionTitle = {
-  fontSize: "11px",
+  fontSize: "9px",
   fontWeight: 700,
-  color: "#f97316",
+  color: "#6b7a9a",
   textTransform: "uppercase",
-  letterSpacing: "0.04em",
+  letterSpacing: "1px",
   margin: "0 0 10px 0",
 };
 
@@ -653,33 +649,30 @@ function TenantNotesBlock({
           placeholder="Interne Notiz …"
         />
         {noteErr ? (
-          <div style={{ marginTop: "8px", fontSize: "13px", color: "#B91C1C" }}>{noteErr}</div>
+          <div style={{ marginTop: "8px", fontSize: "13px", color: "#f87171" }}>{noteErr}</div>
         ) : null}
         {noteSubmitError ? (
-          <div style={{ marginTop: "8px", fontSize: "13px", color: "#B91C1C" }}>{noteSubmitError}</div>
+          <div style={{ marginTop: "8px", fontSize: "13px", color: "#f87171" }}>{noteSubmitError}</div>
         ) : null}
         <div style={{ marginTop: "10px" }}>
           <button
             type="submit"
             disabled={noteSaving}
-            style={{
-              padding: "8px 14px",
-              borderRadius: "10px",
-              border: "none",
-              background: noteSaving ? "#94A3B8" : "#f97316",
-              color: "#FFF",
-              fontWeight: 700,
-              cursor: noteSaving ? "default" : "pointer",
-            }}
+            className={`rounded-[8px] bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3.5 py-2 text-sm font-semibold text-white ${
+              noteSaving ? "cursor-default opacity-50" : "cursor-pointer"
+            }`}
+            style={{ border: "none" }}
           >
             {noteSaving ? "Speichern …" : "Notiz speichern"}
           </button>
         </div>
       </form>
-      <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
-        <div style={{ ...labelStyle, marginBottom: "8px" }}>Alle Notizen</div>
+      <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div style={{ ...labelStyle, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 700 }}>
+          Alle Notizen
+        </div>
         {!notes.length ? (
-          <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Noch keine Notizen</p>
+          <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Noch keine Notizen</p>
         ) : (
           <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
             {notes.map((n) => (
@@ -687,12 +680,16 @@ function TenantNotesBlock({
                 key={n.id}
                 style={{
                   marginBottom: "12px",
-                  paddingBottom: "12px",
-                  borderBottom: "1px solid #F1F5F9",
+                  padding: "12px",
+                  borderRadius: "10px",
+                  background: "#111520",
+                  border: "1px solid rgba(255,255,255,0.05)",
                 }}
               >
-                <div style={{ fontSize: "14px", color: "#0F172A", whiteSpace: "pre-wrap" }}>{n.content}</div>
-                <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "6px" }}>
+                <div style={{ fontSize: "13px", color: "#eef2ff", whiteSpace: "pre-wrap", fontWeight: 500 }}>
+                  {n.content}
+                </div>
+                <div style={{ fontSize: "12px", color: "#6b7a9a", marginTop: "6px" }}>
                   {formatDateTime(n.created_at)} · {n.author_name || "—"}
                 </div>
               </li>
@@ -709,7 +706,7 @@ function TenantHistoryBlock({ events }) {
     <div style={sectionCard}>
       <div style={sectionTitle}>Verlauf / Aktivität</div>
       {!events.length ? (
-        <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Noch kein Verlauf</p>
+        <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Noch kein Verlauf</p>
       ) : (
         <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
           {events.map((ev) => {
@@ -721,18 +718,18 @@ function TenantHistoryBlock({ events }) {
               <li
                 key={ev.id}
                 style={{
-                  marginBottom: "12px",
-                  paddingLeft: "12px",
-                  borderLeft: "3px solid #E2E8F0",
+                  marginBottom: "0",
+                  padding: "12px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
                 }}
               >
-                <div style={{ fontWeight: 600, fontSize: "14px", color: "#0F172A" }}>{ev.summary}</div>
+                <div style={{ fontWeight: 600, fontSize: "13px", color: "#eef2ff" }}>{ev.summary}</div>
                 {showDiff ? (
-                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>
+                  <div style={{ fontSize: "12px", color: "#6b7a9a", marginTop: "4px" }}>
                     {ev.old_value ?? "—"} → {ev.new_value ?? "—"}
                   </div>
                 ) : null}
-                <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "6px" }}>
+                <div style={{ fontSize: "12px", color: "#6b7a9a", marginTop: "6px" }}>
                   {formatDateTime(ev.created_at)} · {ev.author_name || "—"}
                 </div>
               </li>
@@ -748,7 +745,7 @@ function Row({ label, value }) {
   return (
     <div style={{ marginBottom: "12px" }}>
       <span style={labelStyle}>{label}</span>
-      <div style={{ fontSize: "15px", color: "#0F172A" }}>{value || "—"}</div>
+      <div style={{ fontSize: "13px", fontWeight: 500, color: "#eef2ff" }}>{value || "—"}</div>
     </div>
   );
 }
@@ -1560,70 +1557,41 @@ export default function AdminTenantDetailPage() {
     return PERMIT_OPTIONS.has(p) ? p : `${p} (legacy)`;
   };
 
+  const tenantOpBadgeClass =
+    statusMeta?.label === "Aktiv"
+      ? "inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400"
+      : statusMeta?.label === "Reserviert"
+        ? "inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400"
+        : statusMeta?.label === "Ausgezogen"
+          ? "inline-flex rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold text-red-400"
+          : "inline-flex rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-bold text-[#eef2ff]";
+
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
+    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
       <div style={pageWrap}>
-        <header
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: "16px",
-            marginBottom: "24px",
-            paddingBottom: "20px",
-            borderBottom: "1px solid #E2E8F0",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", flexWrap: "wrap", minWidth: 0 }}>
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-white/[0.07] bg-[#07090f] pb-5">
+          <div className="flex min-w-0 flex-wrap items-start gap-3">
             <button
               type="button"
               onClick={goToTenantList}
-              style={{
-                padding: "8px 12px",
-                borderRadius: "10px",
-                border: "1px solid #E2E8F0",
-                background: "#FFFFFF",
-                fontWeight: 600,
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
+              className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+              style={{ cursor: "pointer" }}
             >
               ← Zurück
             </button>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: "12px", color: "#f97316", fontWeight: 700 }}>Mieter</div>
-              <h1
-                style={{
-                  fontSize: "28px",
-                  fontWeight: 800,
-                  margin: "4px 0 0 0",
-                  wordBreak: "break-word",
-                }}
-              >
+              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Mieter</div>
+              <h1 className="mt-1 break-words text-[22px] font-bold text-[#eef2ff]">
                 {loading ? "…" : displayName}
               </h1>
               {!loading && tenant && (
-                <div style={{ marginTop: "10px" }}>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      padding: "6px 10px",
-                      borderRadius: "999px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      background: statusMeta?.bg || "#F1F5F9",
-                      color: statusMeta?.color || "#475569",
-                      border: `1px solid ${statusMeta?.border || "#CBD5E1"}`,
-                    }}
-                  >
-                    {statusMeta?.label || "Status"}
-                  </span>
+                <div className="mt-2.5">
+                  <span className={tenantOpBadgeClass}>{statusMeta?.label || "Status"}</span>
                 </div>
               )}
             </div>
           </div>
-          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+          <div className="flex shrink-0 gap-2">
             {!editing && tenant && !loadError && !loading ? (
               <button
                 type="button"
@@ -1631,15 +1599,8 @@ export default function AdminTenantDetailPage() {
                   setEditing(true);
                   setSaveError(null);
                 }}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid #E2E8F0",
-                  background: "#FFFFFF",
-                  fontWeight: 600,
-                  fontSize: "13px",
-                  cursor: "pointer",
-                }}
+                className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                style={{ cursor: "pointer" }}
               >
                 Bearbeiten
               </button>
@@ -1649,30 +1610,15 @@ export default function AdminTenantDetailPage() {
 
         <main>
           {loading ? (
-            <p style={{ color: "#64748B" }}>Lade Daten …</p>
+            <p className="text-[#6b7a9a]">Lade Daten …</p>
           ) : loadError ? (
-            <div
-              style={{
-                padding: "16px",
-                borderRadius: "12px",
-                background: "#FEF2F2",
-                border: "1px solid #FECACA",
-                color: "#B91C1C",
-              }}
-            >
+            <div className="rounded-[14px] border border-red-500/20 bg-red-500/10 p-4 text-[#f87171]">
               <p style={{ margin: "0 0 12px 0" }}>{loadError}</p>
               <button
                 type="button"
                 onClick={goToTenantList}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: "10px",
-                  border: "1px solid #E2E8F0",
-                  background: "#FFFFFF",
-                  fontWeight: 600,
-                  fontSize: "13px",
-                  cursor: "pointer",
-                }}
+                className="rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[#8090b0]"
+                style={{ cursor: "pointer" }}
               >
                 Zurück zur Übersicht
               </button>
@@ -1689,9 +1635,9 @@ export default function AdminTenantDetailPage() {
                       <Row label="Geburtsdatum" value={formatDateOnly(tenant.birth_date)} />
                       <Row label="Nationalität" value={tenant.nationality} />
                     </div>
-                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
+                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                       <span style={labelStyle}>Erfasst am</span>
-                      <div style={{ fontSize: "15px", color: "#0F172A" }}>
+                      <div style={{ fontSize: "13px", fontWeight: 500, color: "#eef2ff" }}>
                         {formatDateTime(tenant.created_at)}
                       </div>
                     </div>
@@ -1725,10 +1671,10 @@ export default function AdminTenantDetailPage() {
                       <Row label="Firma" value={tenant.company} />
                     </div>
                   </div>
-                  <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-3">
-                    <h2 className="text-sm font-semibold text-slate-900 mb-4">Adresse</h2>
+                  <section className="mb-3 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+                    <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Adresse</h2>
                     <div className="flex items-start gap-2">
-                      <div className="text-sm font-medium text-slate-900 space-y-1 flex-1 min-w-0">
+                      <div className="min-w-0 flex-1 space-y-1 text-[13px] font-medium text-[#eef2ff]">
                         <p>{tenantAddrLine1 ? tenantAddrLine1 : "—"}</p>
                         <p>{tenantAddrLine2 ? tenantAddrLine2 : "—"}</p>
                         <p>{tenantAddrLine3 ? tenantAddrLine3 : "—"}</p>
@@ -1749,7 +1695,7 @@ export default function AdminTenantDetailPage() {
                               "noopener,noreferrer"
                             )
                           }
-                          className="shrink-0 p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 inline-flex items-center justify-center"
+                          className="inline-flex shrink-0 items-center justify-center rounded-[8px] border border-white/[0.1] bg-transparent p-1.5 text-[#8090b0] hover:bg-white/[0.05] hover:text-[#eef2ff]"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1967,7 +1913,7 @@ export default function AdminTenantDetailPage() {
                     </div>
 
                     {saveError ? (
-                      <div style={{ marginBottom: "12px", fontSize: "13px", color: "#B91C1C" }}>
+                      <div style={{ marginBottom: "12px", fontSize: "13px", color: "#f87171" }}>
                         {saveError}
                       </div>
                     ) : null}
@@ -1975,15 +1921,10 @@ export default function AdminTenantDetailPage() {
                       <button
                         type="submit"
                         disabled={saving}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: "10px",
-                          border: "none",
-                          background: saving ? "#94A3B8" : "#f97316",
-                          color: "#FFF",
-                          fontWeight: 700,
-                          cursor: saving ? "default" : "pointer",
-                        }}
+                        className={`rounded-[8px] bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3.5 py-2 text-sm font-semibold text-white ${
+                          saving ? "cursor-default opacity-50" : "cursor-pointer"
+                        }`}
+                        style={{ border: "none" }}
                       >
                         {saving ? "Speichern …" : "Speichern"}
                       </button>
@@ -1995,14 +1936,8 @@ export default function AdminTenantDetailPage() {
                           setSaveError(null);
                           setForm(tenantToForm(tenant));
                         }}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: "10px",
-                          border: "1px solid #E2E8F0",
-                          background: "#FFF",
-                          fontWeight: 600,
-                          cursor: saving ? "default" : "pointer",
-                        }}
+                        className="rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                        style={{ cursor: saving ? "default" : "pointer" }}
                       >
                         Abbrechen
                       </button>
@@ -2011,19 +1946,29 @@ export default function AdminTenantDetailPage() {
                   </form>
                 )}
 
-              <div style={{ marginTop: "8px", marginBottom: "8px", fontWeight: 700, color: "#334155", fontSize: "13px" }}>
+              <div
+                style={{
+                  marginTop: "8px",
+                  marginBottom: "8px",
+                  fontWeight: 700,
+                  color: "#6b7a9a",
+                  fontSize: "10px",
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                }}
+              >
                 Verknüpfungen &amp; CRM
               </div>
               <div style={sectionCard}>
                 <div style={sectionTitle}>Mietverhältnisse</div>
                 {!tenancies.length ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>
                     Keine Mietverhältnisse vorhanden
                   </p>
                 ) : (
                   <div className="space-y-6">
                     {tenancyEditErr ? (
-                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#f87171" }}>
                         {tenancyEditErr}
                       </p>
                     ) : null}
@@ -2474,8 +2419,8 @@ export default function AdminTenantDetailPage() {
                                         <div
                                           style={{
                                             ...inputStyle,
-                                            background: "#F8FAFC",
-                                            border: "1px solid #E2E8F0",
+                                            background: "#111520",
+                                            border: "1px solid rgba(255,255,255,0.08)",
                                             display: "flex",
                                             alignItems: "center",
                                           }}
@@ -2486,23 +2431,11 @@ export default function AdminTenantDetailPage() {
                                               tenancyEditTerminationEffective,
                                               tenancyEditActualMoveOut
                                             );
-                                            const badge =
-                                              TENANCY_DISPLAY_STATUS_BADGE[key] ||
-                                              TENANCY_STATUS_BADGE[key === "reserved" ? "upcoming" : key] ||
-                                              TENANCY_STATUS_BADGE.ended;
+                                            const badgeClass =
+                                              TENANCY_LIFECYCLE_PREVIEW_BADGE_CLASS[key] ||
+                                              TENANCY_LIFECYCLE_PREVIEW_BADGE_CLASS.active;
                                             return (
-                                              <span
-                                                style={{
-                                                  display: "inline-flex",
-                                                  padding: "4px 8px",
-                                                  borderRadius: "999px",
-                                                  fontSize: "11px",
-                                                  fontWeight: 700,
-                                                  background: badge.bg,
-                                                  color: badge.color,
-                                                  border: `1px solid ${badge.border}`,
-                                                }}
-                                              >
+                                              <span className={badgeClass}>
                                                 {tenancyDisplayStatusLabelDe(key)}
                                               </span>
                                             );
@@ -2574,16 +2507,10 @@ export default function AdminTenantDetailPage() {
                                           type="button"
                                           onClick={submitTenancyEdit}
                                           disabled={tenancyEditSaving}
-                                          style={{
-                                            padding: "6px 12px",
-                                            borderRadius: "8px",
-                                            border: "none",
-                                            background: tenancyEditSaving ? "#94A3B8" : "#f97316",
-                                            color: "#FFF",
-                                            fontWeight: 700,
-                                            fontSize: "12px",
-                                            cursor: tenancyEditSaving ? "default" : "pointer",
-                                          }}
+                                          className={`rounded-[8px] bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3 py-1.5 text-xs font-semibold text-white ${
+                                            tenancyEditSaving ? "cursor-default opacity-50" : "cursor-pointer"
+                                          }`}
+                                          style={{ border: "none" }}
                                         >
                                           {tenancyEditSaving ? "Speichern …" : "Speichern"}
                                         </button>
@@ -2591,23 +2518,16 @@ export default function AdminTenantDetailPage() {
                                           type="button"
                                           onClick={cancelTenancyEdit}
                                           disabled={tenancyEditSaving}
-                                          style={{
-                                            padding: "6px 12px",
-                                            borderRadius: "8px",
-                                            border: "1px solid #E2E8F0",
-                                            background: "#FFF",
-                                            fontWeight: 600,
-                                            fontSize: "12px",
-                                            cursor: tenancyEditSaving ? "default" : "pointer",
-                                          }}
+                                          className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                                          style={{ cursor: tenancyEditSaving ? "default" : "pointer" }}
                                         >
                                           Abbrechen
                                         </button>
                                       </div>
                                     </div>
 
-                                    <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                                      <div style={{ fontSize: "12px", fontWeight: 800, color: "#334155", marginBottom: "8px" }}>
+                                    <div className="mb-2 border-t border-white/[0.05] pt-3">
+                                      <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
                                         Einnahmen
                                       </div>
 
@@ -2621,10 +2541,11 @@ export default function AdminTenantDetailPage() {
                                               style={{
                                                 marginBottom: "10px",
                                                 padding: "10px 12px",
-                                                background: "#F8FAFC",
+                                                background: "#111520",
                                                 borderRadius: "8px",
                                                 fontSize: "12px",
-                                                color: "#94A3B8",
+                                                color: "#6b7a9a",
+                                                border: "1px solid rgba(255,255,255,0.05)",
                                               }}
                                             >
                                               …
@@ -2640,39 +2561,42 @@ export default function AdminTenantDetailPage() {
                                             style={{
                                               marginBottom: "10px",
                                               padding: "10px 12px",
-                                              background: "#F1F5F9",
+                                              background: "#111520",
                                               borderRadius: "8px",
                                               fontSize: "12px",
-                                              color: "#334155",
+                                              color: "#eef2ff",
+                                              border: "1px solid rgba(255,255,255,0.05)",
                                             }}
                                           >
-                                            <div style={{ fontWeight: 800, color: "#0F172A", marginBottom: "8px" }}>
+                                            <div style={{ fontWeight: 800, color: "#6b7a9a", marginBottom: "8px", fontSize: "9px", letterSpacing: "1px", textTransform: "uppercase" }}>
                                               Einnahmen-Übersicht
                                             </div>
                                             <div style={{ marginBottom: "4px" }}>
-                                              <span style={{ color: "#64748B", fontWeight: 600 }}>Gesamteinnahmen / Monat:</span>{" "}
-                                              <span style={{ fontWeight: 700 }}>{formatChfRent(monthlyKpi)}</span>
+                                              <span style={{ color: "#6b7a9a", fontWeight: 600 }}>Gesamteinnahmen / Monat:</span>{" "}
+                                              <span style={{ fontWeight: 700, color: "#eef2ff" }}>{formatChfRent(monthlyKpi)}</span>
                                             </div>
                                             <div style={{ marginBottom: recBr.length || otBr.length ? "8px" : 0 }}>
-                                              <span style={{ color: "#64748B", fontWeight: 600 }}>Einmalige Einnahmen:</span>{" "}
-                                              <span style={{ fontWeight: 700 }}>{formatChfRent(oneTimeKpi)}</span>
+                                              <span style={{ color: "#6b7a9a", fontWeight: 600 }}>Einmalige Einnahmen:</span>{" "}
+                                              <span style={{ fontWeight: 700, color: "#eef2ff" }}>{formatChfRent(oneTimeKpi)}</span>
                                             </div>
                                             {recBr.length || otBr.length ? (
                                               <div
                                                 style={{
                                                   marginTop: "8px",
                                                   paddingTop: "8px",
-                                                  borderTop: "1px solid #E2E8F0",
+                                                  borderTop: "1px solid rgba(255,255,255,0.05)",
                                                 }}
                                               >
                                                 {recBr.length ? (
                                                   <div style={{ marginBottom: otBr.length ? "8px" : 0 }}>
                                                     <div
                                                       style={{
-                                                        fontSize: "11px",
+                                                        fontSize: "10px",
                                                         fontWeight: 700,
-                                                        color: "#64748B",
+                                                        color: "#6b7a9a",
                                                         marginBottom: "4px",
+                                                        textTransform: "uppercase",
+                                                        letterSpacing: "0.5px",
                                                       }}
                                                     >
                                                       Einnahmen Zusammensetzung
@@ -2686,10 +2610,11 @@ export default function AdminTenantDetailPage() {
                                                           gap: "12px",
                                                           fontSize: "12px",
                                                           lineHeight: 1.45,
+                                                          color: "#eef2ff",
                                                         }}
                                                       >
-                                                        <span>{b.label}</span>
-                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                                                        <span style={{ color: "#7f8daa" }}>{b.label}</span>
+                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap", color: "#eef2ff" }}>
                                                           {formatChfRent(b.total)}
                                                         </span>
                                                       </div>
@@ -2700,10 +2625,12 @@ export default function AdminTenantDetailPage() {
                                                   <div>
                                                     <div
                                                       style={{
-                                                        fontSize: "11px",
+                                                        fontSize: "10px",
                                                         fontWeight: 700,
-                                                        color: "#64748B",
+                                                        color: "#6b7a9a",
                                                         marginBottom: "4px",
+                                                        textTransform: "uppercase",
+                                                        letterSpacing: "0.5px",
                                                       }}
                                                     >
                                                       Einmalige Einnahmen
@@ -2717,10 +2644,11 @@ export default function AdminTenantDetailPage() {
                                                           gap: "12px",
                                                           fontSize: "12px",
                                                           lineHeight: 1.45,
+                                                          color: "#eef2ff",
                                                         }}
                                                       >
-                                                        <span>{b.label}</span>
-                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                                                        <span style={{ color: "#7f8daa" }}>{b.label}</span>
+                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap", color: "#eef2ff" }}>
                                                           {formatChfRent(b.total)}
                                                         </span>
                                                       </div>
@@ -2734,7 +2662,7 @@ export default function AdminTenantDetailPage() {
                                       })()}
 
                                       {tenancyRevenueErr ? (
-                                        <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                                        <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#f87171" }}>
                                           {tenancyRevenueErr}
                                         </p>
                                       ) : null}
@@ -2817,9 +2745,9 @@ export default function AdminTenantDetailPage() {
                                             <div
                                               style={{
                                                 ...inputStyle,
-                                                background: "#F8FAFC",
-                                                border: "1px solid #E2E8F0",
-                                                color: "#334155",
+                                                background: "#111520",
+                                                border: "1px solid rgba(255,255,255,0.08)",
+                                                color: "#eef2ff",
                                                 fontWeight: 600,
                                               }}
                                             >
@@ -2834,7 +2762,7 @@ export default function AdminTenantDetailPage() {
                                             <div
                                               style={{
                                                 fontSize: "10px",
-                                                color: "#94A3B8",
+                                                color: "#6b7a9a",
                                                 marginTop: "4px",
                                                 maxWidth: "220px",
                                               }}
@@ -2859,15 +2787,10 @@ export default function AdminTenantDetailPage() {
                                             type="button"
                                             onClick={() => submitRevenueForm(tn.id, tn)}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                            style={{
-                                              padding: "7px 12px",
-                                              borderRadius: "10px",
-                                              border: "1px solid #FB923C",
-                                              background: "#FB923C",
-                                              color: "#FFF",
-                                              fontWeight: 800,
-                                              cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
-                                            }}
+                                            className={`rounded-[8px] bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3 py-1.5 text-xs font-semibold text-white ${
+                                              tenancyRevenueLoadingId === String(tn.id) ? "cursor-default opacity-50" : "cursor-pointer"
+                                            }`}
+                                            style={{ border: "none", fontWeight: 800 }}
                                           >
                                             {revenueEditingId ? "Aktualisieren" : "Hinzufügen"}
                                           </button>
@@ -2875,14 +2798,8 @@ export default function AdminTenantDetailPage() {
                                             type="button"
                                             onClick={() => cancelRevenueEdit(tn)}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                            style={{
-                                              padding: "7px 12px",
-                                              borderRadius: "10px",
-                                              border: "1px solid #E2E8F0",
-                                              background: "#FFF",
-                                              fontWeight: 700,
-                                              cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
-                                            }}
+                                            className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                                            style={{ cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer", fontWeight: 700 }}
                                           >
                                             Abbrechen
                                           </button>
@@ -2910,7 +2827,7 @@ export default function AdminTenantDetailPage() {
                                                 return (
                                                   <tr key={rid}>
                                                     <td style={tdCell}>{revenueTypeLabelForDisplay(rr.type)}</td>
-                                                    <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#0F172A" }}>
+                                                    <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#eef2ff" }}>
                                                       {formatChfRent(rr.amount_chf)}
                                                     </td>
                                                     <td style={tdCell}>{revenueFrequencyLabel(rr.frequency)}</td>
@@ -2922,15 +2839,8 @@ export default function AdminTenantDetailPage() {
                                                           type="button"
                                                           onClick={() => startRevenueEdit(rr)}
                                                           disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                                          style={{
-                                                            padding: "4px 10px",
-                                                            borderRadius: "8px",
-                                                            border: "1px solid #E2E8F0",
-                                                            background: "#FFF",
-                                                            fontSize: "12px",
-                                                            fontWeight: 700,
-                                                            cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
-                                                          }}
+                                                          className="rounded-[8px] border border-white/[0.1] bg-transparent px-2.5 py-1 text-xs font-bold text-[#8090b0] hover:bg-white/[0.05] disabled:cursor-default"
+                                                          style={{ cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer" }}
                                                         >
                                                           Bearbeiten
                                                         </button>
@@ -2938,16 +2848,8 @@ export default function AdminTenantDetailPage() {
                                                           type="button"
                                                           onClick={() => deleteRevenueRow(tn.id, rr, tn)}
                                                           disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                                          style={{
-                                                            padding: "4px 10px",
-                                                            borderRadius: "8px",
-                                                            border: "1px solid #E2E8F0",
-                                                            background: "#FFF",
-                                                            fontSize: "12px",
-                                                            fontWeight: 700,
-                                                            color: "#B91C1C",
-                                                            cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
-                                                          }}
+                                                          className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-[#f87171] hover:bg-red-500/15 disabled:cursor-default"
+                                                          style={{ cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer" }}
                                                         >
                                                           Löschen
                                                         </button>
@@ -2958,7 +2860,7 @@ export default function AdminTenantDetailPage() {
                                               })
                                             ) : (
                                               <tr>
-                                                <td colSpan={6} style={{ ...tdCell, color: "#64748B" }}>
+                                                <td colSpan={6} style={{ ...tdCell, color: "#6b7a9a" }}>
                                                   {tenancyRevenueLoadingId === String(tn.id) ? "Lade …" : "Keine Einnahmen erfasst."}
                                                 </td>
                                               </tr>
@@ -2967,7 +2869,7 @@ export default function AdminTenantDetailPage() {
                                         </table>
                                       </div>
 
-                                      <p style={{ margin: "10px 0 0 0", fontSize: "11px", color: "#64748B" }}>
+                                      <p style={{ margin: "10px 0 0 0", fontSize: "11px", color: "#6b7a9a" }}>
                                         Berechnung Gesamteinnahmen / Monat: monatlich voll, jährlich ÷12; einmalige Beträge unter „Einmalige Einnahmen“.
                                       </p>
                                     </div>
@@ -2981,35 +2883,23 @@ export default function AdminTenantDetailPage() {
                 <button
                   type="button"
                   onClick={openAssignForm}
-                  style={{
-                    marginTop: "14px",
-                    padding: "8px 14px",
-                    borderRadius: "10px",
-                    border: "1px solid #E2E8F0",
-                    background: "#FFFFFF",
-                    fontWeight: 600,
-                    fontSize: "13px",
-                    cursor: "pointer",
-                  }}
+                  className="mt-3.5 rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  style={{ cursor: "pointer" }}
                 >
                   Mietverhältnis zuweisen
                 </button>
                 {assignOpen ? (
                   <form
                     onSubmit={handleAssignSubmit}
-                    style={{
-                      marginTop: "14px",
-                      paddingTop: "14px",
-                      borderTop: "1px solid #F1F5F9",
-                    }}
+                    className="mt-3.5 border-t border-white/[0.05] pt-3.5"
                   >
                     {assignUnitsErr ? (
-                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#f87171" }}>
                         {assignUnitsErr}
                       </p>
                     ) : null}
                     {assignErr ? (
-                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#f87171" }}>
                         {assignErr}
                       </p>
                     ) : null}
@@ -3143,13 +3033,27 @@ export default function AdminTenantDetailPage() {
                       </div>
                       <div>
                         <label style={labelStyle}>Einnahmen / Monat</label>
-                        <div style={{ ...inputStyle, background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                        <div
+                          style={{
+                            ...inputStyle,
+                            background: "#111520",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            color: "#eef2ff",
+                          }}
+                        >
                           {formatChfRent(monthlyEquivalentFromRevenueRows(assignRevenueRows))}
                         </div>
                       </div>
                       <div>
                         <label style={labelStyle}>Status (abgeleitet)</label>
-                        <div style={{ ...inputStyle, background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                        <div
+                          style={{
+                            ...inputStyle,
+                            background: "#111520",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            color: "#eef2ff",
+                          }}
+                        >
                           {tenancyDisplayStatusLabelDe(
                             deriveTenancyLifecyclePreviewForAssign(
                               assignMoveIn,
@@ -3160,7 +3064,7 @@ export default function AdminTenantDetailPage() {
                         </div>
                       </div>
                       <div style={{ gridColumn: "1 / -1" }}>
-                        <div style={{ fontSize: "12px", fontWeight: 800, color: "#334155", marginBottom: "8px" }}>
+                        <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
                           Einnahmen
                         </div>
                         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -3238,9 +3142,9 @@ export default function AdminTenantDetailPage() {
                               <div
                                 style={{
                                   ...inputStyle,
-                                  background: "#F8FAFC",
-                                  border: "1px solid #E2E8F0",
-                                  color: "#334155",
+                                  background: "#111520",
+                                  border: "1px solid rgba(255,255,255,0.08)",
+                                  color: "#eef2ff",
                                   fontWeight: 600,
                                 }}
                               >
@@ -3248,7 +3152,7 @@ export default function AdminTenantDetailPage() {
                                   tenancyDraftDisplayEndIso(assignActualMoveOut, assignTerminationEffective) || ""
                                 )}
                               </div>
-                              <div style={{ fontSize: "10px", color: "#94A3B8", marginTop: "4px", maxWidth: "220px" }}>
+                              <div style={{ fontSize: "10px", color: "#6b7a9a", marginTop: "4px", maxWidth: "220px" }}>
                                 Ende wird automatisch aus Mietende übernommen.
                               </div>
                             </div>
@@ -3288,14 +3192,9 @@ export default function AdminTenantDetailPage() {
                               setAssignRevenueRows((prev) => [...(Array.isArray(prev) ? prev : []), row]);
                               setAssignRevenueForm((f) => ({ ...f, amount_chf: "", notes: "" }));
                             }}
-                            style={{
-                              padding: "8px 12px",
-                              borderRadius: "10px",
-                              border: "1px solid #E2E8F0",
-                              background: "#FFF",
-                              fontWeight: 700,
-                              cursor: assignSaving ? "default" : "pointer",
-                            }}
+                            className={`rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-xs font-bold text-[#8090b0] hover:bg-white/[0.05] ${
+                              assignSaving ? "cursor-default opacity-50" : "cursor-pointer"
+                            }`}
                           >
                             + Einnahme hinzufügen
                           </button>
@@ -3315,7 +3214,7 @@ export default function AdminTenantDetailPage() {
                               {(Array.isArray(assignRevenueRows) ? assignRevenueRows : []).map((rr) => (
                                 <tr key={rr.id}>
                                   <td style={tdCell}>{revenueTypeLabelForDisplay(rr.type)}</td>
-                                  <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#0F172A" }}>
+                                  <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#eef2ff" }}>
                                     {formatChfRent(parseRevenueAmount(rr.amount_chf) ?? rr.amount_chf)}
                                   </td>
                                   <td style={tdCell}>{revenueFrequencyLabel(rr.frequency)}</td>
@@ -3326,16 +3225,8 @@ export default function AdminTenantDetailPage() {
                                       onClick={() =>
                                         setAssignRevenueRows((prev) => (prev || []).filter((x) => x.id !== rr.id))
                                       }
-                                      style={{
-                                        padding: "4px 10px",
-                                        borderRadius: "8px",
-                                        border: "1px solid #E2E8F0",
-                                        background: "#FFF",
-                                        fontSize: "12px",
-                                        fontWeight: 700,
-                                        color: "#B91C1C",
-                                        cursor: assignSaving ? "default" : "pointer",
-                                      }}
+                                      className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-[#f87171] hover:bg-red-500/15 disabled:cursor-default"
+                                      style={{ cursor: assignSaving ? "default" : "pointer" }}
                                     >
                                       Löschen
                                     </button>
@@ -3409,15 +3300,10 @@ export default function AdminTenantDetailPage() {
                       <button
                         type="submit"
                         disabled={assignSaving}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: "10px",
-                          border: "none",
-                          background: assignSaving ? "#94A3B8" : "#f97316",
-                          color: "#FFF",
-                          fontWeight: 700,
-                          cursor: assignSaving ? "default" : "pointer",
-                        }}
+                        className={`rounded-[8px] bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3.5 py-2 text-sm font-semibold text-white ${
+                          assignSaving ? "cursor-default opacity-50" : "cursor-pointer"
+                        }`}
+                        style={{ border: "none", fontWeight: 700 }}
                       >
                         {assignSaving ? "Speichern …" : "Speichern"}
                       </button>
@@ -3428,14 +3314,8 @@ export default function AdminTenantDetailPage() {
                           setAssignOpen(false);
                           resetAssignForm();
                         }}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: "10px",
-                          border: "1px solid #E2E8F0",
-                          background: "#FFF",
-                          fontWeight: 600,
-                          cursor: assignSaving ? "default" : "pointer",
-                        }}
+                        className="rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                        style={{ cursor: assignSaving ? "default" : "pointer" }}
                       >
                         Abbrechen
                       </button>
@@ -3446,7 +3326,7 @@ export default function AdminTenantDetailPage() {
               <div style={sectionCard}>
                 <div style={sectionTitle}>Rechnungen</div>
                 {!invoices.length ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>
                     Keine Rechnungen vorhanden
                   </p>
                 ) : (
@@ -3462,33 +3342,19 @@ export default function AdminTenantDetailPage() {
                       </thead>
                       <tbody>
                         {invoices.map((inv) => {
-                          const st = (inv.status || "").toLowerCase();
-                          const badge =
-                            INVOICE_STATUS_BADGE[st] || INVOICE_STATUS_BADGE.unpaid;
                           return (
                             <tr key={inv.id != null ? String(inv.id) : `${inv.invoice_number}-${inv.due_date}`}>
-                              <td style={{ ...tdCell, fontWeight: 700, color: "#0F172A" }}>
+                              <td style={{ ...tdCell, fontWeight: 700, color: "#eef2ff" }}>
                                 {inv.invoice_number || "—"}
                               </td>
-                              <td style={{ ...tdCell, textAlign: "right", color: "#0F172A" }}>
+                              <td style={{ ...tdCell, textAlign: "right", color: "#eef2ff" }}>
                                 {formatInvoiceAmount(inv.amount, inv.currency)}
                               </td>
-                              <td style={{ ...tdCell, fontSize: "13px", color: "#64748B" }}>
+                              <td style={{ ...tdCell, fontSize: "13px", color: "#6b7a9a" }}>
                                 {formatDateOnly(inv.due_date)}
                               </td>
                               <td style={tdCell}>
-                                <span
-                                  style={{
-                                    display: "inline-flex",
-                                    padding: "4px 8px",
-                                    borderRadius: "999px",
-                                    fontSize: "11px",
-                                    fontWeight: 700,
-                                    background: badge.bg,
-                                    color: badge.color,
-                                    border: `1px solid ${badge.border}`,
-                                  }}
-                                >
+                                <span className="inline-flex rounded-full border border-white/[0.1] bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-[#7aaeff]">
                                   {inv.status || "—"}
                                 </span>
                               </td>
@@ -3532,7 +3398,7 @@ export default function AdminTenantDetailPage() {
                       justifyContent: "flex-end",
                     }}
                   >
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#64748B" }}>
+                    <label className="flex items-center gap-2 text-[13px] text-[#6b7a9a]">
                       <span>Kategorie</span>
                       <select
                         value={tenantDocCategory}
@@ -3540,11 +3406,12 @@ export default function AdminTenantDetailPage() {
                         disabled={tenantDocUploading || !tenantId}
                         style={{
                           fontSize: "13px",
-                          border: "1px solid #CBD5E1",
-                          borderRadius: "8px",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: "9px",
                           padding: "6px 8px",
-                          color: "#0F172A",
-                          background: tenantDocUploading || !tenantId ? "#F1F5F9" : "#FFFFFF",
+                          color: "#eef2ff",
+                          background: tenantDocUploading || !tenantId ? "rgba(255,255,255,0.04)" : "#111520",
+                          cursor: tenantDocUploading || !tenantId ? "not-allowed" : "pointer",
                         }}
                       >
                         <option value="">—</option>
@@ -3565,33 +3432,25 @@ export default function AdminTenantDetailPage() {
                       type="button"
                       onClick={handleTenantDocPick}
                       disabled={tenantDocUploading || !tenantId}
-                      style={{
-                        fontSize: "13px",
-                        border: "1px solid #CBD5E1",
-                        background: tenantDocUploading || !tenantId ? "#F1F5F9" : "#FFFFFF",
-                        color: "#334155",
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        fontWeight: 600,
-                        cursor: tenantDocUploading || !tenantId ? "not-allowed" : "pointer",
-                      }}
+                      className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ cursor: tenantDocUploading || !tenantId ? "not-allowed" : "pointer" }}
                     >
                       {tenantDocUploading ? "Wird hochgeladen …" : "Hochladen"}
                     </button>
                   </div>
                 </div>
                 {tenantDocUploadError ? (
-                  <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#DC2626" }}>
+                  <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#f87171" }}>
                     {tenantDocUploadError}
                   </p>
                 ) : null}
                 {loading ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Lade Dokumente …</p>
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Lade Dokumente …</p>
                 ) : tenantDocuments.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Keine Dokumente vorhanden</p>
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Keine Dokumente vorhanden</p>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", color: "#0F172A" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", color: "#eef2ff" }}>
                       <thead>
                         <tr>
                           <th style={thCell}>Datei</th>
@@ -3605,13 +3464,13 @@ export default function AdminTenantDetailPage() {
                       <tbody>
                         {tenantDocuments.map((doc) => (
                           <tr key={String(doc.id)}>
-                            <td style={{ ...tdCell, fontWeight: 600 }}>{doc.file_name || "—"}</td>
-                            <td style={{ ...tdCell, color: "#64748B" }}>{formatTenantDocumentType(doc)}</td>
-                            <td style={{ ...tdCell, color: "#64748B" }}>
+                            <td style={{ ...tdCell, fontWeight: 600, color: "#eef2ff" }}>{doc.file_name || "—"}</td>
+                            <td style={{ ...tdCell, color: "#6b7a9a" }}>{formatTenantDocumentType(doc)}</td>
+                            <td style={{ ...tdCell, color: "#6b7a9a" }}>
                               {formatTenantDocumentCategoryLabel(doc.category)}
                             </td>
-                            <td style={{ ...tdCell, color: "#64748B" }}>{formatTenantDocumentDate(doc.created_at)}</td>
-                            <td style={{ ...tdCell, color: "#64748B" }}>
+                            <td style={{ ...tdCell, color: "#6b7a9a" }}>{formatTenantDocumentDate(doc.created_at)}</td>
+                            <td style={{ ...tdCell, color: "#6b7a9a" }}>
                               {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
                                 ? doc.uploaded_by_name
                                 : "—"}
@@ -3621,30 +3480,16 @@ export default function AdminTenantDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenTenantDocument(doc.id)}
-                                  style={{
-                                    background: "none",
-                                    border: "none",
-                                    padding: 0,
-                                    color: "#EA580C",
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                    textDecoration: "underline",
-                                  }}
+                                  className="border-none bg-transparent p-0 text-[13px] font-semibold text-[#7aaeff] underline hover:text-[#a8c4ff]"
+                                  style={{ cursor: "pointer" }}
                                 >
                                   Öffnen
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteTenantDocument(doc.id)}
-                                  style={{
-                                    background: "none",
-                                    border: "none",
-                                    padding: 0,
-                                    color: "#64748B",
-                                    fontSize: "13px",
-                                    cursor: "pointer",
-                                    textDecoration: "underline",
-                                  }}
+                                  className="border-none bg-transparent p-0 text-[13px] font-semibold text-[#6b7a9a] underline hover:text-[#f87171]"
+                                  style={{ cursor: "pointer" }}
                                 >
                                   Löschen
                                 </button>
@@ -3660,7 +3505,7 @@ export default function AdminTenantDetailPage() {
               <TenantHistoryBlock events={mergedHistoryEvents} />
             </>
           ) : (
-            <p style={{ color: "#64748B" }}>Keine Daten.</p>
+            <p className="text-[#6b7a9a]">Keine Daten.</p>
           )}
         </main>
       </div>
