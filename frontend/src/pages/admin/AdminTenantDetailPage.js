@@ -25,7 +25,7 @@ import {
 } from "../../api/adminData";
 import { API_BASE_URL, getApiHeaders } from "../../config";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
-import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
+import { getDisplayUnitId } from "../../utils/unitDisplayId";
 import {
   UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE,
   deriveTenantOperationalStatus,
@@ -616,10 +616,7 @@ export default function AdminTenantDetailPage() {
   const [assignTenantDepositProvider, setAssignTenantDepositProvider] = useState("");
   const [assignErr, setAssignErr] = useState(null);
   const [assignSaving, setAssignSaving] = useState(false);
-  const assignRentUserEditedRef = useRef(false);
-  const [assignRevenueRows, setAssignRevenueRows] = useState([
-    { id: `ar-${Date.now()}`, type: "rent", amount_chf: "", frequency: "monthly", start_date: "", end_date: "", notes: "" },
-  ]);
+  const [assignRevenueRows, setAssignRevenueRows] = useState([]);
   const [assignRevenueForm, setAssignRevenueForm] = useState({
     type: "rent",
     amount_chf: "",
@@ -650,10 +647,29 @@ export default function AdminTenantDetailPage() {
     notes: "",
   });
 
-  const assignUnitForRent = useMemo(
-    () => assignUnits.find((x) => String(x.id) === String(assignUnitId)),
-    [assignUnits, assignUnitId]
-  );
+  const prefetchTenancyRevenueForTenancyList = useCallback(async (tenancyList) => {
+    const ids = (tenancyList || [])
+      .map((t) => t?.id)
+      .filter((id) => id != null && String(id).trim() !== "")
+      .map(String);
+    if (!ids.length) {
+      setTenancyRevenueByTenancyId({});
+      return;
+    }
+    const results = await Promise.all(
+      ids.map(async (tid) => {
+        try {
+          const rows = await fetchAdminTenancyRevenue(tid);
+          return [tid, Array.isArray(rows) ? rows : []];
+        } catch {
+          return [tid, []];
+        }
+      })
+    );
+    const next = {};
+    for (const [tid, rows] of results) next[tid] = rows;
+    setTenancyRevenueByTenancyId(next);
+  }, []);
 
   const mergedHistoryEvents = useMemo(() => {
     const fromAudit = (auditLogs || []).map(auditLogToTenantHistoryEvent).filter(Boolean);
@@ -665,50 +681,17 @@ export default function AdminTenantDetailPage() {
     });
   }, [events, auditLogs]);
 
-  useEffect(() => {
-    if (!assignUnitId || !assignUnits.length) return;
-    const u = assignUnits.find((x) => String(x.id) === String(assignUnitId));
-    if (!u) return;
-    const ut = normalizeUnitTypeLabel(u.type);
-    if (ut === "Apartment") {
-      const raw = u.tenantPriceMonthly ?? u.tenant_price_monthly_chf;
-      const p = Number(raw);
-      const next = Number.isFinite(p) && p >= 0 ? String(p) : "";
-      if (!assignRentUserEditedRef.current) {
-        setAssignRevenueForm((f) => ({ ...f, amount_chf: next }));
-        setAssignRevenueRows((prev) => {
-          if (!Array.isArray(prev) || prev.length === 0) {
-            return [{ id: `ar-${Date.now()}`, type: "rent", amount_chf: next, frequency: "monthly", start_date: "", end_date: "", notes: "" }];
-          }
-          return prev;
-        });
-      }
-      return;
-    }
-    if (!assignRoomId || !assignRooms.length) return;
-    const room = assignRooms.find((r) => String(r.id) === String(assignRoomId));
-    if (!room) return;
-    if (assignRentUserEditedRef.current) return;
-    const raw = room.priceMonthly ?? room.price ?? room.base_rent_chf;
-    const p = Number(raw);
-    const next = Number.isFinite(p) && p >= 0 ? String(p) : "";
-    setAssignRevenueForm((f) => ({ ...f, amount_chf: next }));
-    setAssignRevenueRows((prev) => {
-      if (!Array.isArray(prev) || prev.length === 0) {
-        return [{ id: `ar-${Date.now()}`, type: "rent", amount_chf: next, frequency: "monthly", start_date: "", end_date: "", notes: "" }];
-      }
-      return prev;
-    });
-  }, [assignUnitId, assignUnits, assignRoomId, assignRooms]);
-
   const reloadTenanciesForTenant = useCallback(async () => {
     try {
       const items = await fetchAdminTenancies({ tenant_id: tenantId, limit: 200 });
-      setTenancies(Array.isArray(items) ? items : []);
+      const list = Array.isArray(items) ? items : [];
+      setTenancies(list);
+      await prefetchTenancyRevenueForTenancyList(list);
     } catch {
       setTenancies([]);
+      setTenancyRevenueByTenancyId({});
     }
-  }, [tenantId]);
+  }, [tenantId, prefetchTenancyRevenueForTenancyList]);
 
   const cancelTenancyEdit = () => {
     setTenancyEditingId(null);
@@ -801,24 +784,6 @@ export default function AdminTenantDetailPage() {
       shouldRefreshTenantList ? { state: { refreshTenants: true } } : undefined
     );
 
-  const reloadTenancyRevenue = useCallback(async (tenancyId) => {
-    const tid = tenancyId != null ? String(tenancyId) : "";
-    if (!tid) return;
-    setTenancyRevenueLoadingId(tid);
-    setTenancyRevenueErr(null);
-    try {
-      const rows = await fetchAdminTenancyRevenue(tid);
-      setTenancyRevenueByTenancyId((prev) => ({
-        ...(prev || {}),
-        [tid]: Array.isArray(rows) ? rows : [],
-      }));
-    } catch (err) {
-      setTenancyRevenueErr(err?.message || "Einnahmen konnten nicht geladen werden.");
-    } finally {
-      setTenancyRevenueLoadingId(null);
-    }
-  }, []);
-
   const startRevenueEdit = (row) => {
     if (!row?.id) return;
     setRevenueEditingId(String(row.id));
@@ -882,7 +847,7 @@ export default function AdminTenantDetailPage() {
       } else {
         await createAdminTenancyRevenue(tid, body);
       }
-      await reloadTenancyRevenue(tid);
+      await reloadTenanciesForTenant();
       cancelRevenueEdit();
     } catch (err) {
       setTenancyRevenueErr(err?.message || "Speichern fehlgeschlagen.");
@@ -900,7 +865,7 @@ export default function AdminTenantDetailPage() {
     setTenancyRevenueLoadingId(tid);
     try {
       await deleteAdminTenancyRevenue(rid);
-      await reloadTenancyRevenue(tid);
+      await reloadTenanciesForTenant();
       if (revenueEditingId === rid) cancelRevenueEdit();
     } catch (err) {
       setTenancyRevenueErr(err?.message || "Löschen fehlgeschlagen.");
@@ -1016,7 +981,9 @@ export default function AdminTenantDetailPage() {
         setNotes(nData?.items || []);
         setEvents(eData?.items || []);
         setInvoices(invData?.items || []);
-        setTenancies(Array.isArray(tenancyItems) ? tenancyItems : []);
+        const tList = Array.isArray(tenancyItems) ? tenancyItems : [];
+        setTenancies(tList);
+        await prefetchTenancyRevenueForTenancyList(tList);
         setAuditLogs(Array.isArray(auditData?.items) ? auditData.items : []);
         setTenantDocuments(Array.isArray(tdDocs) ? tdDocs : []);
       } catch (e) {
@@ -1028,7 +995,7 @@ export default function AdminTenantDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [tenantId]);
+  }, [tenantId, prefetchTenancyRevenueForTenancyList]);
 
   useEffect(() => {
     if (!assignOpen || !tenantId) return;
@@ -1116,7 +1083,6 @@ export default function AdminTenantDetailPage() {
 
   const resetAssignForm = () => {
     const today = new Date().toISOString().slice(0, 10);
-    assignRentUserEditedRef.current = false;
     setAssignUnitId("");
     setAssignRoomId("");
     setAssignMoveIn(today);
@@ -1125,10 +1091,7 @@ export default function AdminTenantDetailPage() {
     setAssignTenantDepositAmount("");
     setAssignTenantDepositProvider("");
     setAssignErr(null);
-    const rid = `ar-${Date.now()}`;
-    setAssignRevenueRows([
-      { id: rid, type: "rent", amount_chf: "", frequency: "monthly", start_date: "", end_date: "", notes: "" },
-    ]);
+    setAssignRevenueRows([]);
     setAssignRevenueForm({
       type: "rent",
       amount_chf: "",
@@ -1152,10 +1115,6 @@ export default function AdminTenantDetailPage() {
       return;
     }
     const rows = Array.isArray(assignRevenueRows) ? assignRevenueRows : [];
-    if (rows.length === 0) {
-      setAssignErr("Bitte mindestens eine Einnahmen-Zeile erfassen.");
-      return;
-    }
     for (const r of rows) {
       const type = String(r?.type || "").trim();
       if (!type) {
@@ -1215,8 +1174,6 @@ export default function AdminTenantDetailPage() {
       .then(async (createdTenancy) => {
         const tid = createdTenancy?.id != null ? String(createdTenancy.id) : "";
         if (!tid) return createdTenancy;
-        const existing = await fetchAdminTenancyRevenue(tid).catch(() => []);
-        if (Array.isArray(existing) && existing.length > 0) return createdTenancy;
         const rows = Array.isArray(assignRevenueRows) ? assignRevenueRows : [];
         for (const r of rows) {
           await createAdminTenancyRevenue(tid, {
@@ -1809,7 +1766,15 @@ export default function AdminTenantDetailPage() {
                                   </span>
                                 </td>
                                 <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
-                                  {formatChfRent(tn.monthly_revenue_equivalent)}
+                                  {(() => {
+                                    const tidStr = String(tn.id);
+                                    const revRowsForCell = tenancyRevenueByTenancyId[tidStr];
+                                    if (revRowsForCell === undefined) {
+                                      return <span style={{ color: "#94A3B8", fontWeight: 500 }}>…</span>;
+                                    }
+                                    const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
+                                    return formatChfRent(monthlyFromSaved);
+                                  })()}
                                 </td>
                                 <td style={tdCell}>{tenantDepositTypeLabel(tn.tenant_deposit_type)}</td>
                                 <td style={{ ...tdCell, textAlign: "right" }}>
@@ -2274,10 +2239,8 @@ export default function AdminTenantDetailPage() {
                           style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
                           value={assignUnitId}
                           onChange={(e) => {
-                            assignRentUserEditedRef.current = false;
                             setAssignUnitId(e.target.value);
                             setAssignRoomId("");
-                            setAssignMonthlyRent("");
                           }}
                           disabled={assignSaving || assignUnitsLoading}
                         >
@@ -2306,7 +2269,6 @@ export default function AdminTenantDetailPage() {
                           style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
                           value={assignRoomId}
                           onChange={(e) => {
-                            assignRentUserEditedRef.current = false;
                             setAssignRoomId(e.target.value);
                           }}
                           disabled={assignSaving || !assignUnitId || assignRoomsLoading}
@@ -2389,7 +2351,6 @@ export default function AdminTenantDetailPage() {
                               style={inputStyle}
                               value={assignRevenueForm.amount_chf}
                               onChange={(e) => {
-                                assignRentUserEditedRef.current = true;
                                 setAssignRevenueForm((f) => ({ ...f, amount_chf: e.target.value }));
                               }}
                               disabled={assignSaving}
