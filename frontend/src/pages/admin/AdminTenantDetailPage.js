@@ -33,6 +33,17 @@ import {
   parseIsoDate,
 } from "../../utils/unitOccupancyStatus";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
+import {
+  REVENUE_TYPE_OPTIONS,
+  REVENUE_TYPE_VALUE_SET,
+  normalizeRevenueFrequency,
+  revenueFrequencyLabel,
+  revenueTypeLabelForDisplay,
+  monthlyEquivalentFromRevenueRows,
+  totalOneTimeRevenueFromRows,
+  recurringMonthlyBreakdownEntries,
+  oneTimeBreakdownEntries,
+} from "../../utils/tenancyRevenueBreakdown";
 
 async function parseAdminErrorFromResponse(res) {
   const text = await res.text();
@@ -225,38 +236,6 @@ function dateOnlyOrNull(value) {
   return s.slice(0, 10);
 }
 
-function normalizeRevenueFrequency(raw) {
-  const k = String(raw || "monthly").trim().toLowerCase() || "monthly";
-  if (!["monthly", "yearly", "one_time"].includes(k)) return "monthly";
-  return k;
-}
-
-function revenueFrequencyLabel(freq) {
-  const k = String(freq || "monthly").trim().toLowerCase();
-  if (k === "yearly") return "Jährlich";
-  if (k === "one_time") return "Einmalig";
-  return "Monatlich";
-}
-
-/** Stable API/storage values with German labels in UI */
-const REVENUE_TYPE_OPTIONS = [
-  { value: "rent", label: "Miete" },
-  { value: "service_fee", label: "Servicegebühr" },
-  { value: "utilities", label: "Nebenkosten" },
-  { value: "furniture", label: "Möbelbenutzung" },
-  { value: "cleaning", label: "Reinigung" },
-  { value: "setup_fee", label: "Setup Fee" },
-  { value: "other", label: "Sonstiges" },
-];
-const REVENUE_TYPE_VALUE_SET = new Set(REVENUE_TYPE_OPTIONS.map((o) => o.value));
-
-function revenueTypeLabelForDisplay(raw) {
-  const v = String(raw || "").trim();
-  if (!v) return "—";
-  const hit = REVENUE_TYPE_OPTIONS.find((o) => o.value === v);
-  return hit ? hit.label : v;
-}
-
 function applyRecurringRevenueDatesFromTenancy(form, freqRaw, moveInRaw, moveOutRaw) {
   const nf = normalizeRevenueFrequency(freqRaw);
   const mi = dateOnlyOrNull(moveInRaw) || "";
@@ -296,76 +275,6 @@ function RevenueTypeSelect({ value, onChange, disabled, id, selectStyle }) {
       ))}
     </select>
   );
-}
-
-function monthlyEquivalentFromRevenueRows(rows) {
-  if (!Array.isArray(rows)) return 0;
-  let sum = 0;
-  for (const r of rows) {
-    const f = normalizeRevenueFrequency(r?.frequency);
-    if (f === "one_time") continue;
-    const amt = Number(r?.amount_chf);
-    if (!Number.isFinite(amt)) continue;
-    sum += f === "yearly" ? amt / 12 : amt;
-  }
-  return sum;
-}
-
-function totalOneTimeRevenueFromRows(rows) {
-  if (!Array.isArray(rows)) return 0;
-  let sum = 0;
-  for (const r of rows) {
-    if (normalizeRevenueFrequency(r?.frequency) !== "one_time") continue;
-    const amt = Number(r?.amount_chf);
-    if (!Number.isFinite(amt)) continue;
-    sum += amt;
-  }
-  return sum;
-}
-
-/** Recurring rows only: summed monthly-equivalent per stored type key */
-function recurringMonthlyBreakdownEntries(rows) {
-  if (!Array.isArray(rows)) return [];
-  const map = new Map();
-  for (const r of rows) {
-    const f = normalizeRevenueFrequency(r?.frequency);
-    if (f === "one_time") continue;
-    const amt = Number(r?.amount_chf);
-    if (!Number.isFinite(amt)) continue;
-    const monthly = f === "yearly" ? amt / 12 : amt;
-    const typeKey = String(r?.type || "").trim();
-    const k = typeKey || "__empty__";
-    map.set(k, (map.get(k) || 0) + monthly);
-  }
-  return Array.from(map.entries())
-    .map(([typeKey, total]) => ({
-      typeKey,
-      label: typeKey === "__empty__" ? "—" : revenueTypeLabelForDisplay(typeKey),
-      total,
-    }))
-    .filter((x) => x.total !== 0)
-    .sort((a, b) => a.label.localeCompare(b.label, "de"));
-}
-
-function oneTimeBreakdownEntries(rows) {
-  if (!Array.isArray(rows)) return [];
-  const map = new Map();
-  for (const r of rows) {
-    if (normalizeRevenueFrequency(r?.frequency) !== "one_time") continue;
-    const amt = Number(r?.amount_chf);
-    if (!Number.isFinite(amt)) continue;
-    const typeKey = String(r?.type || "").trim();
-    const k = typeKey || "__empty__";
-    map.set(k, (map.get(k) || 0) + amt);
-  }
-  return Array.from(map.entries())
-    .map(([typeKey, total]) => ({
-      typeKey,
-      label: typeKey === "__empty__" ? "—" : revenueTypeLabelForDisplay(typeKey),
-      total,
-    }))
-    .filter((x) => x.total !== 0)
-    .sort((a, b) => a.label.localeCompare(b.label, "de"));
 }
 
 function deriveTenancyStatusFromDates(moveInRaw, moveOutRaw, todayIso = getTodayIsoForOccupancy()) {
@@ -1958,6 +1867,8 @@ export default function AdminTenantDetailPage() {
                                     }
                                     const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
                                     const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
+                                    const recBrCell = recurringMonthlyBreakdownEntries(revRowsForCell);
+                                    const otBrCell = oneTimeBreakdownEntries(revRowsForCell);
                                     return (
                                       <div
                                         style={{
@@ -1973,12 +1884,90 @@ export default function AdminTenantDetailPage() {
                                         <span>{formatChfRent(monthlyFromSaved)}</span>
                                         <div style={{ marginTop: "2px", textAlign: "right" }}>
                                           <div style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
-                                            Einmalige Einnahmen gesamt
+                                            Einmalige Einnahmen
                                           </div>
                                           <span style={{ fontSize: "13px", color: "#0F172A" }}>
                                             {formatChfRent(oneTimeTotal)}
                                           </span>
                                         </div>
+                                        {recBrCell.length || otBrCell.length ? (
+                                          <div
+                                            style={{
+                                              marginTop: "6px",
+                                              paddingTop: "6px",
+                                              borderTop: "1px solid #E2E8F0",
+                                              width: "100%",
+                                              maxWidth: "220px",
+                                            }}
+                                          >
+                                            {recBrCell.length ? (
+                                              <div style={{ marginBottom: otBrCell.length ? "6px" : 0 }}>
+                                                <div
+                                                  style={{
+                                                    fontSize: "10px",
+                                                    fontWeight: 700,
+                                                    color: "#64748B",
+                                                    marginBottom: "4px",
+                                                    textAlign: "right",
+                                                  }}
+                                                >
+                                                  Einnahmen Zusammensetzung
+                                                </div>
+                                                {recBrCell.map((b) => (
+                                                  <div
+                                                    key={b.typeKey}
+                                                    style={{
+                                                      display: "flex",
+                                                      justifyContent: "space-between",
+                                                      gap: "8px",
+                                                      fontSize: "11px",
+                                                      lineHeight: 1.4,
+                                                      textAlign: "right",
+                                                    }}
+                                                  >
+                                                    <span style={{ color: "#475569" }}>{b.label}</span>
+                                                    <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                                                      {formatChfRent(b.total)}
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : null}
+                                            {otBrCell.length ? (
+                                              <div>
+                                                <div
+                                                  style={{
+                                                    fontSize: "10px",
+                                                    fontWeight: 700,
+                                                    color: "#64748B",
+                                                    marginBottom: "4px",
+                                                    textAlign: "right",
+                                                  }}
+                                                >
+                                                  Einmalige Einnahmen
+                                                </div>
+                                                {otBrCell.map((b) => (
+                                                  <div
+                                                    key={b.typeKey}
+                                                    style={{
+                                                      display: "flex",
+                                                      justifyContent: "space-between",
+                                                      gap: "8px",
+                                                      fontSize: "11px",
+                                                      lineHeight: 1.4,
+                                                      textAlign: "right",
+                                                    }}
+                                                  >
+                                                    <span style={{ color: "#475569" }}>{b.label}</span>
+                                                    <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                                                      {formatChfRent(b.total)}
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                        ) : null}
                                       </div>
                                     );
                                   })()}
@@ -2236,7 +2225,7 @@ export default function AdminTenantDetailPage() {
                                               <span style={{ fontWeight: 700 }}>{formatChfRent(monthlyKpi)}</span>
                                             </div>
                                             <div style={{ marginBottom: recBr.length || otBr.length ? "8px" : 0 }}>
-                                              <span style={{ color: "#64748B", fontWeight: 600 }}>Einmalige Einnahmen gesamt:</span>{" "}
+                                              <span style={{ color: "#64748B", fontWeight: 600 }}>Einmalige Einnahmen:</span>{" "}
                                               <span style={{ fontWeight: 700 }}>{formatChfRent(oneTimeKpi)}</span>
                                             </div>
                                             {recBr.length || otBr.length ? (
@@ -2257,7 +2246,7 @@ export default function AdminTenantDetailPage() {
                                                         marginBottom: "4px",
                                                       }}
                                                     >
-                                                      Monatlich (normalisiert)
+                                                      Einnahmen Zusammensetzung
                                                     </div>
                                                     {recBr.map((b) => (
                                                       <div
@@ -2288,7 +2277,7 @@ export default function AdminTenantDetailPage() {
                                                         marginBottom: "4px",
                                                       }}
                                                     >
-                                                      Einmalig
+                                                      Einmalige Einnahmen
                                                     </div>
                                                     {otBr.map((b) => (
                                                       <div
@@ -2515,7 +2504,7 @@ export default function AdminTenantDetailPage() {
                                       </div>
 
                                       <p style={{ margin: "10px 0 0 0", fontSize: "11px", color: "#64748B" }}>
-                                        Berechnung Gesamteinnahmen / Monat: monatlich voll, jährlich ÷12; einmalige Beträge unter „Einmalige Einnahmen gesamt“ und „Einmalig“.
+                                        Berechnung Gesamteinnahmen / Monat: monatlich voll, jährlich ÷12; einmalige Beträge unter „Einmalige Einnahmen“.
                                       </p>
                                     </div>
                                   </td>

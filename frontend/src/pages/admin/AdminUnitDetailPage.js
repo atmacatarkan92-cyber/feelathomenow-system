@@ -28,6 +28,7 @@ import {
   updateAdminUnit,
   fetchAdminProfit,
   fetchAdminOccupancy,
+  fetchAdminTenancyRevenue,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -48,6 +49,11 @@ import {
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
 import { getPhase4OperationalWarnings } from "../../utils/unitOperationalIntelligence";
 import { getUnitCostsTotal, landlordDepositInsuranceMonthly } from "../../utils/adminUnitRunningCosts";
+import {
+  aggregateRecurringMonthlyBreakdownRows,
+  aggregateOneTimeBreakdownRows,
+  aggregateOneTimeTotalFromRowArrays,
+} from "../../utils/tenancyRevenueBreakdown";
 
 const UNIT_AUDIT_FIELD_LABELS = {
   landlord_id: "Verwaltung",
@@ -891,6 +897,10 @@ function AdminUnitDetailPage() {
   const [unitKpiOcc, setUnitKpiOcc] = useState(null);
   const [unitKpiLoading, setUnitKpiLoading] = useState(false);
   const [unitKpiErr, setUnitKpiErr] = useState(null);
+  const [unitTenancyRevenueByTenancyId, setUnitTenancyRevenueByTenancyId] =
+    useState({});
+  const [unitTenancyRevenueLoading, setUnitTenancyRevenueLoading] =
+    useState(false);
 
   const reloadUnitKpi = useCallback(async () => {
     if (!unitId) return;
@@ -1393,6 +1403,72 @@ function AdminUnitDetailPage() {
       profit: metrics.currentProfit,
     };
   }, [metrics]);
+
+  const activeTenancyIdsKey = useMemo(
+    () =>
+      activeUnitTenancies
+        .map((t) => String(t.id))
+        .filter(Boolean)
+        .sort()
+        .join(","),
+    [activeUnitTenancies]
+  );
+
+  useEffect(() => {
+    if (!unitId) return;
+    const ids = activeTenancyIdsKey
+      ? activeTenancyIdsKey.split(",").filter(Boolean)
+      : [];
+    if (ids.length === 0) {
+      setUnitTenancyRevenueByTenancyId({});
+      setUnitTenancyRevenueLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setUnitTenancyRevenueLoading(true);
+    setUnitTenancyRevenueByTenancyId({});
+    Promise.all(
+      ids.map((id) =>
+        fetchAdminTenancyRevenue(id)
+          .then((rows) => [id, Array.isArray(rows) ? rows : []])
+          .catch(() => [id, []])
+      )
+    )
+      .then((pairs) => {
+        if (cancelled) return;
+        const next = {};
+        for (const [id, rows] of pairs) next[id] = rows;
+        setUnitTenancyRevenueByTenancyId(next);
+      })
+      .finally(() => {
+        if (!cancelled) setUnitTenancyRevenueLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [unitId, activeTenancyIdsKey]);
+
+  const unitTenancyRevenueRowArrays = useMemo(() => {
+    const ids = activeTenancyIdsKey
+      ? activeTenancyIdsKey.split(",").filter(Boolean)
+      : [];
+    return ids
+      .map((id) => unitTenancyRevenueByTenancyId[id])
+      .filter((x) => Array.isArray(x));
+  }, [activeTenancyIdsKey, unitTenancyRevenueByTenancyId]);
+
+  const unitAggregatedRecurringBreakdown = useMemo(
+    () => aggregateRecurringMonthlyBreakdownRows(unitTenancyRevenueRowArrays),
+    [unitTenancyRevenueRowArrays]
+  );
+  const unitAggregatedOneTimeTotal = useMemo(
+    () => aggregateOneTimeTotalFromRowArrays(unitTenancyRevenueRowArrays),
+    [unitTenancyRevenueRowArrays]
+  );
+  const unitAggregatedOneTimeBreakdown = useMemo(
+    () => aggregateOneTimeBreakdownRows(unitTenancyRevenueRowArrays),
+    [unitTenancyRevenueRowArrays]
+  );
 
   const unitNumber =
     safeUnit.unitId && safeUnit.unitId.split("-")[2]
@@ -2129,6 +2205,67 @@ function AdminUnitDetailPage() {
                 hint="Umsatz minus Kosten (Backend berechnet)"
                 accent="slate"
               />
+            </div>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+              <p className="font-semibold text-slate-800 mb-1">
+                Einnahmen Zusammensetzung
+              </p>
+              <p className="text-xs text-slate-500 mb-3">
+                Wiederkehrende Einnahmen nach Typ (Monatsäquivalent), summiert über
+                aktive Mietverhältnisse. «Aktueller Umsatz» oben ist der
+                Backend-KPI-Monat und kann davon abweichen.
+              </p>
+              {unitTenancyRevenueLoading ? (
+                <p className="text-slate-500">…</p>
+              ) : activeUnitTenancies.length === 0 ? (
+                <p className="text-slate-500">Keine aktiven Mietverhältnisse.</p>
+              ) : unitAggregatedRecurringBreakdown.length === 0 ? (
+                <p className="text-slate-500">Keine Einnahmen definiert</p>
+              ) : (
+                <ul className="space-y-1">
+                  {unitAggregatedRecurringBreakdown.map((b) => (
+                    <li
+                      key={b.typeKey}
+                      className="flex justify-between gap-4 text-slate-700"
+                    >
+                      <span>{b.label}</span>
+                      <span className="font-medium tabular-nums">
+                        {formatCurrency(b.total)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!unitTenancyRevenueLoading &&
+              activeUnitTenancies.length > 0 &&
+              unitAggregatedOneTimeTotal > 0 ? (
+                <div className="mt-3 pt-3 border-t border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600 mb-2">
+                    Einmalige Einnahmen
+                  </p>
+                  <p className="text-sm text-slate-800 mb-2">
+                    Gesamt:{" "}
+                    <span className="font-semibold tabular-nums">
+                      {formatCurrency(unitAggregatedOneTimeTotal)}
+                    </span>
+                  </p>
+                  {unitAggregatedOneTimeBreakdown.length > 0 ? (
+                    <ul className="space-y-1 text-sm">
+                      {unitAggregatedOneTimeBreakdown.map((b) => (
+                        <li
+                          key={`ot-${b.typeKey}`}
+                          className="flex justify-between gap-4 text-slate-600"
+                        >
+                          <span>{b.label}</span>
+                          <span className="font-medium tabular-nums">
+                            {formatCurrency(b.total)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </SectionCard>
 
