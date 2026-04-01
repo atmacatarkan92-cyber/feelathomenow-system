@@ -138,12 +138,6 @@ function formatTenantDocumentCategoryLabel(category) {
   return TENANT_DOCUMENT_CATEGORY_LABELS[k] || k;
 }
 
-const TENANCY_REV_FREQ_HISTORY_LABELS = {
-  monthly: "monatlich",
-  yearly: "jährlich",
-  one_time: "einmalig",
-};
-
 function formatTenantAuditDateDe(iso) {
   if (!iso) return "—";
   const s = String(iso).slice(0, 10);
@@ -237,14 +231,13 @@ function auditLogToTenantHistoryEvent(log) {
     }
   }
 
-  const fq = (f) => TENANCY_REV_FREQ_HISTORY_LABELS[String(f || "").toLowerCase()] || f || "—";
   const rN = nv.tenancy_revenue;
   const rO = ov.tenancy_revenue;
   if (rN || rO) {
     if (action === "create" && rN) {
       return {
         id: `audit-${log.id}`,
-        summary: `Einnahme hinzugefügt: ${String(rN.type || "").trim() || "—"}, ${formatTenantAuditChf(rN.amount_chf)}, ${fq(rN.frequency)}`,
+        summary: `Einnahme hinzugefügt: ${revenueTypeLabelForDisplay(rN.type)}, ${formatTenantAuditChf(rN.amount_chf)}, ${revenueFrequencyLabel(rN.frequency).toLowerCase()}`,
         created_at: log.created_at,
         author_name: author,
         action_type: "audit_revenue",
@@ -253,7 +246,7 @@ function auditLogToTenantHistoryEvent(log) {
     if (action === "delete" && rO) {
       return {
         id: `audit-${log.id}`,
-        summary: `Einnahme gelöscht: ${String(rO.type || "").trim() || "—"}, ${formatTenantAuditChf(rO.amount_chf)}, ${fq(rO.frequency)}`,
+        summary: `Einnahme gelöscht: ${revenueTypeLabelForDisplay(rO.type)}, ${formatTenantAuditChf(rO.amount_chf)}, ${revenueFrequencyLabel(rO.frequency).toLowerCase()}`,
         created_at: log.created_at,
         author_name: author,
         action_type: "audit_revenue",
@@ -262,7 +255,7 @@ function auditLogToTenantHistoryEvent(log) {
     if (action === "update" && rO && rN) {
       return {
         id: `audit-${log.id}`,
-        summary: `Einnahme bearbeitet: ${String(rN.type || "").trim() || "—"}, ${formatTenantAuditChf(rN.amount_chf)}, ${fq(rN.frequency)}`,
+        summary: `Einnahme bearbeitet: ${revenueTypeLabelForDisplay(rN.type)}, ${formatTenantAuditChf(rN.amount_chf)}, ${revenueFrequencyLabel(rN.frequency).toLowerCase()}`,
         created_at: log.created_at,
         author_name: author,
         action_type: "audit_revenue",

@@ -61,6 +61,8 @@ import {
   aggregateRecurringMonthlyBreakdownRows,
   aggregateOneTimeBreakdownRows,
   aggregateOneTimeTotalFromRowArrays,
+  revenueTypeLabelForDisplay,
+  revenueFrequencyLabel,
 } from "../../utils/tenancyRevenueBreakdown";
 
 const UNIT_AUDIT_FIELD_LABELS = {
@@ -406,12 +408,6 @@ function buildAuditUpdateLines(entry, resolvers) {
   return ["Unit bearbeitet", ...docExtraLines, ...limited];
 }
 
-const TENANCY_REV_FREQ_AUDIT_LABELS = {
-  monthly: "monatlich",
-  yearly: "jährlich",
-  one_time: "einmalig",
-};
-
 function formatAuditIsoDateDe(iso) {
   if (!iso) return "—";
   const s = String(iso).slice(0, 10);
@@ -498,21 +494,20 @@ function getAuditEntryDisplayLines(entry, resolvers) {
 
   const revN = objNv.tenancy_revenue;
   const revO = objOv.tenancy_revenue;
-  const fqLab = (f) => TENANCY_REV_FREQ_AUDIT_LABELS[String(f || "").toLowerCase()] || f || "—";
   if (revN || revO) {
     if (action === "create" && revN) {
       return [
-        `Einnahme hinzugefügt: ${String(revN.type || "").trim() || "—"}, ${formatChfPlain(revN.amount_chf)}, ${fqLab(revN.frequency)}`,
+        `Einnahme hinzugefügt: ${revenueTypeLabelForDisplay(revN.type)}, ${formatChfPlain(revN.amount_chf)}, ${revenueFrequencyLabel(revN.frequency).toLowerCase()}`,
       ];
     }
     if (action === "delete" && revO) {
       return [
-        `Einnahme gelöscht: ${String(revO.type || "").trim() || "—"}, ${formatChfPlain(revO.amount_chf)}, ${fqLab(revO.frequency)}`,
+        `Einnahme gelöscht: ${revenueTypeLabelForDisplay(revO.type)}, ${formatChfPlain(revO.amount_chf)}, ${revenueFrequencyLabel(revO.frequency).toLowerCase()}`,
       ];
     }
     if (action === "update" && revO && revN) {
       return [
-        `Einnahme bearbeitet: ${String(revN.type || "").trim() || "—"}, ${formatChfPlain(revN.amount_chf)}, ${fqLab(revN.frequency)}`,
+        `Einnahme bearbeitet: ${revenueTypeLabelForDisplay(revN.type)}, ${formatChfPlain(revN.amount_chf)}, ${revenueFrequencyLabel(revN.frequency).toLowerCase()}`,
       ];
     }
   }
