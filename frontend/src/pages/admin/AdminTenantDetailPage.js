@@ -2021,27 +2021,13 @@ export default function AdminTenantDetailPage() {
                     Keine Mietverhältnisse vorhanden
                   </p>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
+                  <div className="space-y-6">
                     {tenancyEditErr ? (
                       <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
                         {tenancyEditErr}
                       </p>
                     ) : null}
-                    <table style={tableStyle}>
-                      <thead>
-                        <tr>
-                          <th style={thCell}>Zeitraum</th>
-                          <th style={thCell}>Status</th>
-                          <th style={{ ...thCell, textAlign: "right" }}>Monat (Einnahmen)</th>
-                          <th style={thCell}>Kautionsart</th>
-                          <th style={{ ...thCell, textAlign: "right" }}>Kautionsbetrag</th>
-                          <th style={thCell}>Anbieter</th>
-                          <th style={{ ...thCell, textAlign: "right", whiteSpace: "nowrap" }}>Aktion</th>
-                        </tr>
-                      </thead>
-                      <tbody>
                         {tenancies.map((tn) => {
-                          const st = (tn.status || "").toLowerCase();
                           const tenantDepType = String(tn.tenant_deposit_type || "").toLowerCase();
                           const derivedStatusKey =
                             String(tn.display_status || "").trim() ||
@@ -2051,312 +2037,42 @@ export default function AdminTenantDetailPage() {
                               tn.actual_move_out_date
                             );
                           const dStat = String(derivedStatusKey || "").toLowerCase();
-                          const badge =
-                            TENANCY_DISPLAY_STATUS_BADGE[dStat] ||
-                            TENANCY_STATUS_BADGE[st] ||
-                            (st === "reserved" ? TENANCY_STATUS_BADGE.upcoming : TENANCY_STATUS_BADGE.ended);
                           const rowKey = tn.id != null ? String(tn.id) : `${tn.move_in_date}-${tn.room_id}`;
                           const urgencyNote = tenancyEndUrgencyNote(tn);
                           return (
                             <React.Fragment key={rowKey}>
-                              <tr>
-                                <td style={{ ...tdCell, verticalAlign: "top" }}>
-                                  <span
-                                    style={{
-                                      fontSize: "13px",
-                                      color: "#0F172A",
-                                      display: "block",
-                                      marginBottom: "6px",
-                                    }}
-                                  >
-                                    {tenancyDateRangeLabel(tn)}
-                                  </span>
-                                  <div
-                                    style={{
-                                      marginTop: "4px",
-                                      padding: "8px 10px",
-                                      borderRadius: "8px",
-                                      background: "#F8FAFC",
-                                      border: "1px solid #E2E8F0",
-                                      fontSize: "11px",
-                                      lineHeight: 1.45,
-                                      maxWidth: "340px",
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        gap: "8px",
-                                        flexWrap: "wrap",
-                                        marginBottom: "6px",
-                                      }}
+                              <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="min-w-0 flex-1 space-y-2">
+                                    <span
+                                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                        dStat === "active"
+                                          ? "border border-green-500/20 bg-green-500/10 text-green-400"
+                                          : dStat === "reserved"
+                                            ? "border border-amber-500/20 bg-amber-500/10 text-amber-400"
+                                            : dStat === "notice_given"
+                                              ? "border border-amber-500/25 bg-amber-500/10 text-amber-300"
+                                              : dStat === "ended"
+                                                ? "border border-white/[0.08] bg-white/[0.04] text-[#cbd5e1]"
+                                                : "border border-white/[0.1] bg-white/[0.06] text-[#eef2ff]"
+                                      }`}
                                     >
-                                      <span style={{ fontWeight: 800, color: "#334155" }}>
-                                        Kündigung &amp; Mietende
-                                      </span>
-                                      <span
-                                        style={{
-                                          display: "inline-flex",
-                                          padding: "4px 8px",
-                                          borderRadius: "999px",
-                                          fontSize: "11px",
-                                          fontWeight: 700,
-                                          background: badge.bg,
-                                          color: badge.color,
-                                          border: `1px solid ${badge.border}`,
-                                        }}
-                                      >
-                                        {tenancyDisplayStatusLabelDe(derivedStatusKey)}
-                                      </span>
-                                    </div>
-                                    <div style={{ color: "#475569" }}>
-                                      <div
-                                        style={{
-                                          marginBottom: "10px",
-                                          padding: "8px 8px 10px",
-                                          borderRadius: "6px",
-                                          background: "#FFFFFF",
-                                          border: "1px solid #E2E8F0",
-                                          boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            fontSize: "11px",
-                                            fontWeight: 800,
-                                            color: "#0F172A",
-                                            letterSpacing: "0.02em",
-                                          }}
-                                        >
-                                          Mietende / Vertragsende
-                                        </div>
-                                        <div
-                                          style={{
-                                            fontSize: "15px",
-                                            fontWeight: 800,
-                                            color: "#0F172A",
-                                            marginTop: "4px",
-                                            lineHeight: 1.25,
-                                          }}
-                                        >
-                                          {formatDateOnly(tenancyDisplayEndIso(tn) || "") || "—"}
-                                        </div>
-                                      </div>
-                                      <div
-                                        style={{
-                                          marginTop: "2px",
-                                          paddingTop: "6px",
-                                          borderTop: "1px solid #EEF2F7",
-                                          fontSize: "10px",
-                                          lineHeight: 1.55,
-                                          color: "#64748B",
-                                        }}
-                                      >
-                                        <div style={{ fontWeight: 700, color: "#94A3B8", marginBottom: "6px" }}>
-                                          Kündigung &amp; Rückgabe
-                                        </div>
-                                        <div>
-                                          <span style={{ color: "#64748B", fontWeight: 600 }}>
-                                            Kündigung eingegangen am{" "}
-                                          </span>
-                                          <span style={{ color: "#475569", fontWeight: 500 }}>
-                                            {formatDateOnly(dateOnlyOrNull(tn.notice_given_at) || "") || "—"}
-                                          </span>
-                                        </div>
-                                        <div style={{ marginTop: "3px" }}>
-                                          <span style={{ color: "#64748B", fontWeight: 600 }}>
-                                            Kündigung wirksam per{" "}
-                                          </span>
-                                          <span style={{ color: "#475569", fontWeight: 500 }}>
-                                            {formatDateOnly(dateOnlyOrNull(tn.termination_effective_date) || "") || "—"}
-                                          </span>
-                                        </div>
-                                        <div style={{ marginTop: "3px" }}>
-                                          <span style={{ color: "#64748B", fontWeight: 600 }}>
-                                            Rückgabe erfolgt am{" "}
-                                          </span>
-                                          <span style={{ color: "#475569", fontWeight: 500 }}>
-                                            {formatDateOnly(dateOnlyOrNull(tn.actual_move_out_date) || "") || "—"}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {urgencyNote ? (
-                                      <div
-                                        style={{
-                                          marginTop: "6px",
-                                          fontSize: "10px",
-                                          color: "#94A3B8",
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        {urgencyNote}
-                                      </div>
-                                    ) : null}
+                                      {tenancyDisplayStatusLabelDe(derivedStatusKey)}
+                                    </span>
+                                    <p className="text-[12px] text-[#7f8daa]">
+                                      seit {formatDateOnly(dateOnlyOrNull(tn.move_in_date) || "") || "—"}
+                                    </p>
+                                    <p className="text-[11px] leading-snug text-[#7f8daa]/90">
+                                      {tenancyDateRangeLabel(tn)}
+                                    </p>
                                   </div>
-                                </td>
-                                <td style={tdCell}>
-                                  <span
-                                    style={{
-                                      display: "inline-flex",
-                                      padding: "4px 8px",
-                                      borderRadius: "999px",
-                                      fontSize: "11px",
-                                      fontWeight: 700,
-                                      background: badge.bg,
-                                      color: badge.color,
-                                      border: `1px solid ${badge.border}`,
-                                    }}
-                                  >
-                                    {tenancyDisplayStatusLabelDe(derivedStatusKey)}
-                                  </span>
-                                </td>
-                                <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A", verticalAlign: "top" }}>
-                                  {(() => {
-                                    const tidStr = String(tn.id);
-                                    const revRowsForCell = tenancyRevenueByTenancyId[tidStr];
-                                    const loadingRow = tenancyRevenueLoadingId === tidStr;
-                                    if (revRowsForCell === undefined || loadingRow) {
-                                      return <span style={{ color: "#94A3B8", fontWeight: 500 }}>…</span>;
-                                    }
-                                    if (!revRowsForCell.length) {
-                                      return (
-                                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>
-                                          Keine Einnahmen definiert
-                                        </span>
-                                      );
-                                    }
-                                    const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
-                                    const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
-                                    const recBrCell = recurringMonthlyBreakdownEntries(revRowsForCell);
-                                    const otBrCell = oneTimeBreakdownEntries(revRowsForCell);
-                                    return (
-                                      <div
-                                        style={{
-                                          display: "flex",
-                                          flexDirection: "column",
-                                          alignItems: "flex-end",
-                                          gap: "4px",
-                                        }}
-                                      >
-                                        <div style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
-                                          Gesamteinnahmen / Monat
-                                        </div>
-                                        <span>{formatChfRent(monthlyFromSaved)}</span>
-                                        <div style={{ marginTop: "2px", textAlign: "right" }}>
-                                          <div style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
-                                            Einmalige Einnahmen
-                                          </div>
-                                          <span style={{ fontSize: "13px", color: "#0F172A" }}>
-                                            {formatChfRent(oneTimeTotal)}
-                                          </span>
-                                        </div>
-                                        {recBrCell.length || otBrCell.length ? (
-                                          <div
-                                            style={{
-                                              marginTop: "6px",
-                                              paddingTop: "6px",
-                                              borderTop: "1px solid #E2E8F0",
-                                              width: "100%",
-                                              maxWidth: "220px",
-                                            }}
-                                          >
-                                            {recBrCell.length ? (
-                                              <div style={{ marginBottom: otBrCell.length ? "6px" : 0 }}>
-                                                <div
-                                                  style={{
-                                                    fontSize: "10px",
-                                                    fontWeight: 700,
-                                                    color: "#64748B",
-                                                    marginBottom: "4px",
-                                                    textAlign: "right",
-                                                  }}
-                                                >
-                                                  Einnahmen Zusammensetzung
-                                                </div>
-                                                {recBrCell.map((b) => (
-                                                  <div
-                                                    key={b.typeKey}
-                                                    style={{
-                                                      display: "flex",
-                                                      justifyContent: "space-between",
-                                                      gap: "8px",
-                                                      fontSize: "11px",
-                                                      lineHeight: 1.4,
-                                                      textAlign: "right",
-                                                    }}
-                                                  >
-                                                    <span style={{ color: "#475569" }}>{b.label}</span>
-                                                    <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-                                                      {formatChfRent(b.total)}
-                                                    </span>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            ) : null}
-                                            {otBrCell.length ? (
-                                              <div>
-                                                <div
-                                                  style={{
-                                                    fontSize: "10px",
-                                                    fontWeight: 700,
-                                                    color: "#64748B",
-                                                    marginBottom: "4px",
-                                                    textAlign: "right",
-                                                  }}
-                                                >
-                                                  Einmalige Einnahmen
-                                                </div>
-                                                {otBrCell.map((b) => (
-                                                  <div
-                                                    key={b.typeKey}
-                                                    style={{
-                                                      display: "flex",
-                                                      justifyContent: "space-between",
-                                                      gap: "8px",
-                                                      fontSize: "11px",
-                                                      lineHeight: 1.4,
-                                                      textAlign: "right",
-                                                    }}
-                                                  >
-                                                    <span style={{ color: "#475569" }}>{b.label}</span>
-                                                    <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-                                                      {formatChfRent(b.total)}
-                                                    </span>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    );
-                                  })()}
-                                </td>
-                                <td style={tdCell}>{tenantDepositTypeLabel(tn.tenant_deposit_type)}</td>
-                                <td style={{ ...tdCell, textAlign: "right" }}>
-                                  {formatChfRent(tn.tenant_deposit_amount)}
-                                </td>
-                                <td style={tdCell}>
-                                  {tenantDepType === "insurance"
-                                    ? tenantDepositProviderLabel(tn.tenant_deposit_provider)
-                                    : "—"}
-                                </td>
-                                <td style={{ ...tdCell, textAlign: "right", whiteSpace: "nowrap" }}>
-                                  <div style={{ display: "inline-flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
                                     <button
                                       type="button"
                                       onClick={() => startTenancyEdit(tn)}
                                       disabled={tenancyEditSaving}
+                                      className="rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-1.5 text-[12px] font-semibold text-[#eef2ff] hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
                                       style={{
-                                        padding: "4px 10px",
-                                        borderRadius: "8px",
-                                        border: "1px solid #E2E8F0",
-                                        background: "#FFF",
-                                        fontSize: "12px",
-                                        fontWeight: 600,
                                         cursor: tenancyEditSaving ? "default" : "pointer",
                                       }}
                                     >
@@ -2367,13 +2083,8 @@ export default function AdminTenantDetailPage() {
                                         type="button"
                                         onClick={() => navigate(`/admin/units/${tn.unit_id}`)}
                                         disabled={tenancyEditSaving}
+                                        className="rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-1.5 text-[12px] font-semibold text-[#eef2ff] hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
                                         style={{
-                                          padding: "4px 10px",
-                                          borderRadius: "8px",
-                                          border: "1px solid #E2E8F0",
-                                          background: "#FFF",
-                                          fontSize: "12px",
-                                          fontWeight: 600,
                                           cursor: tenancyEditSaving ? "default" : "pointer",
                                         }}
                                       >
@@ -2381,30 +2092,316 @@ export default function AdminTenantDetailPage() {
                                       </button>
                                     ) : null}
                                   </div>
-                                </td>
-                              </tr>
+                                </div>
+
+                                {(() => {
+                                  const tidStr = String(tn.id);
+                                  const revRowsForCell = tenancyRevenueByTenancyId[tidStr];
+                                  const loadingRow = tenancyRevenueLoadingId === tidStr;
+                                  if (revRowsForCell === undefined || loadingRow) {
+                                    return (
+                                      <div className="mt-5 flex flex-col divide-y divide-white/[0.05] overflow-hidden rounded-[10px] border border-white/[0.05] bg-[#111520] sm:flex-row sm:divide-x sm:divide-y-0">
+                                        <div className="flex-1 px-4 py-4">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                            Monatliche Einnahmen
+                                          </p>
+                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">…</p>
+                                        </div>
+                                        <div className="flex-1 px-4 py-4">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                            Einmalige Einnahmen
+                                          </p>
+                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">…</p>
+                                        </div>
+                                        <div className="flex-1 px-4 py-4">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                            Kaution
+                                          </p>
+                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                            {formatChfRent(tn.tenant_deposit_amount)}
+                                          </p>
+                                          <p className="mt-1 text-[11px] text-[#7f8daa]">
+                                            {tenantDepositTypeLabel(tn.tenant_deposit_type)}
+                                            {tenantDepType === "insurance"
+                                              ? ` · ${tenantDepositProviderLabel(tn.tenant_deposit_provider)}`
+                                              : ""}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  if (!revRowsForCell.length) {
+                                    return (
+                                      <div className="mt-5 flex flex-col divide-y divide-white/[0.05] overflow-hidden rounded-[10px] border border-white/[0.05] bg-[#111520] sm:flex-row sm:divide-x sm:divide-y-0">
+                                        <div className="flex-1 px-4 py-4">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                            Monatliche Einnahmen
+                                          </p>
+                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                            Keine Einnahmen definiert
+                                          </p>
+                                        </div>
+                                        <div className="flex-1 px-4 py-4">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                            Einmalige Einnahmen
+                                          </p>
+                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                            Keine Einnahmen definiert
+                                          </p>
+                                        </div>
+                                        <div className="flex-1 px-4 py-4">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                            Kaution
+                                          </p>
+                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                            {formatChfRent(tn.tenant_deposit_amount)}
+                                          </p>
+                                          <p className="mt-1 text-[11px] text-[#7f8daa]">
+                                            {tenantDepositTypeLabel(tn.tenant_deposit_type)}
+                                            {tenantDepType === "insurance"
+                                              ? ` · ${tenantDepositProviderLabel(tn.tenant_deposit_provider)}`
+                                              : ""}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
+                                  const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
+                                  return (
+                                    <div className="mt-5 flex flex-col divide-y divide-white/[0.05] overflow-hidden rounded-[10px] border border-white/[0.05] bg-[#111520] sm:flex-row sm:divide-x sm:divide-y-0">
+                                      <div className="flex-1 px-4 py-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Monatliche Einnahmen
+                                        </p>
+                                        <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                          {formatChfRent(monthlyFromSaved)}
+                                        </p>
+                                      </div>
+                                      <div className="flex-1 px-4 py-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Einmalige Einnahmen
+                                        </p>
+                                        <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                          {formatChfRent(oneTimeTotal)}
+                                        </p>
+                                      </div>
+                                      <div className="flex-1 px-4 py-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Kaution
+                                        </p>
+                                        <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                          {formatChfRent(tn.tenant_deposit_amount)}
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-[#7f8daa]">
+                                          {tenantDepositTypeLabel(tn.tenant_deposit_type)}
+                                          {tenantDepType === "insurance"
+                                            ? ` · ${tenantDepositProviderLabel(tn.tenant_deposit_provider)}`
+                                            : ""}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                <div className="mt-6 border-t border-white/[0.05] pt-6">
+                                  <div className="rounded-[10px] border border-white/[0.05] bg-[#111520] p-4">
+                                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                      Vertragsdaten
+                                    </p>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Einzug
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {formatDateOnly(dateOnlyOrNull(tn.move_in_date) || "") || "—"}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Auszug
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {formatDateOnly(tenancyDisplayEndIso(tn) || "") || "—"}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Kautionsart
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {tenantDepositTypeLabel(tn.tenant_deposit_type)}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Kautionsbetrag
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {formatChfRent(tn.tenant_deposit_amount)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="my-5 border-t border-white/[0.05]" />
+                                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                      Kündigung
+                                    </p>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Kündigungsfrist
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">—</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Eingegangen am
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {formatDateOnly(dateOnlyOrNull(tn.notice_given_at) || "") || "—"}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Wirksam am
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {formatDateOnly(dateOnlyOrNull(tn.termination_effective_date) || "") || "—"}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Rückgabe am
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {formatDateOnly(dateOnlyOrNull(tn.actual_move_out_date) || "") || "—"}
+                                        </p>
+                                      </div>
+                                      <div className="md:col-span-2 xl:col-span-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          Gekündigt durch
+                                        </p>
+                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          {(() => {
+                                            const v = String(tn.terminated_by || "").toLowerCase();
+                                            if (v === "tenant") return "Mieter";
+                                            if (v === "landlord") return "Vermieter / Verwaltung";
+                                            if (v === "other") return "Sonstiges";
+                                            return "—";
+                                          })()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {urgencyNote ? (
+                                  <p className="mt-3 text-[11px] font-semibold text-[#7f8daa]">{urgencyNote}</p>
+                                ) : null}
+
+                                <div className="mt-6 border-t border-white/[0.05] pt-5">
+                                  <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                    Einnahmen-Übersicht
+                                  </p>
+                                  {(() => {
+                                    const tidStr = String(tn.id);
+                                    const revRowsForCell = tenancyRevenueByTenancyId[tidStr];
+                                    const loadingRow = tenancyRevenueLoadingId === tidStr;
+                                    if (revRowsForCell === undefined || loadingRow) {
+                                      return (
+                                        <span className="text-[13px] text-[#7f8daa] md:text-[14px]">…</span>
+                                      );
+                                    }
+                                    if (!revRowsForCell.length) {
+                                      return (
+                                        <span className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                          Keine Einnahmen definiert
+                                        </span>
+                                      );
+                                    }
+                                    const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
+                                    const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
+                                    const recBrCell = recurringMonthlyBreakdownEntries(revRowsForCell);
+                                    const otBrCell = oneTimeBreakdownEntries(revRowsForCell);
+                                    return (
+                                      <div className="rounded-[10px] border border-white/[0.05] bg-[#111520] p-4">
+                                        <div className="flex items-center justify-between gap-4 border-b border-white/[0.05] py-3">
+                                          <span className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                            Gesamteinnahmen / Monat
+                                          </span>
+                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                            {formatChfRent(monthlyFromSaved)}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-4 border-b border-white/[0.05] py-3">
+                                          <span className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                            Einmalige Einnahmen
+                                          </span>
+                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                            {formatChfRent(oneTimeTotal)}
+                                          </span>
+                                        </div>
+                                        {recBrCell.length ? (
+                                          <div className="divide-y divide-white/[0.05]">
+                                            {recBrCell.map((b) => (
+                                              <div
+                                                key={b.typeKey}
+                                                className="flex items-center justify-between gap-4 py-3"
+                                              >
+                                                <span className="text-[13px] font-medium text-[#7f8daa] md:text-[14px]">
+                                                  {b.label}
+                                                </span>
+                                                <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                                  {formatChfRent(b.total)}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : null}
+                                        {otBrCell.length ? (
+                                          <div className="border-t border-white/[0.05] pt-4">
+                                            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.8px] text-[#7f8daa]">
+                                              Einmalige Einnahmen
+                                            </p>
+                                            <div className="divide-y divide-white/[0.05]">
+                                              {otBrCell.map((b) => (
+                                                <div
+                                                  key={b.typeKey}
+                                                  className="flex items-center justify-between gap-4 py-3"
+                                                >
+                                                  <span className="text-[13px] font-medium text-[#7f8daa] md:text-[14px]">
+                                                    {b.label}
+                                                  </span>
+                                                  <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                                    {formatChfRent(b.total)}
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
                               {String(tenancyEditingId) === String(tn.id) ? (
-                                <tr>
-                                  <td colSpan={7} style={{ ...tdCell, background: "#F8FAFC", verticalAlign: "top" }}>
-                                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
+                                <div className="mt-4 rounded-[14px] border border-white/[0.07] bg-[#111520] p-5">
+                                    <div className="mb-2 text-[12px] font-bold text-[#eef2ff]">
                                       Mietverhältnis bearbeiten
                                     </div>
                                     <div
-                                      style={{
-                                        fontSize: "11px",
-                                        color: "#64748B",
-                                        marginBottom: "10px",
-                                        width: "100%",
-                                        lineHeight: 1.45,
-                                      }}
+                                      className="mb-2.5 w-full text-[11px] leading-snug text-[#7f8daa]"
+                                      style={{ lineHeight: 1.45 }}
                                     >
-                                      <div style={{ fontWeight: 700, color: "#334155" }}>
+                                      <div className="font-bold text-[#eef2ff]">
                                         Mietende (automatisch berechnet)
                                       </div>
-                                      <div style={{ fontSize: "10px", color: "#94A3B8", marginTop: "2px", marginBottom: "4px" }}>
+                                      <div className="mt-0.5 mb-1 text-[10px] text-[#7f8daa]">
                                         ergibt sich aus Kündigung &amp; Rückgabe
                                       </div>
-                                      <strong style={{ fontSize: "13px", color: "#0F172A", fontWeight: 800 }}>
+                                      <strong className="text-[13px] font-extrabold text-[#eef2ff]">
                                         {formatDateOnly(
                                           tenancyDraftDisplayEndIso(
                                             tenancyEditActualMoveOut,
@@ -2974,14 +2971,11 @@ export default function AdminTenantDetailPage() {
                                         Berechnung Gesamteinnahmen / Monat: monatlich voll, jährlich ÷12; einmalige Beträge unter „Einmalige Einnahmen“.
                                       </p>
                                     </div>
-                                  </td>
-                                </tr>
+                                </div>
                               ) : null}
                             </React.Fragment>
                           );
                         })}
-                      </tbody>
-                    </table>
                   </div>
                 )}
                 <button
