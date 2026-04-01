@@ -229,6 +229,44 @@ function calendarDaysUntil(dateStr) {
   return Math.round((end - t0) / 86400000);
 }
 
+const UNIT_COST_AUDIT_FREQ_LABELS = {
+  monthly: "Monatlich",
+  yearly: "Jährlich",
+  one_time: "Einmalig",
+};
+
+function formatUnitCostAuditSnapshot(uc) {
+  if (!uc || typeof uc !== "object") return "—";
+  const ct = String(uc.cost_type || "").trim() || "—";
+  const n = Number(uc.amount_chf);
+  const amt = Number.isFinite(n) ? formatCurrency(n) : "—";
+  const fq = String(uc.frequency || "monthly").trim().toLowerCase();
+  const fqLabel = UNIT_COST_AUDIT_FREQ_LABELS[fq] || fq;
+  return `${ct} · ${amt} · ${fqLabel}`;
+}
+
+function buildUnitCostAuditUpdateLines(ucOld, ucNew) {
+  const lines = [];
+  if (String(ucOld.cost_type || "") !== String(ucNew.cost_type || "")) {
+    lines.push(`Kostenart: ${dashEmpties(ucOld.cost_type)} → ${dashEmpties(ucNew.cost_type)}`);
+  }
+  const oAmt = Number(ucOld.amount_chf);
+  const nAmt = Number(ucNew.amount_chf);
+  if (Number.isFinite(oAmt) && Number.isFinite(nAmt) && oAmt !== nAmt) {
+    lines.push(`Betrag: ${formatCurrency(oAmt)} → ${formatCurrency(nAmt)}`);
+  } else if (String(ucOld.amount_chf) !== String(ucNew.amount_chf)) {
+    lines.push(`Betrag: ${dashEmpties(ucOld.amount_chf)} → ${dashEmpties(ucNew.amount_chf)}`);
+  }
+  const oFq = String(ucOld.frequency || "").trim().toLowerCase();
+  const nFq = String(ucNew.frequency || "").trim().toLowerCase();
+  if (oFq !== nFq) {
+    lines.push(
+      `Frequenz: ${UNIT_COST_AUDIT_FREQ_LABELS[oFq] || oFq} → ${UNIT_COST_AUDIT_FREQ_LABELS[nFq] || nFq}`
+    );
+  }
+  return lines;
+}
+
 const AUDIT_CHF_KEYS = new Set([
   "tenant_price_monthly_chf",
   "landlord_rent_monthly_chf",
@@ -356,6 +394,22 @@ function buildAuditUpdateLines(entry, resolvers) {
 
 function getAuditEntryDisplayLines(entry, resolvers) {
   const action = String(entry.action || "").toLowerCase();
+  const nv = entry.new_values;
+  const ov = entry.old_values;
+  const ucNew = nv && typeof nv === "object" && !Array.isArray(nv) ? nv.unit_cost : null;
+  const ucOld = ov && typeof ov === "object" && !Array.isArray(ov) ? ov.unit_cost : null;
+
+  if (action === "create" && ucNew) {
+    return [`Kosten hinzugefügt: ${formatUnitCostAuditSnapshot(ucNew)}`];
+  }
+  if (action === "delete" && ucOld) {
+    return [`Kosten gelöscht: ${formatUnitCostAuditSnapshot(ucOld)}`];
+  }
+  if (action === "update" && ucOld && ucNew) {
+    const detail = buildUnitCostAuditUpdateLines(ucOld, ucNew);
+    return detail.length ? ["Kosten bearbeitet", ...detail] : ["Kosten bearbeitet"];
+  }
+
   if (action === "create") return ["Unit erstellt"];
   if (action === "delete") return ["Unit gelöscht"];
   if (action === "update") return buildAuditUpdateLines(entry, resolvers);
@@ -1930,6 +1984,7 @@ function AdminUnitDetailPage() {
       await reloadUnitCosts();
       await reloadUnitSnapshot();
       await reloadUnitKpi();
+      await reloadAuditLogs();
       setCostForm({ cost_type: "", custom_type: "", amount_chf: "", frequency: "monthly" });
       setEditingCostId(null);
     } catch (err) {
@@ -1982,6 +2037,7 @@ function AdminUnitDetailPage() {
       await reloadUnitCosts();
       await reloadUnitSnapshot();
       await reloadUnitKpi();
+      await reloadAuditLogs();
     } catch (err) {
       setCostError(err.message || "Löschen fehlgeschlagen.");
     } finally {

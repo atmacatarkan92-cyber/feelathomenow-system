@@ -422,6 +422,20 @@ def _unit_cost_to_dict(c: UnitCost) -> dict:
     }
 
 
+def _unit_cost_audit_payload(row: UnitCost) -> dict:
+    """Nested under new_values/old_values key 'unit_cost' for entity_type=unit audit rows."""
+    return {
+        "id": str(row.id),
+        "cost_type": str(row.cost_type or ""),
+        "amount_chf": float(row.amount_chf or 0),
+        "frequency": str(getattr(row, "frequency", None) or "monthly"),
+    }
+
+
+# Future (same pattern: parent entity_type/entity_id, payload under a namespaced key in old/new_values):
+# TenancyRevenue CRUD, tenancy lifecycle (Kündigung, etc.), documents, assignments — centralized Verlauf.
+
+
 class UnitCostCreateBody(BaseModel):
     cost_type: str
     amount_chf: float = Field(gt=0)
@@ -853,7 +867,7 @@ def admin_create_unit_cost(
     unit_id: str,
     body: UnitCostCreateBody,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     unit = session.get(Unit, unit_id)
@@ -866,6 +880,17 @@ def admin_create_unit_cost(
         frequency=(body.frequency or "monthly"),
     )
     session.add(row)
+    session.flush()
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "create",
+        "unit",
+        unit_id,
+        old_values=None,
+        new_values={"unit_cost": _unit_cost_audit_payload(row)},
+        organization_id=org_id,
+    )
     _touch_unit_updated_at(session, unit_id)
     session.commit()
     session.refresh(row)
@@ -880,7 +905,7 @@ def admin_patch_unit_cost(
     cost_id: str,
     body: UnitCostPatchBody,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     unit = session.get(Unit, unit_id)
@@ -889,6 +914,7 @@ def admin_patch_unit_cost(
     row = session.get(UnitCost, cost_id)
     if not row or row.unit_id != unit_id:
         raise HTTPException(status_code=404, detail="Cost not found")
+    old_values = {"unit_cost": _unit_cost_audit_payload(row)}
     data = body.model_dump(exclude_unset=True)
     if "cost_type" in data:
         row.cost_type = data["cost_type"]
@@ -897,6 +923,19 @@ def admin_patch_unit_cost(
     if "frequency" in data:
         row.frequency = data["frequency"] or "monthly"
     session.add(row)
+    session.flush()
+    new_values = {"unit_cost": _unit_cost_audit_payload(row)}
+    if old_values != new_values:
+        create_audit_log(
+            session,
+            str(current_user.id),
+            "update",
+            "unit",
+            unit_id,
+            old_values=old_values,
+            new_values=new_values,
+            organization_id=org_id,
+        )
     _touch_unit_updated_at(session, unit_id)
     session.commit()
     session.refresh(row)
@@ -910,7 +949,7 @@ def admin_delete_unit_cost(
     unit_id: str,
     cost_id: str,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     unit = session.get(Unit, unit_id)
@@ -919,7 +958,18 @@ def admin_delete_unit_cost(
     row = session.get(UnitCost, cost_id)
     if not row or row.unit_id != unit_id:
         raise HTTPException(status_code=404, detail="Cost not found")
+    old_values = {"unit_cost": _unit_cost_audit_payload(row)}
     session.delete(row)
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "delete",
+        "unit",
+        unit_id,
+        old_values=old_values,
+        new_values=None,
+        organization_id=org_id,
+    )
     _touch_unit_updated_at(session, unit_id)
     session.commit()
     return {"status": "ok"}
