@@ -339,7 +339,7 @@ function HeroCard({
     },
     slate: {
       card: "border-t-slate-500",
-      value: "text-[#eef2ff]",
+      value: "text-[#0f172a] dark:text-[#eef2ff]",
       dot: "bg-slate-500",
     },
     rose: {
@@ -363,22 +363,22 @@ function HeroCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 bg-[#141824] p-5 ${style.card}`}
+      className={`relative overflow-hidden rounded-[14px] border border-black/10 dark:border-white/[0.07] border-t-4 bg-white dark:bg-[#141824] p-5 ${style.card}`}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7a9a]">{title}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">{title}</p>
           </div>
           <p className={`mt-2 text-2xl font-bold tracking-tight ${style.value}`}>
             {value}
           </p>
-          <p className="mt-2 text-sm text-[#6b7a9a]">{subtitle}</p>
+          <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-1 text-xs font-semibold text-[#6b7a9a]">
+          <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-2.5 py-1 text-xs font-semibold text-[#64748b] dark:text-[#6b7a9a]">
             Live
           </span>
           {trend ? (
@@ -400,12 +400,12 @@ function HeroCard({
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
-    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-5">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-[#eef2ff]">{title}</h3>
+          <h3 className="text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
           {subtitle ? (
-            <p className="mt-1 text-sm text-[#6b7a9a]">{subtitle}</p>
+            <p className="mt-1 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
           ) : null}
         </div>
         {rightSlot}
@@ -417,10 +417,10 @@ function SectionCard({ title, subtitle, children, rightSlot = null }) {
 
 function SmallStatCard({ label, value, hint }) {
   return (
-    <div className="rounded-[14px] border border-white/[0.08] bg-[#111520] p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7a9a]">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-[#eef2ff]">{value}</p>
-      {hint ? <p className="mt-2 text-sm text-[#6b7a9a]">{hint}</p> : null}
+    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-[#0f172a] dark:text-[#eef2ff]">{value}</p>
+      {hint ? <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
 }
@@ -430,7 +430,7 @@ function ProgressRow({
   value,
   count,
   colorClass,
-  trackClass = "bg-[#111520]",
+  trackClass = "bg-slate-100 dark:bg-[#111520]",
 }) {
   const safeValue = Math.max(0, Math.min(Number(value || 0), 100));
 
@@ -438,12 +438,12 @@ function ProgressRow({
     <div>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-[#eef2ff]">{label}</p>
-          <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-2 py-0.5 text-xs font-semibold text-[#6b7a9a]">
+          <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">{label}</p>
+          <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-2 py-0.5 text-xs font-semibold text-[#64748b] dark:text-[#6b7a9a]">
             {count}
           </span>
         </div>
-        <p className="text-sm font-semibold text-[#eef2ff]">
+        <p className="text-sm font-semibold text-[#0f172a] dark:text-[#eef2ff]">
           {formatPercent(safeValue)}
         </p>
       </div>
@@ -462,7 +462,7 @@ function RankingBadge({ value, type }) {
     success: "border-green-500/20 bg-green-500/10 text-green-400",
     warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
     danger: "border-red-500/20 bg-red-500/10 text-red-400",
-    neutral: "border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]",
+    neutral: "border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] text-[#64748b] dark:text-[#6b7a9a]",
     blue: "border-blue-500/20 bg-blue-500/10 text-[#7aaeff]",
   };
 
@@ -478,11 +478,11 @@ function RankingBadge({ value, type }) {
 function FilterSelect({ label, value, onChange, children }) {
   return (
     <div className="min-w-[180px]">
-      <label className="mb-2 block text-xs font-medium text-[#6b7a9a]">{label}</label>
+      <label className="mb-2 block text-xs font-medium text-[#64748b] dark:text-[#6b7a9a]">{label}</label>
       <select
         value={value}
         onChange={onChange}
-        className="w-full rounded-lg border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] outline-none"
+        className="w-full rounded-lg border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
       >
         {children}
       </select>
@@ -874,17 +874,17 @@ function AdminCoLivingDashboardPage() {
   const occupancyTrend = null;
 
   return (
-    <div className="-m-6 min-h-screen bg-[#07090f] p-6 text-[#eef2ff] md:p-8">
+    <div className="-m-6 min-h-screen bg-[#f8fafc] dark:bg-[#07090f] p-6 text-[#0f172a] dark:text-[#eef2ff] md:p-8">
       <div className="mx-auto max-w-[1800px] space-y-6">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7a9a]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
               Vantio
             </p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-[#eef2ff]">
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-[#0f172a] dark:text-[#eef2ff]">
               Co-Living Dashboard
             </h2>
-            <p className="mt-3 max-w-3xl text-sm text-[#6b7a9a]">
+            <p className="mt-3 max-w-3xl text-sm text-[#64748b] dark:text-[#6b7a9a]">
               Übersicht über aktuelle Belegung, Kosten, Umsatz, Gewinn und die
               wichtigsten operativen Signale deiner Co-Living Units.
             </p>
@@ -893,7 +893,7 @@ function AdminCoLivingDashboardPage() {
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="rounded-lg border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff]"
+                className="rounded-lg border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff]"
               >
                 <option value="month">Dieser Monat</option>
                 <option value="lastMonth">Letzter Monat</option>
@@ -911,10 +911,10 @@ function AdminCoLivingDashboardPage() {
           )}
 
           <div className="flex items-center gap-2">
-            <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
+            <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#64748b] dark:text-[#6b7a9a]">
               Live KPI
             </span>
-            <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
+            <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#64748b] dark:text-[#6b7a9a]">
               Co-Living only
             </span>
           </div>
@@ -1101,7 +1101,7 @@ function AdminCoLivingDashboardPage() {
                   {warning.title}
                 </p>
                 <p
-                  className={`mt-2 text-sm font-medium text-[#6b7a9a] ${
+                  className={`mt-2 text-sm font-medium text-[#64748b] dark:text-[#6b7a9a] ${
                     warning.type === "danger" ? "" : ""
                   }`}
                 >
@@ -1115,7 +1115,7 @@ function AdminCoLivingDashboardPage() {
                 <p className="text-[13px] font-semibold text-green-400">
                   Keine kritischen Warnungen
                 </p>
-                <p className="mt-2 text-sm text-[#6b7a9a]">
+                <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">
                   Aktuell wurden keine dringenden Risiken erkannt.
                 </p>
               </div>
@@ -1266,26 +1266,26 @@ function AdminCoLivingDashboardPage() {
           title="Monatlicher Umsatz-Forecast"
           subtitle="Voraussichtlicher Umsatz und freie Kapazität auf Basis sicherer, reservierter und risikobehafteter Monate"
         >
-          <div className="overflow-x-auto rounded-[14px] border border-white/[0.07] bg-[#141824]">
+          <div className="overflow-x-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824]">
             <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-[#111520]">
+              <thead className="bg-slate-100 dark:bg-[#111520]">
                 <tr className="text-left">
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
                     Monat
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
                     Sicher
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
                     Reserviert
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
                     Risiko
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
                     Offenes Potenzial
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
                     Forecast Umsatz
                   </th>
                 </tr>
@@ -1294,9 +1294,9 @@ function AdminCoLivingDashboardPage() {
                 {monthlyRevenueForecast.map((row) => (
                   <tr
                     key={row.month}
-                    className="border-b border-white/[0.05] text-sm text-[#eef2ff]"
+                    className="border-b border-black/10 text-sm text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]"
                   >
-                    <td className="py-4 pr-4 font-semibold text-[#eef2ff]">
+                    <td className="py-4 pr-4 font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                       {row.month}
                     </td>
                     <td className="py-4 pr-4 font-medium text-[#4ade80]">
@@ -1311,7 +1311,7 @@ function AdminCoLivingDashboardPage() {
                     <td className="py-4 pr-4 font-medium text-[#f87171]">
                       {formatChfOrDash(row.freeRevenue)}
                     </td>
-                    <td className="py-4 pr-4 font-bold text-[#eef2ff]">
+                    <td className="py-4 pr-4 font-bold text-[#0f172a] dark:text-[#eef2ff]">
                       {formatChfOrDash(row.forecastRevenue)}
                     </td>
                   </tr>
@@ -1327,23 +1327,28 @@ function AdminCoLivingDashboardPage() {
               title="Monatsverlauf"
               subtitle="Berechnet auf Basis des gewählten Monatsfilters und der Room-Daten."
             >
-              <div className="h-[420px]">
+              <div className="h-[420px] w-full text-[#64748b] dark:text-[#6b7a9a] [&_.recharts-cartesian-grid_line]:stroke-[#e2e8f0] dark:[&_.recharts-cartesian-grid_line]:stroke-[rgba(255,255,255,0.08)]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="currentColor"
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="month"
-                      tick={{ fill: "#6b7a9a", fontSize: 12 }}
+                      tick={{ fill: "currentColor", fontSize: 12 }}
                     />
-                    <YAxis tick={{ fill: "#6b7a9a", fontSize: 12 }} />
+                    <YAxis tick={{ fill: "currentColor", fontSize: 12 }} />
                     <Tooltip
                       formatter={(value) =>
                         value === null || value === undefined
                           ? "-"
                           : formatCurrency(value)
                       }
+                      wrapperClassName="rounded-lg border border-black/10 bg-white !text-[#0f172a] shadow-sm dark:border-white/10 dark:bg-[#141824] dark:!text-[#eef2ff]"
                     />
-                    <Legend />
+                    <Legend wrapperClassName="text-[#64748b] dark:text-[#6b7a9a]" />
                     <Line
                       type="monotone"
                       dataKey="umsatz"
@@ -1364,19 +1369,23 @@ function AdminCoLivingDashboardPage() {
               title="Room-Status aktuell"
               subtitle="Live aus deinen Co-Living Rooms berechnet"
             >
-              <div className="h-[420px]">
+              <div className="h-[420px] w-full text-[#64748b] dark:text-[#6b7a9a] [&_.recharts-cartesian-grid_line]:stroke-[#e2e8f0] dark:[&_.recharts-cartesian-grid_line]:stroke-[rgba(255,255,255,0.08)]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={roomStatusChartData} barCategoryGap={28}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="currentColor"
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="name"
-                      tick={{ fill: "#6b7a9a", fontSize: 12 }}
+                      tick={{ fill: "currentColor", fontSize: 12 }}
                     />
                     <YAxis
                       allowDecimals={false}
-                      tick={{ fill: "#6b7a9a", fontSize: 12 }}
+                      tick={{ fill: "currentColor", fontSize: 12 }}
                     />
-                    <Tooltip />
+                    <Tooltip wrapperClassName="rounded-lg border border-black/10 bg-white !text-[#0f172a] shadow-sm dark:border-white/10 dark:bg-[#141824] dark:!text-[#eef2ff]" />
                     <Bar
                       dataKey="value"
                       name="Anzahl Rooms"
