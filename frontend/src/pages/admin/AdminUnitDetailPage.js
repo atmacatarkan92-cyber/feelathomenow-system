@@ -56,6 +56,7 @@ import {
   recurringUnitCostBreakdownWithInsurance,
   oneTimeUnitCostBreakdownEntries,
   totalOneTimeUnitCosts,
+  sumOneTimeUnitCostsInCalendarMonth,
 } from "../../utils/adminUnitRunningCosts";
 import {
   aggregateRecurringMonthlyBreakdownRows,
@@ -1815,6 +1816,14 @@ function AdminUnitDetailPage() {
     () => getUnitMonthlyRunningCosts(unit, unitCosts),
     [unit, unitCosts]
   );
+  const oneTimeCostsInKpiMonth = useMemo(
+    () => sumOneTimeUnitCostsInCalendarMonth(unitCosts, kpiYear, kpiMonth),
+    [unitCosts, kpiYear, kpiMonth]
+  );
+  const totalExpendituresInfoMonth = useMemo(
+    () => runningCostsStammdatenTotal + oneTimeCostsInKpiMonth,
+    [runningCostsStammdatenTotal, oneTimeCostsInKpiMonth]
+  );
 
   if (loading) {
     return (
@@ -2480,7 +2489,7 @@ function AdminUnitDetailPage() {
 
           <SectionCard
             title="Finanzübersicht"
-            subtitle={`Monat ${String(kpiMonth).padStart(2, "0")}/${kpiYear} · Backend-KPI (revenue_forecast / profit_service)`}
+            subtitle={`Monat ${String(kpiMonth).padStart(2, "0")}/${kpiYear} · Backend-KPI (revenue_forecast / profit_service) · Monatliche Betrachtung (exkl. einmalige Kosten)`}
           >
             {unitKpiErr ? (
               <p className="text-sm text-red-600 mb-3">{unitKpiErr}</p>
@@ -2607,6 +2616,19 @@ function AdminUnitDetailPage() {
                 Kosten» oben ist der Backend-KPI-Monat und kann bei Abweichungen in den
                 Stammdaten davon abweichen.
               </p>
+              <div className="mb-3 pb-3 border-b border-slate-200/90">
+                <p className="text-sm text-slate-600">
+                  <span className="font-medium">Gesamtausgaben (dieser Monat):</span>{" "}
+                  <span className="font-semibold tabular-nums text-slate-700">
+                    {formatCurrency(totalExpendituresInfoMonth)}
+                  </span>
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Informativ: Laufende Monatskosten zuzüglich einmalige Kosten mit
+                  Erfassungsdatum in {String(kpiMonth).padStart(2, "0")}/{kpiYear} (ohne
+                  KPI-Wirkung).
+                </p>
+              </div>
               <div className="mb-3">
                 <p className="text-sm text-slate-600">
                   <span className="text-slate-600 font-medium">
@@ -2856,7 +2878,7 @@ function AdminUnitDetailPage() {
           <div className="xl:col-span-2">
             <SectionCard
               title="Einmalige Kosten"
-              subtitle="unit_costs mit Frequenz „Einmalig“ (nicht in laufenden Kosten enthalten)"
+              subtitle="Einmalige Buchungen; nicht in den laufenden Kosten oder den KPI oben enthalten"
             >
               {oneTimeUnitCosts.length === 0 ? (
                 <p className="text-sm text-slate-500">Keine einmaligen Kosten erfasst.</p>
@@ -2888,24 +2910,14 @@ function AdminUnitDetailPage() {
                               : "—"}
                           </td>
                           <td className="py-2 pr-4">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <button
-                                type="button"
-                                disabled={costLoading}
-                                onClick={() => handleUnitCostEdit(row)}
-                                className="text-orange-600 hover:underline text-sm font-medium disabled:opacity-50"
-                              >
-                                Bearbeiten
-                              </button>
-                              <button
-                                type="button"
-                                disabled={costLoading}
-                                onClick={() => handleUnitCostDelete(row)}
-                                className="text-red-600 hover:underline text-sm font-medium disabled:opacity-50"
-                              >
-                                Löschen
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              disabled={costLoading}
+                              onClick={() => handleUnitCostDelete(row)}
+                              className="text-red-600 hover:underline text-sm font-medium disabled:opacity-50"
+                            >
+                              Löschen
+                            </button>
                           </td>
                         </tr>
                       ))}

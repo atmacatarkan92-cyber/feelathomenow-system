@@ -179,3 +179,27 @@ export function oneTimeUnitCostBreakdownEntries(unitCosts) {
     .filter((x) => x.total !== 0);
   return sortOneTimeBreakdown(out);
 }
+
+/**
+ * Sum one_time amount_chf for rows whose created_at is in the given calendar month.
+ * Uses ISO date prefix (YYYY-MM) from created_at; rows without created_at are skipped.
+ * Display-only; not used in KPI or profit_service.
+ */
+export function sumOneTimeUnitCostsInCalendarMonth(unitCosts, year, month) {
+  if (!Array.isArray(unitCosts)) return 0;
+  const y = Number(year);
+  const m = Number(month);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return 0;
+  const prefix = `${y}-${String(m).padStart(2, "0")}`;
+  let sum = 0;
+  for (const row of unitCosts) {
+    if (String(row?.frequency || "").trim().toLowerCase() !== "one_time") continue;
+    const amt = Number(row?.amount_chf);
+    if (!Number.isFinite(amt) || amt <= 0) continue;
+    const ca = row?.created_at;
+    if (ca == null || typeof ca !== "string") continue;
+    if (ca.slice(0, 7) !== prefix) continue;
+    sum += amt;
+  }
+  return sum;
+}
