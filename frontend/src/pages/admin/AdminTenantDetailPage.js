@@ -234,6 +234,22 @@ function storedTenancyStatusForApi(displayKey) {
   return "active";
 }
 
+/** Subtle note from API display end + display_status only (no extra lifecycle rules). */
+function tenancyEndUrgencyNote(tn, todayIso = getTodayIsoForOccupancy()) {
+  const endIso = parseIsoDate(tn?.display_end_date) || parseIsoDate(tn?.move_out_date);
+  if (!endIso) return null;
+  const ds = String(tn?.display_status || "").toLowerCase();
+  if (ds === "ended" || endIso < todayIso) return "bereits beendet";
+  if (endIso >= todayIso) {
+    const d0 = new Date(`${todayIso}T12:00:00`);
+    const d1 = new Date(`${endIso}T12:00:00`);
+    const days = Math.round((d1.getTime() - d0.getTime()) / 86400000);
+    if (days === 0) return "endet heute";
+    if (days > 0) return `endet in ${days} Tag${days === 1 ? "" : "en"}`;
+  }
+  return null;
+}
+
 function formatChfRent(amount) {
   const n = Number(amount);
   if (Number.isNaN(n)) return "CHF —";
@@ -1910,13 +1926,102 @@ export default function AdminTenantDetailPage() {
                             TENANCY_STATUS_BADGE[st] ||
                             (st === "reserved" ? TENANCY_STATUS_BADGE.upcoming : TENANCY_STATUS_BADGE.ended);
                           const rowKey = tn.id != null ? String(tn.id) : `${tn.move_in_date}-${tn.room_id}`;
+                          const urgencyNote = tenancyEndUrgencyNote(tn);
                           return (
                             <React.Fragment key={rowKey}>
                               <tr>
-                                <td style={tdCell}>
-                                  <span style={{ fontSize: "13px", color: "#0F172A" }}>
+                                <td style={{ ...tdCell, verticalAlign: "top" }}>
+                                  <span
+                                    style={{
+                                      fontSize: "13px",
+                                      color: "#0F172A",
+                                      display: "block",
+                                      marginBottom: "6px",
+                                    }}
+                                  >
                                     {tenancyDateRangeLabel(tn)}
                                   </span>
+                                  <div
+                                    style={{
+                                      marginTop: "4px",
+                                      padding: "8px 10px",
+                                      borderRadius: "8px",
+                                      background: "#F8FAFC",
+                                      border: "1px solid #E2E8F0",
+                                      fontSize: "11px",
+                                      lineHeight: 1.45,
+                                      maxWidth: "340px",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: "8px",
+                                        flexWrap: "wrap",
+                                        marginBottom: "6px",
+                                      }}
+                                    >
+                                      <span style={{ fontWeight: 800, color: "#334155" }}>
+                                        Kündigung &amp; Mietende
+                                      </span>
+                                      <span
+                                        style={{
+                                          display: "inline-flex",
+                                          padding: "4px 8px",
+                                          borderRadius: "999px",
+                                          fontSize: "11px",
+                                          fontWeight: 700,
+                                          background: badge.bg,
+                                          color: badge.color,
+                                          border: `1px solid ${badge.border}`,
+                                        }}
+                                      >
+                                        {dStat
+                                          ? tenancyDisplayStatusLabelDe(tn.display_status)
+                                          : tn.status || "—"}
+                                      </span>
+                                    </div>
+                                    <div style={{ color: "#475569" }}>
+                                      <div>
+                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
+                                          Kündigung eingegangen am{" "}
+                                        </span>
+                                        {formatDateOnly(dateOnlyOrNull(tn.notice_given_at) || "")}
+                                      </div>
+                                      <div>
+                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
+                                          Kündigung wirksam per{" "}
+                                        </span>
+                                        {formatDateOnly(dateOnlyOrNull(tn.termination_effective_date) || "")}
+                                      </div>
+                                      <div>
+                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
+                                          Rückgabe erfolgt am{" "}
+                                        </span>
+                                        {formatDateOnly(dateOnlyOrNull(tn.actual_move_out_date) || "")}
+                                      </div>
+                                      <div>
+                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
+                                          Mietende / Vertragsende{" "}
+                                        </span>
+                                        {formatDateOnly(tenancyDisplayEndIso(tn) || "")}
+                                      </div>
+                                    </div>
+                                    {urgencyNote ? (
+                                      <div
+                                        style={{
+                                          marginTop: "6px",
+                                          fontSize: "10px",
+                                          color: "#94A3B8",
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {urgencyNote}
+                                      </div>
+                                    ) : null}
+                                  </div>
                                 </td>
                                 <td style={tdCell}>
                                   <span
