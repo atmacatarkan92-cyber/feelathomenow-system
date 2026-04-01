@@ -1103,7 +1103,6 @@ function AdminApartmentsPage() {
           );
           return;
         }
-        const allowedStatus = ["Frei", "Belegt", "Reserviert"];
         for (let i = 0; i < n; i++) {
           const row = coLivingRowsForSubmit[i];
           if (!row || !String(row.name || "").trim()) {
@@ -1117,11 +1116,6 @@ function AdminApartmentsPage() {
           const prn = Number(String(row.price).replace(",", "."));
           if (Number.isNaN(prn) || prn < 0) {
             setSaveError(`Zimmer ${i + 1}: Ungültiger Preis.`);
-            return;
-          }
-          const st = row.status || "Frei";
-          if (!allowedStatus.includes(st)) {
-            setSaveError(`Zimmer ${i + 1}: Ungültiger Status.`);
             return;
           }
           if (row.floor !== "" && row.floor != null) {
@@ -1206,7 +1200,7 @@ function AdminApartmentsPage() {
             price: Math.round(Number(String(row.price).replace(",", "."))),
             floor,
             size_m2,
-            status: row.status || "Frei",
+            status: "Frei",
           };
         });
       }
@@ -1772,7 +1766,9 @@ function AdminApartmentsPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-600 mb-1">Preis (CHF)</label>
+                          <label className="block text-xs text-slate-600 mb-1">
+                            Geplanter Zimmerpreis (CHF)
+                          </label>
                           <input
                             type="number"
                             min="0"
@@ -1783,6 +1779,9 @@ function AdminApartmentsPage() {
                             required
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
                           />
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            Wird für Prognosen und Vollbelegung verwendet
+                          </p>
                         </div>
                         <div>
                           <label className="block text-xs text-slate-600 mb-1">Etage</label>
@@ -1811,17 +1810,12 @@ function AdminApartmentsPage() {
                         </div>
                         <div>
                           <label className="block text-xs text-slate-600 mb-1">Status</label>
-                          <select
-                            value={row.status}
-                            onChange={(e) =>
-                              handleCoLivingRoomChange(idx, "status", e.target.value)
-                            }
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option>Frei</option>
-                            <option>Belegt</option>
-                            <option>Reserviert</option>
-                          </select>
+                          <div className="w-full border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-800">
+                            <span className="font-medium">Frei</span>
+                            <span className="block text-[11px] text-slate-500 mt-0.5">
+                              Wird automatisch berechnet
+                            </span>
+                          </div>
                         </div>
                         <div>
                           <label className="block text-xs text-slate-600 mb-1">
