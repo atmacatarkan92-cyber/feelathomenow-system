@@ -42,6 +42,8 @@ function formatDate(dateString) {
 
 function getStatusMeta(status) {
   const normalized = String(status || "").toLowerCase();
+  const pillBase =
+    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold";
 
   if (
     normalized === "active" ||
@@ -50,9 +52,7 @@ function getStatusMeta(status) {
   ) {
     return {
       label: "Aktiv",
-      bg: "#DCFCE7",
-      color: "#166534",
-      border: "#86EFAC",
+      pillClass: `${pillBase} border-green-500/20 bg-green-500/10 text-green-400`,
     };
   }
 
@@ -62,9 +62,7 @@ function getStatusMeta(status) {
   ) {
     return {
       label: "Reserviert",
-      bg: "#FEF3C7",
-      color: "#92400E",
-      border: "#FCD34D",
+      pillClass: `${pillBase} border-amber-500/20 bg-amber-500/10 text-amber-400`,
     };
   }
 
@@ -76,26 +74,20 @@ function getStatusMeta(status) {
   ) {
     return {
       label: "Ausgezogen",
-      bg: "#E5E7EB",
-      color: "#374151",
-      border: "#D1D5DB",
+      pillClass: `${pillBase} border-red-500/20 bg-red-500/10 text-red-400`,
     };
   }
 
   if (normalized === "inactive" || normalized === "inaktiv") {
     return {
       label: "Inaktiv",
-      bg: "#F1F5F9",
-      color: "#475569",
-      border: "#CBD5E1",
+      pillClass: `${pillBase} border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]`,
     };
   }
 
   return {
     label: status || "Offen",
-    bg: "#F1F5F9",
-    color: "#475569",
-    border: "#CBD5E1",
+    pillClass: `${pillBase} border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]`,
   };
 }
 
@@ -217,17 +209,6 @@ function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
       notes: currentTenancy?.notes || tenant.notes || "",
     };
   });
-}
-
-function getCardStyle(accentColor) {
-  return {
-    background: "#FFFFFF",
-    border: "1px solid #E5E7EB",
-    borderTop: `4px solid ${accentColor}`,
-    borderRadius: "18px",
-    padding: "20px",
-    boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
-  };
 }
 
 function AdminTenantsPage() {
@@ -366,7 +347,7 @@ function AdminTenantsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "24px", color: "#64748B" }}>
+      <div className="min-h-screen bg-[#07090f] p-6 text-[#6b7a9a]">
         Lade Mieter, Zimmer, Mietverhältnisse und Rechnungen …
       </div>
     );
@@ -374,381 +355,247 @@ function AdminTenantsPage() {
 
   if (loadError) {
     return (
-      <div
-        style={{
-          padding: "24px",
-          background: "#FEF2F2",
-          border: "1px solid #FECACA",
-          borderRadius: "12px",
-          color: "#B91C1C",
-        }}
-      >
-        <strong>Fehler beim Laden:</strong> {loadError}
+      <div className="min-h-screen bg-[#07090f] p-6 text-[#eef2ff]">
+        <div className="rounded-[14px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
+          <strong className="font-semibold text-[#f87171]">Fehler beim Laden:</strong> {loadError}
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
-      <TenantCreateModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => {
-          reloadData();
-        }}
-      />
-      <div>
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#f97316",
-            fontWeight: 700,
-            marginBottom: "8px",
+    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+      <div className="mx-auto grid max-w-[min(1400px,100%)] gap-6 p-6">
+        <TenantCreateModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            reloadData();
           }}
-        >
-          Vantio
-        </div>
+        />
+        <div>
+          <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Vantio</div>
 
-        {deleteError ? (
-          <div
-            style={{
-              marginBottom: "16px",
-              padding: "12px 16px",
-              borderRadius: "12px",
-              border: "1px solid #FECACA",
-              background: "#FEF2F2",
-              color: "#B91C1C",
-              fontSize: "14px",
-            }}
-          >
-            {deleteError}
-          </div>
-        ) : null}
+          {deleteError ? (
+            <div className="mb-4 rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
+              {deleteError}
+            </div>
+          ) : null}
 
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: "16px",
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>
-              Mieter
-            </h2>
-            <p style={{ color: "#64748B", marginTop: "10px", maxWidth: "560px" }}>
-              CRM-Übersicht: Mieter durchsuchen, anlegen und bearbeiten. Mietverhältnisse
-              und weitere Module folgen.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            style={{
-              padding: "12px 18px",
-              borderRadius: "12px",
-              border: "none",
-              background: "#f97316",
-              color: "#FFFFFF",
-              fontWeight: 700,
-              fontSize: "15px",
-              cursor: "pointer",
-              boxShadow: "0 4px 14px rgba(249, 115, 22, 0.35)",
-            }}
-          >
-            Neuer Mieter
-          </button>
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "16px",
-        }}
-      >
-        <div style={getCardStyle("#334155")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Mieter gesamt
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#0F172A" }}>
-            {summary.totalCount}
-          </div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Alle erfassten Mieter
-          </div>
-        </div>
-
-        <div style={getCardStyle("#16A34A")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Aktive Mieter
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#166534" }}>
-            {summary.activeCount}
-          </div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Aktuell laufende Mietverhältnisse
-          </div>
-        </div>
-
-        <div style={getCardStyle("#F59E0B")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Reserviert
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#92400E" }}>
-            {summary.reservedCount}
-          </div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Einzug geplant
-          </div>
-        </div>
-
-        <div style={getCardStyle("#DC2626")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Offene Rechnungen
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#991B1B" }}>
-            {summary.totalOpenInvoices}
-          </div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            {formatCurrency(summary.totalOpenAmount)}
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
-          padding: "20px",
-          overflowX: "auto",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "16px",
-          }}
-        >
-          <h3 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
-            Mieterübersicht
-          </h3>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "10px",
-              alignItems: "center",
-            }}
-          >
-            <input
-              type="search"
-              placeholder="Suche: Name, E-Mail, Telefon …"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                minWidth: "200px",
-                padding: "10px 12px",
-                borderRadius: "10px",
-                border: "1px solid #E2E8F0",
-                fontSize: "14px",
-              }}
-              aria-label="Mieter suchen"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                padding: "10px 12px",
-                borderRadius: "10px",
-                border: "1px solid #E2E8F0",
-                fontSize: "14px",
-                background: "#FFFFFF",
-              }}
-              aria-label="Status filtern"
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="m-0 text-[22px] font-bold text-[#eef2ff]">Mieter</h2>
+              <p className="mt-2 max-w-[560px] text-[12px] text-[#6b7a9a]">
+                CRM-Übersicht: Mieter durchsuchen, anlegen und bearbeiten. Mietverhältnisse
+                und weitere Module folgen.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-[18px] py-3 text-[15px] font-semibold text-white"
             >
-              <option value="all">Alle Status</option>
-              <option value="active">Aktiv</option>
-              <option value="reserved">Reserviert</option>
-              <option value="ended">Ausgezogen</option>
-              <option value="open">Offen / Sonstige</option>
-            </select>
+              Neuer Mieter
+            </button>
           </div>
         </div>
 
-        <div style={{ fontSize: "14px", color: "#64748B", marginBottom: "12px" }}>
-          {filteredRows.length === rows.length
-            ? `${rows.length} Einträge`
-            : `${filteredRows.length} von ${rows.length} Einträgen (gefiltert)`}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-slate-500 bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+              Mieter gesamt
+            </div>
+            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.totalCount}</div>
+            <div className="mt-2 text-[11px] text-[#6b7a9a]">Alle erfassten Mieter</div>
+          </div>
+
+          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-green-500 bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+              Aktive Mieter
+            </div>
+            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.activeCount}</div>
+            <div className="mt-2 text-[11px] text-[#6b7a9a]">Aktuell laufende Mietverhältnisse</div>
+          </div>
+
+          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-amber-500 bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+              Reserviert
+            </div>
+            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.reservedCount}</div>
+            <div className="mt-2 text-[11px] text-[#6b7a9a]">Einzug geplant</div>
+          </div>
+
+          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-red-500 bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+              Offene Rechnungen
+            </div>
+            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.totalOpenInvoices}</div>
+            <div className="mt-2 text-[11px] text-[#6b7a9a]">{formatCurrency(summary.totalOpenAmount)}</div>
+          </div>
         </div>
 
-        {rows.length === 0 ? (
-          <p>Keine Mieter erfasst.</p>
-        ) : filteredRows.length === 0 ? (
-          <p>Keine Mieter für diese Filter.</p>
-        ) : (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "14px",
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  textAlign: "left",
-                  borderBottom: "1px solid #E5E7EB",
-                  color: "#64748B",
-                }}
+        <div className="overflow-x-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">Mieterübersicht</h3>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <input
+                type="search"
+                placeholder="Suche: Name, E-Mail, Telefon …"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="min-w-[200px] rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[13px] text-[#eef2ff] placeholder:text-[#6b7a9a]"
+                aria-label="Mieter suchen"
+              />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[13px] text-[#eef2ff]"
+                aria-label="Status filtern"
               >
-                <th style={{ padding: "12px" }}>Mieter</th>
-                <th style={{ padding: "12px" }}>Kontakt</th>
-                <th style={{ padding: "12px" }}>Unit</th>
-                <th style={{ padding: "12px" }}>Zimmer</th>
-                <th style={{ padding: "12px" }}>Start</th>
-                <th style={{ padding: "12px" }}>Ende</th>
-                <th style={{ padding: "12px" }}>Einnahmen / Monat (Äquivalent)</th>
-                <th style={{ padding: "12px" }}>Rechnungen offen</th>
-                <th style={{ padding: "12px" }}>Offener Betrag</th>
-                <th style={{ padding: "12px" }}>Status</th>
-                <th style={{ padding: "12px", minWidth: "180px" }}>Aktion</th>
-              </tr>
-            </thead>
+                <option value="all">Alle Status</option>
+                <option value="active">Aktiv</option>
+                <option value="reserved">Reserviert</option>
+                <option value="ended">Ausgezogen</option>
+                <option value="open">Offen / Sonstige</option>
+              </select>
+            </div>
+          </div>
 
-            <tbody>
-              {filteredRows.map((row) => {
-                const statusMeta = getStatusMeta(row.status);
+          <div className="mb-3 text-[13px] text-[#6b7a9a]">
+            {filteredRows.length === rows.length
+              ? `${rows.length} Einträge`
+              : `${filteredRows.length} von ${rows.length} Einträgen (gefiltert)`}
+          </div>
 
-                return (
-                  <tr
-                    key={row.id}
-                    style={{
-                      borderBottom: "1px solid #F1F5F9",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => navigate(`/admin/tenants/${row.id}`)}
-                  >
-                    <td style={{ padding: "12px" }}>
-                      <div style={{ fontWeight: 700, color: "#0F172A" }}>
-                        {row.fullName}
-                      </div>
-                      {row.notes ? (
-                        <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>
-                          {row.notes}
-                        </div>
-                      ) : null}
-                    </td>
+          {rows.length === 0 ? (
+            <p className="text-[13px] text-[#6b7a9a]">Keine Mieter erfasst.</p>
+          ) : filteredRows.length === 0 ? (
+            <p className="text-[13px] text-[#6b7a9a]">Keine Mieter für diese Filter.</p>
+          ) : (
+            <table className="w-full border-collapse text-[13px] text-[#eef2ff]">
+              <thead className="bg-[#111520]">
+                <tr className="text-left">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Mieter
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Kontakt
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Unit
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Zimmer
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Start
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Ende
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Einnahmen / Monat (Äquivalent)
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Rechnungen offen
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Offener Betrag
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Status
+                  </th>
+                  <th className="min-w-[180px] px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Aktion
+                  </th>
+                </tr>
+              </thead>
 
-                    <td style={{ padding: "12px" }}>
-                      <div>{row.email}</div>
-                      <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>
-                        {row.phone}
-                      </div>
-                    </td>
+              <tbody>
+                {filteredRows.map((row) => {
+                  const statusMeta = getStatusMeta(row.status);
 
-                    <td style={{ padding: "12px" }}>
-                      <div style={{ fontWeight: 600 }}>{row.unitId}</div>
-                      <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>
-                        {row.unitAddress}
-                      </div>
-                    </td>
+                  return (
+                    <tr
+                      key={row.id}
+                      className="cursor-pointer border-b border-white/[0.05]"
+                      onClick={() => navigate(`/admin/tenants/${row.id}`)}
+                    >
+                      <td className="px-3 py-3 align-top">
+                        <div className="text-[13px] font-medium text-[#eef2ff]">{row.fullName}</div>
+                        {row.notes ? (
+                          <div className="mt-1 text-[12px] text-[#6b7a9a]">{row.notes}</div>
+                        ) : null}
+                      </td>
 
-                    <td style={{ padding: "12px" }}>{row.roomName}</td>
-                    <td style={{ padding: "12px" }}>{formatDate(row.startDate)}</td>
-                    <td style={{ padding: "12px" }}>{formatDate(row.endDate)}</td>
-                    <td style={{ padding: "12px", fontWeight: 700 }}>
-                      {row.monthlyRent == null ? "—" : formatCurrency(row.monthlyRent)}
-                    </td>
-                    <td style={{ padding: "12px" }}>{row.openInvoicesCount}</td>
-                    <td style={{ padding: "12px", fontWeight: 700 }}>
-                      {formatCurrency(row.totalOpenAmount)}
-                    </td>
-                    <td style={{ padding: "12px" }}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          padding: "6px 10px",
-                          borderRadius: "999px",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          background: statusMeta.bg,
-                          color: statusMeta.color,
-                          border: `1px solid ${statusMeta.border}`,
-                        }}
+                      <td className="px-3 py-3 align-top">
+                        <div className="text-[13px] font-medium text-[#eef2ff]">{row.email}</div>
+                        <div className="mt-1 text-[12px] text-[#6b7a9a]">{row.phone}</div>
+                      </td>
+
+                      <td className="px-3 py-3 align-top">
+                        <div className="text-[13px] font-medium text-[#7aaeff]">{row.unitAddress}</div>
+                        <div className="mt-0.5 text-[10px] text-[#6b7a9a]">{row.unitId}</div>
+                      </td>
+
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                        {row.roomName}
+                      </td>
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                        {formatDate(row.startDate)}
+                      </td>
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                        {formatDate(row.endDate)}
+                      </td>
+                      <td
+                        className={`px-3 py-3 align-top text-[13px] font-semibold ${
+                          row.monthlyRent == null ? "text-[#6b7a9a]" : "text-[#4ade80]"
+                        }`}
                       >
-                        {statusMeta.label}
-                      </span>
-                    </td>
-                    <td style={{ padding: "12px" }}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/admin/tenants/${row.id}`);
-                          }}
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid #E2E8F0",
-                            background: "#FFFFFF",
-                            fontWeight: 600,
-                            fontSize: "13px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Öffnen
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteTenant(e, row.id)}
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid #FECACA",
-                            background: "#FFFFFF",
-                            color: "#B91C1C",
-                            fontWeight: 600,
-                            fontSize: "13px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Löschen
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+                        {row.monthlyRent == null ? "—" : formatCurrency(row.monthlyRent)}
+                      </td>
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                        {row.openInvoicesCount}
+                      </td>
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                        {formatCurrency(row.totalOpenAmount)}
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <span className={statusMeta.pillClass}>{statusMeta.label}</span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/tenants/${row.id}`);
+                            }}
+                            className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                          >
+                            Öffnen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteTenant(e, row.id)}
+                            className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[13px] font-semibold text-[#f87171] hover:bg-red-500/15"
+                          >
+                            Löschen
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
 
-      <div
-        style={{
-          background: "#ECFDF5",
-          border: "1px solid #A7F3D0",
-          borderRadius: "18px",
-          padding: "18px 20px",
-          color: "#065F46",
-          fontSize: "14px",
-          fontWeight: 500,
-        }}
-      >
-        Mieter, Zimmer, Mietverhältnisse und Rechnungen werden aus der Backend-API geladen.
+        <div className="rounded-[10px] border border-blue-500/[0.12] bg-blue-500/[0.06] px-5 py-4 text-[14px] font-medium text-[#7aaeff]">
+          Mieter, Zimmer, Mietverhältnisse und Rechnungen werden aus der Backend-API geladen.
+        </div>
       </div>
     </div>
   );
