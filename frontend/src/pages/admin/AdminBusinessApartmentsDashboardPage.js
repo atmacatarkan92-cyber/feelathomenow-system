@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
   CartesianGrid,
   XAxis,
   YAxis,
@@ -16,7 +14,6 @@ import {
   fetchAdminRooms,
   fetchAdminTenanciesAll,
   fetchAdminProfit,
-  fetchAdminOccupancy,
   normalizeUnit,
   normalizeRoom,
   sanitizeClientErrorMessage,
@@ -24,6 +21,9 @@ import {
 import {
   getUnitOccupancyStatus,
   isLandlordContractLeaseStarted,
+  isTenancyActiveByDates,
+  isTenancyReservedSlot,
+  isTenancyFuture,
 } from "../../utils/unitOccupancyStatus";
 
 function roundCurrency(value) {
@@ -204,6 +204,52 @@ function lastNMonths(n) {
   return out;
 }
 
+/** Business Apartments: klassische Apartments (not Co-Living). Legacy label still accepted. */
+function isBusinessApartment(u) {
+  const t = String(u?.type || "").trim();
+  return t === "Apartment" || t === "Business Apartment";
+}
+
+/**
+ * Month buckets for charts/KPIs by Zeitraum filter (no backend change).
+ * all → rolling last 6 months (existing behavior).
+ */
+function monthsForPeriod(period) {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  if (period === "thisMonth") return [{ year: y, month: m }];
+  if (period === "lastMonth") {
+    const dt = new Date(y, m - 2, 1);
+    return [{ year: dt.getFullYear(), month: dt.getMonth() + 1 }];
+  }
+  if (period === "year") {
+    return Array.from({ length: 12 }, (_, i) => ({ year: y, month: i + 1 }));
+  }
+  return lastNMonths(6);
+}
+
+/**
+ * Same semantics as getUnitOccupancyStatus for non–Co-Living units, evaluated on month-end day.
+ */
+function unitOccupancyKeyAsOf(unit, tenancies, asOfIso) {
+  const uid = String(unit.unitId || unit.id || "");
+  const unitTenancies = (tenancies || []).filter(
+    (t) => String(t.unit_id || t.unitId) === uid
+  );
+  let hasActive = false;
+  let hasFuture = false;
+  for (const t of unitTenancies) {
+    if (isTenancyActiveByDates(t, asOfIso)) hasActive = true;
+    if (isTenancyReservedSlot(t, asOfIso) || isTenancyFuture(t, asOfIso)) {
+      hasFuture = true;
+    }
+  }
+  if (hasActive) return "belegt";
+  if (hasFuture) return "reserviert";
+  return "frei";
+}
+
 function monthEndDateString(year, month) {
   const lastDay = new Date(year, month, 0);
   const y = lastDay.getFullYear();
@@ -250,7 +296,7 @@ function AdminBusinessApartmentsDashboardPage() {
   }, []);
 
   const businessUnits = useMemo(() => {
-    return units.filter((unit) => unit.type === "Business Apartment");
+    return units.filter((unit) => isBusinessApartment(unit));
   }, [units]);
 
   const placeOptions = useMemo(() => {
@@ -279,18 +325,11 @@ function AdminBusinessApartmentsDashboardPage() {
       return undefined;
     }
     const allowedIds = new Set(filteredUnits.map((u) => String(u.unitId || u.id)));
-    const months = lastNMonths(6);
+    const months = monthsForPeriod(selectedPeriod);
     setChartsLoading(true);
     setChartsError("");
-    Promise.all([
-      Promise.all(months.map(({ year, month }) => fetchAdminProfit({ year, month }))),
-      Promise.all(
-        months.map(({ year, month }) =>
-          fetchAdminOccupancy({ on_date: monthEndDateString(year, month) })
-        )
-      ),
-    ])
-      .then(([profits, occupancies]) => {
+    Promise.all(months.map(({ year, month }) => fetchAdminProfit({ year, month })))
+      .then((profits) => {
         if (cancelled) return;
         const finance = months.map((m, idx) => {
           const p = profits[idx];
@@ -309,32 +348,46 @@ function AdminBusinessApartmentsDashboardPage() {
           }
           return { month: label, revenue, costs, profit };
         });
-        const occRows = months.map((m, idx) => {
-          const o = occupancies[idx];
+        const occRows = months.map((m) => {
+          const asOfIso = monthEndDateString(m.year, m.month);
           const label = new Date(m.year, m.month - 1, 1).toLocaleDateString("de-CH", {
             month: "short",
           });
           let occupied = 0;
           let free = 0;
-          for (const u of o?.units || []) {
-            if (allowedIds.has(String(u.unit_id))) {
-              occupied += Number(u.occupied_rooms || 0);
-              free += Number(u.free_rooms || 0);
-            }
+          for (const unit of filteredUnits) {
+            const key = unitOccupancyKeyAsOf(unit, tenancies, asOfIso);
+            if (key === "belegt") occupied += 1;
+            else free += 1;
           }
           return { month: label, occupied, free };
         });
-        const lastIdx = months.length - 1;
-        const lastProfit = profits[lastIdx];
         const profitByUnitId = {};
-        for (const row of lastProfit?.units || []) {
-          const id = String(row.unit_id);
-          if (allowedIds.has(id)) {
-            profitByUnitId[id] = {
-              revenue: row.revenue != null ? Number(row.revenue) : null,
-              costs: row.costs != null ? Number(row.costs) : null,
-              profit: row.profit != null ? Number(row.profit) : null,
-            };
+        if (selectedPeriod === "year") {
+          for (const p of profits) {
+            for (const row of p?.units || []) {
+              const id = String(row.unit_id);
+              if (!allowedIds.has(id)) continue;
+              if (!profitByUnitId[id]) {
+                profitByUnitId[id] = { revenue: 0, costs: 0, profit: 0 };
+              }
+              profitByUnitId[id].revenue += Number(row.revenue || 0);
+              profitByUnitId[id].costs += Number(row.costs || 0);
+              profitByUnitId[id].profit += Number(row.profit || 0);
+            }
+          }
+        } else {
+          const lastIdx = months.length - 1;
+          const lastProfit = profits[lastIdx];
+          for (const row of lastProfit?.units || []) {
+            const id = String(row.unit_id);
+            if (allowedIds.has(id)) {
+              profitByUnitId[id] = {
+                revenue: row.revenue != null ? Number(row.revenue) : null,
+                costs: row.costs != null ? Number(row.costs) : null,
+                profit: row.profit != null ? Number(row.profit) : null,
+              };
+            }
           }
         }
         setLatestUnitProfit(profitByUnitId);
@@ -356,7 +409,7 @@ function AdminBusinessApartmentsDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [filteredUnits]);
+  }, [filteredUnits, selectedPeriod, tenancies]);
 
   const dashboard = useMemo(() => {
     let totalApartments = 0;
@@ -445,10 +498,65 @@ function AdminBusinessApartmentsDashboardPage() {
     return getTrendLabel(occupancyRateFromChartRow(cur), occupancyRateFromChartRow(prev));
   }, [occupancyChartData]);
 
-  const latestFinanceMonth =
-    financeChartData.length > 0
-      ? financeChartData[financeChartData.length - 1]
-      : null;
+  /** KPI hero row: Jahreswerte summiert; sonst letzter Monat der gewählten Periode. */
+  const heroFinance = useMemo(() => {
+    if (!financeChartData.length) return null;
+    if (selectedPeriod === "year") {
+      return financeChartData.reduce(
+        (acc, row) => ({
+          revenue: acc.revenue + row.revenue,
+          costs: acc.costs + row.costs,
+          profit: acc.profit + row.profit,
+        }),
+        { revenue: 0, costs: 0, profit: 0 }
+      );
+    }
+    return financeChartData[financeChartData.length - 1];
+  }, [financeChartData, selectedPeriod]);
+
+  const financeChartTitle = useMemo(() => {
+    if (selectedPeriod === "year") return "Finanzentwicklung dieses Jahr";
+    if (selectedPeriod === "all") return "Finanzentwicklung letzte 6 Monate";
+    return "Finanzentwicklung";
+  }, [selectedPeriod]);
+
+  const financeChartSubtitle = useMemo(() => {
+    if (selectedPeriod === "year") {
+      return "Umsatz, Kosten und Gewinn pro Monat (laufendes Jahr)";
+    }
+    if (selectedPeriod === "all") {
+      return "Umsatz, Kosten und Gewinn im zeitlichen Verlauf (letzte 6 Monate)";
+    }
+    if (selectedPeriod === "thisMonth") {
+      return "Umsatz, Kosten und Gewinn (aktueller Monat)";
+    }
+    if (selectedPeriod === "lastMonth") {
+      return "Umsatz, Kosten und Gewinn (Vormonat)";
+    }
+    return "Umsatz, Kosten und Gewinn im zeitlichen Verlauf";
+  }, [selectedPeriod]);
+
+  const occupancyChartTitle = useMemo(() => {
+    if (selectedPeriod === "year") return "Belegung Apartments dieses Jahr";
+    if (selectedPeriod === "all") return "Belegung Apartments letzte 6 Monate";
+    return "Belegung Apartments";
+  }, [selectedPeriod]);
+
+  const occupancyChartSubtitle = useMemo(() => {
+    if (selectedPeriod === "year") {
+      return "Belegte und freie Apartments pro Monatsende (einheitliche Logik)";
+    }
+    if (selectedPeriod === "all") {
+      return "Belegte und freie Apartments pro Monatsende (letzte 6 Monate)";
+    }
+    if (selectedPeriod === "thisMonth") {
+      return "Belegte und freie Apartments (aktueller Monat, Monatsende)";
+    }
+    if (selectedPeriod === "lastMonth") {
+      return "Belegte und freie Apartments (Vormonat, Monatsende)";
+    }
+    return "Belegte und freie Apartments im Verlauf";
+  }, [selectedPeriod]);
 
   return (
     <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
@@ -533,9 +641,9 @@ function AdminBusinessApartmentsDashboardPage() {
           <HeroCard
             title="Aktueller Umsatz"
             value={
-              chartsLoading || chartsError || !latestFinanceMonth
+              chartsLoading || chartsError || !heroFinance
                 ? "-"
-                : formatCurrency(latestFinanceMonth.revenue)
+                : formatCurrency(heroFinance.revenue)
             }
             subtitle="Umsatz aus aktuell belegten Apartments"
             accent="orange"
@@ -544,9 +652,9 @@ function AdminBusinessApartmentsDashboardPage() {
           <HeroCard
             title="Gewinn aktuell"
             value={
-              chartsLoading || chartsError || !latestFinanceMonth
+              chartsLoading || chartsError || !heroFinance
                 ? "-"
-                : formatCurrency(latestFinanceMonth.profit)
+                : formatCurrency(heroFinance.profit)
             }
             subtitle="Umsatz minus laufende Ausgaben"
             accent="green"
@@ -555,9 +663,9 @@ function AdminBusinessApartmentsDashboardPage() {
           <HeroCard
             title="Aktuelle Ausgaben"
             value={
-              chartsLoading || chartsError || !latestFinanceMonth
+              chartsLoading || chartsError || !heroFinance
                 ? "-"
-                : formatCurrency(latestFinanceMonth.costs)
+                : formatCurrency(heroFinance.costs)
             }
             subtitle="Miete, Nebenkosten und Reinigung"
             accent="slate"
@@ -574,8 +682,8 @@ function AdminBusinessApartmentsDashboardPage() {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <SectionCard
-            title="Finanzentwicklung letzte 6 Monate"
-            subtitle="Umsatz, Kosten und Gewinn im zeitlichen Verlauf"
+            title={financeChartTitle}
+            subtitle={financeChartSubtitle}
           >
             {chartsLoading ? (
               <p className="text-slate-500 py-8">Lade Monatsdaten…</p>
@@ -602,8 +710,8 @@ function AdminBusinessApartmentsDashboardPage() {
           </SectionCard>
 
           <SectionCard
-            title="Belegung Apartments letzte 6 Monate"
-            subtitle="Belegte und freie Apartments im Verlauf"
+            title={occupancyChartTitle}
+            subtitle={occupancyChartSubtitle}
           >
             {chartsLoading ? (
               <p className="text-slate-500 py-8">Lade Monatsdaten…</p>
@@ -677,11 +785,11 @@ function AdminBusinessApartmentsDashboardPage() {
             <SmallStatCard
               label="Ø Gewinn pro Apartment"
               value={
-                latestFinanceMonth &&
+                heroFinance &&
                 dashboard.totalApartments > 0 &&
-                latestFinanceMonth.profit != null
+                heroFinance.profit != null
                   ? formatCurrency(
-                      latestFinanceMonth.profit / dashboard.totalApartments
+                      heroFinance.profit / dashboard.totalApartments
                     )
                   : "-"
               }
