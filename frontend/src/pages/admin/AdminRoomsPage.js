@@ -11,28 +11,36 @@ import {
 import { getRoomOccupancyStatus } from "../../utils/unitOccupancyStatus";
 
 function StatCard({ label, value, hint, color = "slate" }) {
-  const styles = {
-    slate: "border-slate-200 bg-white text-slate-800",
-    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    amber: "border-amber-200 bg-amber-50 text-amber-700",
-    rose: "border-rose-200 bg-rose-50 text-rose-700",
+  const top = {
+    slate: "border-t-slate-500",
+    green: "border-t-green-500",
+    amber: "border-t-amber-500",
+    rose: "border-t-red-500",
+  };
+  const val = {
+    slate: "text-[#eef2ff]",
+    green: "text-[#4ade80]",
+    amber: "text-[#fbbf24]",
+    rose: "text-[#f87171]",
   };
 
   return (
-    <div className={`rounded-2xl border shadow-sm p-5 ${styles[color]}`}>
-      <p className="text-sm opacity-80">{label}</p>
-      <p className="text-3xl font-bold mt-2">{value}</p>
-      {hint ? <p className="text-xs opacity-70 mt-2">{hint}</p> : null}
+    <div
+      className={`relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 bg-[#141824] p-5 ${top[color]}`}
+    >
+      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{label}</p>
+      <p className={`mt-2 text-[24px] font-bold ${val[color]}`}>{value}</p>
+      {hint ? <p className="mt-2 text-[11px] text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
 }
 
 function SectionCard({ title, subtitle, children }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
       <div className="mb-5">
-        <h3 className="text-2xl font-semibold text-slate-800">{title}</h3>
-        {subtitle ? <p className="text-slate-500 mt-1">{subtitle}</p> : null}
+        <h3 className="text-[16px] font-bold text-[#eef2ff]">{title}</h3>
+        {subtitle ? <p className="mt-1 text-[12px] text-[#6b7a9a]">{subtitle}</p> : null}
       </div>
       {children}
     </div>
@@ -87,80 +95,82 @@ function AdminRoomsPage() {
   }, [coLivingRooms, tenancies]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-slate-800">Co-Living-Zimmer</h2>
-        <p className="text-slate-500 mt-1">
-          Übersicht über alle Co-Living-Zimmer, deren Belegung und Verfügbarkeit.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          label="Rooms gesamt"
-          value={roomStats.total}
-          hint="Alle Co-Living-Zimmer"
-          color="slate"
-        />
-        <StatCard
-          label="Belegt"
-          value={roomStats.occupied}
-          hint="Aktuell belegte Co-Living-Zimmer"
-          color="green"
-        />
-        <StatCard
-          label="Reserviert"
-          value={roomStats.reserved}
-          hint="Reservierte Co-Living-Zimmer"
-          color="amber"
-        />
-        <StatCard
-          label="Frei"
-          value={roomStats.free}
-          hint="Freie Co-Living-Zimmer"
-          color="rose"
-        />
-      </div>
-
-      <SectionCard
-        title="Room Map"
-        subtitle="Visuelle Übersicht aller Co-Living-Zimmer pro Unit"
-      >
-        <div className="space-y-6">
-          {coLivingUnits.map((unit) => (
-            <RoomMap
-              key={unit.unitId || unit.id}
-              unit={unit}
-              rooms={rooms}
-              tenancies={tenancies}
-            />
-          ))}
-
-          {coLivingUnits.length === 0 && (
-            <p className="text-slate-500">Keine Co-Living Units gefunden.</p>
-          )}
+    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+      <div className="mx-auto max-w-[min(1400px,100%)] space-y-6 p-6">
+        <div>
+          <h2 className="text-[22px] font-bold text-[#eef2ff]">Co-Living-Zimmer</h2>
+          <p className="mt-1 text-[12px] text-[#6b7a9a]">
+            Übersicht über alle Co-Living-Zimmer, deren Belegung und Verfügbarkeit.
+          </p>
         </div>
-      </SectionCard>
 
-      <SectionCard
-        title="Belegungskalender"
-        subtitle="Monatsvorschau pro Co-Living-Zimmer mit sicher, Risiko, reserviert und frei"
-      >
-        <div className="space-y-6">
-          {coLivingUnits.map((unit) => (
-            <RoomCalendar
-              key={unit.unitId || unit.id}
-              unit={unit}
-              rooms={rooms}
-              tenancies={tenancies}
-            />
-          ))}
-
-          {coLivingUnits.length === 0 && (
-            <p className="text-slate-500">Keine Co-Living Units gefunden.</p>
-          )}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Rooms gesamt"
+            value={roomStats.total}
+            hint="Alle Co-Living-Zimmer"
+            color="slate"
+          />
+          <StatCard
+            label="Belegt"
+            value={roomStats.occupied}
+            hint="Aktuell belegte Co-Living-Zimmer"
+            color="green"
+          />
+          <StatCard
+            label="Reserviert"
+            value={roomStats.reserved}
+            hint="Reservierte Co-Living-Zimmer"
+            color="amber"
+          />
+          <StatCard
+            label="Frei"
+            value={roomStats.free}
+            hint="Freie Co-Living-Zimmer"
+            color="rose"
+          />
         </div>
-      </SectionCard>
+
+        <SectionCard
+          title="Room Map"
+          subtitle="Visuelle Übersicht aller Co-Living-Zimmer pro Unit"
+        >
+          <div className="space-y-6">
+            {coLivingUnits.map((unit) => (
+              <RoomMap
+                key={unit.unitId || unit.id}
+                unit={unit}
+                rooms={rooms}
+                tenancies={tenancies}
+              />
+            ))}
+
+            {coLivingUnits.length === 0 && (
+              <p className="text-[13px] text-[#6b7a9a]">Keine Co-Living Units gefunden.</p>
+            )}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Belegungskalender"
+          subtitle="Monatsvorschau pro Co-Living-Zimmer mit sicher, Risiko, reserviert und frei"
+        >
+          <div className="space-y-6">
+            {coLivingUnits.map((unit) => (
+              <RoomCalendar
+                key={unit.unitId || unit.id}
+                unit={unit}
+                rooms={rooms}
+                tenancies={tenancies}
+              />
+            ))}
+
+            {coLivingUnits.length === 0 && (
+              <p className="text-[13px] text-[#6b7a9a]">Keine Co-Living Units gefunden.</p>
+            )}
+          </div>
+        </SectionCard>
+      </div>
     </div>
   );
 }

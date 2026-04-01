@@ -19,29 +19,38 @@ function formatPercent(value) {
 }
 
 function StatCard({ label, value, hint, color = "slate" }) {
-  const styles = {
-    slate: "border-slate-200 bg-white text-slate-800",
-    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    amber: "border-amber-200 bg-amber-50 text-amber-700",
-    rose: "border-rose-200 bg-rose-50 text-rose-700",
-    blue: "border-sky-200 bg-sky-50 text-sky-700",
+  const top = {
+    slate: "border-t-slate-500",
+    green: "border-t-green-500",
+    amber: "border-t-amber-500",
+    rose: "border-t-rose-500",
+    blue: "border-t-blue-500",
+  };
+  const val = {
+    slate: "text-[#eef2ff]",
+    green: "text-[#4ade80]",
+    amber: "text-[#fbbf24]",
+    rose: "text-[#f87171]",
+    blue: "text-[#7aaeff]",
   };
 
   return (
-    <div className={`rounded-2xl border shadow-sm p-5 ${styles[color]}`}>
-      <p className="text-sm opacity-80">{label}</p>
-      <p className="text-3xl font-bold mt-2">{value}</p>
-      {hint ? <p className="text-xs opacity-70 mt-2">{hint}</p> : null}
+    <div
+      className={`relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 bg-[#141824] p-5 ${top[color]}`}
+    >
+      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{label}</p>
+      <p className={`mt-2 text-[24px] font-bold ${val[color]}`}>{value}</p>
+      {hint ? <p className="mt-2 text-[11px] text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
 }
 
 function SectionCard({ title, subtitle, children }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
       <div className="mb-5">
-        <h3 className="text-2xl font-semibold text-slate-800">{title}</h3>
-        {subtitle ? <p className="text-slate-500 mt-1">{subtitle}</p> : null}
+        <h3 className="text-[16px] font-bold text-[#eef2ff]">{title}</h3>
+        {subtitle ? <p className="mt-1 text-[12px] text-[#6b7a9a]">{subtitle}</p> : null}
       </div>
       {children}
     </div>
@@ -50,15 +59,15 @@ function SectionCard({ title, subtitle, children }) {
 
 function Badge({ children, type = "neutral" }) {
   const styles = {
-    success: "bg-emerald-100 text-emerald-700",
-    warning: "bg-amber-100 text-amber-700",
-    danger: "bg-rose-100 text-rose-700",
-    info: "bg-sky-100 text-sky-700",
-    neutral: "bg-slate-100 text-slate-700",
+    success: "border-green-500/20 bg-green-500/10 text-green-400",
+    warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
+    danger: "border-red-500/20 bg-red-500/10 text-red-400",
+    info: "border-blue-500/20 bg-blue-500/10 text-[#7aaeff]",
+    neutral: "border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]",
   };
 
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${styles[type]}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${styles[type]}`}>
       {children}
     </span>
   );
@@ -239,11 +248,12 @@ function AdminOccupancyPage() {
   }, [occupancyRows]);
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+      <div className="mx-auto max-w-[min(1400px,100%)] space-y-6 p-6">
       <div>
-        <p className="text-sm font-semibold text-orange-600">Vantio</p>
-        <h2 className="text-3xl font-bold text-slate-800 mt-1">Belegung</h2>
-        <p className="text-slate-500 mt-1">
+        <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Vantio</p>
+        <h2 className="mt-1 text-[22px] font-bold text-[#eef2ff]">Belegung</h2>
+        <p className="mt-1 text-[12px] text-[#6b7a9a]">
           Übersicht über Auslastung, freie Zimmer, Reservierungen und Belegungsquote
           für Apartments und Co-Living Units.
         </p>
@@ -293,48 +303,68 @@ function AdminOccupancyPage() {
         subtitle="Hier siehst du sofort, welche Units stark laufen und wo Leerstand besteht."
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500 text-sm">
-                <th className="py-3 pr-4">Unit</th>
-                <th className="py-3 pr-4">Ort</th>
-                <th className="py-3 pr-4">Adresse</th>
-                <th className="py-3 pr-4">Rooms gesamt</th>
-                <th className="py-3 pr-4">Belegt</th>
-                <th className="py-3 pr-4">Reserviert</th>
-                <th className="py-3 pr-4">Frei</th>
-                <th className="py-3 pr-4">Belegt %</th>
-                <th className="py-3 pr-4">Reserviert %</th>
-                <th className="py-3 pr-4">Status</th>
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-[#111520]">
+              <tr>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Unit
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Ort
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Adresse
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Rooms gesamt
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Belegt
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Reserviert
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Frei
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Belegt %
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Reserviert %
+                </th>
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody>
               {occupancyRows.map((row) => (
                 <tr
                   key={row.unitId}
-                  className="border-b border-slate-100 text-slate-700 hover:bg-slate-50"
+                  className="border-b border-white/[0.05] text-[13px] text-[#eef2ff]"
                 >
-                  <td className="py-4 pr-4 font-semibold text-slate-900">
+                  <td className="py-4 pr-4 font-semibold">
                     <Link
                       to={`/admin/units/${row.unitId}`}
-                      className="text-orange-600 hover:text-orange-700 hover:underline"
+                      className="text-[#7aaeff] hover:underline"
                     >
                       {getUnitDisplayLabel(
                         row.unit || { unitId: row.unitId, id: row.unitId }
                       )}
                     </Link>
                     {row.unitId ? (
-                      <p className="text-xs text-slate-400 mt-0.5 font-mono break-all">
+                      <p className="mt-0.5 break-all font-mono text-[10px] text-[#6b7a9a]">
                         {row.unitId}
                       </p>
                     ) : null}
                   </td>
-                  <td className="py-4 pr-4">{row.place}</td>
-                  <td className="py-4 pr-4">{row.address}</td>
+                  <td className="py-4 pr-4 font-medium">{row.place}</td>
+                  <td className="py-4 pr-4 font-medium text-[#7aaeff]">{row.address}</td>
                   <td className="py-4 pr-4">{row.totalRooms}</td>
-                  <td className="py-4 pr-4">{row.occupiedCount}</td>
-                  <td className="py-4 pr-4">{row.reservedCount}</td>
-                  <td className="py-4 pr-4">{row.freeCount}</td>
+                  <td className="py-4 pr-4 font-medium text-[#4ade80]">{row.occupiedCount}</td>
+                  <td className="py-4 pr-4 font-medium text-[#fbbf24]">{row.reservedCount}</td>
+                  <td className="py-4 pr-4 font-medium text-[#f87171]">{row.freeCount}</td>
                   <td className="py-4 pr-4 font-medium">
                     {formatPercent(row.occupancyRate)}
                   </td>
@@ -351,7 +381,7 @@ function AdminOccupancyPage() {
 
               {occupancyRows.length === 0 && (
                 <tr>
-                  <td colSpan="10" className="py-8 text-center text-slate-500">
+                  <td colSpan="10" className="py-8 text-center text-[13px] text-[#6b7a9a]">
                     Keine Belegungsdaten gefunden.
                   </td>
                 </tr>
@@ -375,7 +405,7 @@ function AdminOccupancyPage() {
             />
           ))}
           {coLivingUnits.length === 0 && (
-            <p className="text-slate-500">Keine Co-Living Units. Räume werden pro Unit geladen.</p>
+            <p className="text-[13px] text-[#6b7a9a]">Keine Co-Living Units. Räume werden pro Unit geladen.</p>
           )}
         </div>
       </SectionCard>
@@ -384,37 +414,38 @@ function AdminOccupancyPage() {
         title="Schwächste Belegung"
         subtitle="Diese Units haben aktuell die tiefste Belegungsquote."
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           {weakestUnits.map((row) => (
             <div
               key={row.unitId}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4"
             >
-              <p className="text-sm text-slate-500">{row.place}</p>
-              <p className="text-lg font-bold text-slate-900 mt-1">
+              <p className="text-[10px] text-[#6b7a9a]">{row.place}</p>
+              <p className="mt-1 text-[15px] font-bold text-[#7aaeff]">
                 {getUnitDisplayLabel(
                   row.unit || { unitId: row.unitId, id: row.unitId }
                 )}
               </p>
               {row.unitId ? (
-                <p className="text-xs text-slate-400 mt-0.5 font-mono break-all">
+                <p className="mt-0.5 break-all font-mono text-[10px] text-[#6b7a9a]">
                   {row.unitId}
                 </p>
               ) : null}
-              <p className="text-2xl font-bold text-rose-600 mt-3">
+              <p className="mt-3 text-[24px] font-bold text-[#f87171]">
                 {formatPercent(row.occupancyRate)}
               </p>
-              <p className="text-sm text-slate-500 mt-2">
+              <p className="mt-2 text-[11px] text-[#6b7a9a]">
                 {row.occupiedCount} von {row.totalRooms} Rooms belegt
               </p>
             </div>
           ))}
 
           {weakestUnits.length === 0 && (
-            <p className="text-slate-500">Keine Daten vorhanden.</p>
+            <p className="text-[13px] text-[#6b7a9a]">Keine Daten vorhanden.</p>
           )}
         </div>
       </SectionCard>
+      </div>
     </div>
   );
 }
