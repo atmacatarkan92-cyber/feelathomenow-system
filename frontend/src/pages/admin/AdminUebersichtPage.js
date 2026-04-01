@@ -85,16 +85,16 @@ function KpiKarte({
   titel,
   wert,
   hinweis,
-  farbe = "#eef2ff",
+  farbe = "var(--text-primary)",
   akzent = "#64748b",
   badge = "Live",
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+    <div className="relative overflow-hidden rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-5">
       <div className="absolute left-0 right-0 top-0 h-1" style={{ background: akzent }} />
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7a9a]">{titel}</div>
-        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-0.5 text-xs font-semibold text-[#6b7a9a]">
+        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{titel}</div>
+        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-[var(--border)] bg-white/[0.06] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
           {badge}
         </span>
       </div>
@@ -102,7 +102,7 @@ function KpiKarte({
         {wert}
       </div>
       {hinweis ? (
-        <div className="mt-3 text-sm leading-relaxed text-[#6b7a9a]">{hinweis}</div>
+        <div className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">{hinweis}</div>
       ) : null}
     </div>
   );
@@ -114,20 +114,20 @@ function SchnellzugriffKarte({
   linkText,
   to,
   icon = "→",
-  iconBg = "#111520",
+  iconBg = "var(--bg-inner)",
   iconColor = "#7aaeff",
 }) {
   return (
-    <div className="flex min-h-[210px] flex-col gap-3.5 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+    <div className="flex min-h-[210px] flex-col gap-3.5 rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-5">
       <div
-        className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.08] text-[22px] font-extrabold"
+        className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border)] text-[22px] font-extrabold"
         style={{ background: iconBg, color: iconColor }}
       >
         {icon}
       </div>
       <div>
-        <h3 className="mb-2 text-lg font-semibold tracking-tight text-[#eef2ff]">{titel}</h3>
-        <p className="m-0 text-sm leading-relaxed text-[#6b7a9a]">{text}</p>
+        <h3 className="mb-2 text-lg font-semibold tracking-tight text-[var(--text-primary)]">{titel}</h3>
+        <p className="m-0 text-sm leading-relaxed text-[var(--text-muted)]">{text}</p>
       </div>
       <div className="mt-auto">
         <Link
@@ -155,7 +155,7 @@ function StatusBadge({ status }) {
     cls += "border-red-500/20 bg-red-500/10 text-red-400";
   } else if (normalized === "cancelled") {
     label = "Storniert";
-    cls += "border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]";
+    cls += "border-[var(--border)] bg-white/[0.06] text-[var(--text-muted)]";
   } else {
     cls += "border-amber-500/20 bg-amber-500/10 text-amber-400";
   }
@@ -466,17 +466,17 @@ export default function AdminUebersichtPage() {
   }, [operationsStats, invoiceStats, weakestUnitDisplayLabel]);
 
   return (
-    <div data-testid="admin-dashboard-page" className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+    <div data-testid="admin-dashboard-page" className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)]">
       <div className="mx-auto grid max-w-[min(1400px,100%)] gap-4 p-6">
       <div className="flex items-center justify-end gap-3">
-        <span className="text-[13px] text-[#6b7a9a]">KPI-Zeitraum:</span>
+        <span className="text-[13px] text-[var(--text-muted)]">KPI-Zeitraum:</span>
         <select
           value={`${kpisPeriod.year}-${kpisPeriod.month}`}
           onChange={(e) => {
             const [y, m] = e.target.value.split("-").map(Number);
             setKpisPeriod({ year: y, month: m });
           }}
-          className="rounded-lg border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff]"
+          className="rounded-lg border border-[var(--border)] bg-[var(--bg-inner)] px-3 py-2 text-sm text-[var(--text-primary)]"
         >
           {(() => {
             const d = new Date();
@@ -495,25 +495,25 @@ export default function AdminUebersichtPage() {
           })()}
         </select>
       </div>
-      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+      <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[var(--text-muted)]">
               Vantio
             </div>
-            <h2 className="m-0 text-[22px] font-bold text-[#eef2ff]">
+            <h2 className="m-0 text-[22px] font-bold text-[var(--text-primary)]">
               Unternehmensübersicht
             </h2>
-            <p className="mt-3 max-w-[950px] text-[12px] leading-relaxed text-[#6b7a9a]">
+            <p className="mt-3 max-w-[950px] text-[12px] leading-relaxed text-[var(--text-muted)]">
               Zentrale Live-Übersicht über Umsatz, Ausgaben, Gewinn, Belegung,
               Rechnungen und kritische Bereiche des Unternehmens.
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
+            <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[var(--text-muted)]">
               Live KPI
             </span>
-            <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
+            <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[var(--text-muted)]">
               Management Ansicht
             </span>
           </div>
@@ -526,7 +526,7 @@ export default function AdminUebersichtPage() {
             titel="Gesamt Umsatz"
             wert={formatCurrency(portfolio.totalRevenue)}
             hinweis="Summe aktiver Mietverhältnisse (alle Units)"
-            farbe="#eef2ff"
+            farbe="var(--text-primary)"
             akzent="#64748b"
             badge="Tenancy"
           />
@@ -599,13 +599,13 @@ export default function AdminUebersichtPage() {
         </div>
       )}
       {tenancies === null && !operationsLoadError && (
-        <p className="py-2 text-[13px] text-[#6b7a9a]">
+        <p className="py-2 text-[13px] text-[var(--text-muted)]">
           Portfolio-KPIs (Tenancies) werden geladen…
         </p>
       )}
 
       {kpisLoading && (
-        <p className="py-4 text-[13px] text-[#6b7a9a]">Lade KPI-Daten…</p>
+        <p className="py-4 text-[13px] text-[var(--text-muted)]">Lade KPI-Daten…</p>
       )}
       {kpisError && (
         <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
@@ -660,11 +660,11 @@ export default function AdminUebersichtPage() {
           {Array.isArray(kpis.warnings) && kpis.warnings.length > 0 && (
             <div className="rounded-[14px] border border-amber-500/[0.15] bg-amber-500/[0.06] p-6">
               <h3 className="m-0 text-[16px] font-bold text-[#fbbf24]">Warnungen (Units / Liegenschaften)</h3>
-              <p className="mb-4 mt-2 text-[13px] text-[#6b7a9a]">Units mit Leerstand, Kosten ohne Umsatz oder negativem Gewinn.</p>
-              <ul className="m-0 list-disc space-y-2 pl-5 text-[13px] text-[#eef2ff]">
+              <p className="mb-4 mt-2 text-[13px] text-[var(--text-muted)]">Units mit Leerstand, Kosten ohne Umsatz oder negativem Gewinn.</p>
+              <ul className="m-0 list-disc space-y-2 pl-5 text-[13px] text-[var(--text-primary)]">
                 {kpis.warnings.map((w, i) => (
                   <li key={`${w.unit_id}-${i}`}>
-                    <strong className="font-semibold text-[#eef2ff]">{w.unit_title || w.unit_id}</strong>: {w.message}
+                    <strong className="font-semibold text-[var(--text-primary)]">{w.unit_title || w.unit_id}</strong>: {w.message}
                     {w.severity === "high" && <span className="ml-2 font-bold text-[#f87171]">• Hoch</span>}
                   </li>
                 ))}
@@ -673,16 +673,16 @@ export default function AdminUebersichtPage() {
           )}
 
           {Array.isArray(kpis.assumptions) && kpis.assumptions.length > 0 && (
-            <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-              <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[#6b7a9a]">Annahmen & Limitationen</h3>
-              <p className="mb-3 mt-2 text-sm text-[#6b7a9a]">So wurden die KPIs berechnet. Geschätzte oder nicht verfügbare Werte sind gekennzeichnet.</p>
-              <ul className="m-0 list-disc space-y-1.5 pl-5 text-sm text-[#6b7a9a]">
+            <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
+              <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Annahmen & Limitationen</h3>
+              <p className="mb-3 mt-2 text-sm text-[var(--text-muted)]">So wurden die KPIs berechnet. Geschätzte oder nicht verfügbare Werte sind gekennzeichnet.</p>
+              <ul className="m-0 list-disc space-y-1.5 pl-5 text-sm text-[var(--text-muted)]">
                 {kpis.assumptions.map((a, i) => (
                   <li key={i}>{a}</li>
                 ))}
               </ul>
               {kpis.availability && (
-                <p className="mt-3 text-sm text-[#6b7a9a]">
+                <p className="mt-3 text-sm text-[var(--text-muted)]">
                   Verfügbarkeit: Umsatz/Gewinn = {kpis.availability.revenue}; Leerstandstage = {kpis.availability.vacant_days}; Prognose = {kpis.availability.forecast}; Break-even = {kpis.availability.break_even}.
                 </p>
               )}
@@ -697,21 +697,21 @@ export default function AdminUebersichtPage() {
         </div>
       )}
 
-      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-        <h3 className="mb-4 text-lg font-semibold text-[#eef2ff]">Finanzentwicklung letzte 6 Monate</h3>
+      <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">Finanzentwicklung letzte 6 Monate</h3>
         {monthlyChartsLoading ? (
-          <p className="text-sm text-[#6b7a9a]">Lade Monatsdaten…</p>
+          <p className="text-sm text-[var(--text-muted)]">Lade Monatsdaten…</p>
         ) : monthlyChartsError ? (
           <p className="text-sm text-[#f87171]">{monthlyChartsError}</p>
         ) : financeChartData.length === 0 ? (
-          <p className="text-sm text-[#6b7a9a]">Keine Daten vorhanden</p>
+          <p className="text-sm text-[var(--text-muted)]">Keine Daten vorhanden</p>
         ) : (
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={financeChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: "#6b7a9a", fontSize: 11 }} />
-                <YAxis tick={{ fill: "#6b7a9a", fontSize: 11 }} />
+                <XAxis dataKey="month" tick={{ fill: "var(--text-muted)", fontSize: 11 }} />
+                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} />
                 <Tooltip formatter={(value) => `CHF ${value.toLocaleString()}`} />
                 <Bar dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
                 <Bar dataKey="costs" fill="#334155" radius={[8, 8, 0, 0]} />
@@ -722,21 +722,21 @@ export default function AdminUebersichtPage() {
         )}
       </div>
 
-      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-        <h3 className="mb-4 text-lg font-semibold text-[#eef2ff]">Belegung Rooms letzte 6 Monate</h3>
+      <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">Belegung Rooms letzte 6 Monate</h3>
         {monthlyChartsLoading ? (
-          <p className="text-sm text-[#6b7a9a]">Lade Monatsdaten…</p>
+          <p className="text-sm text-[var(--text-muted)]">Lade Monatsdaten…</p>
         ) : monthlyChartsError ? (
           <p className="text-sm text-[#f87171]">{monthlyChartsError}</p>
         ) : belegungChartData.length === 0 ? (
-          <p className="text-sm text-[#6b7a9a]">Keine Daten vorhanden</p>
+          <p className="text-sm text-[var(--text-muted)]">Keine Daten vorhanden</p>
         ) : (
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={belegungChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: "#6b7a9a", fontSize: 11 }} />
-                <YAxis tick={{ fill: "#6b7a9a", fontSize: 11 }} />
+                <XAxis dataKey="month" tick={{ fill: "var(--text-muted)", fontSize: 11 }} />
+                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
                 <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
@@ -782,12 +782,12 @@ export default function AdminUebersichtPage() {
         />
       </div>
 
-      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+      <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <div className="mb-4">
-          <h3 className="m-0 text-lg font-semibold text-[#eef2ff]">
+          <h3 className="m-0 text-lg font-semibold text-[var(--text-primary)]">
             Kritische Hinweise
           </h3>
-          <p className="mt-2 text-sm text-[#6b7a9a]">
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
             Die wichtigsten Auffälligkeiten auf einen Blick.
           </p>
         </div>
@@ -797,17 +797,17 @@ export default function AdminUebersichtPage() {
               success: {
                 box: "border border-green-500/20 bg-green-500/10",
                 title: "text-green-400",
-                text: "text-[#6b7a9a]",
+                text: "text-[var(--text-muted)]",
               },
               warning: {
                 box: "border border-amber-500/[0.15] bg-amber-500/[0.06]",
                 title: "text-[#fbbf24]",
-                text: "text-[#6b7a9a]",
+                text: "text-[var(--text-muted)]",
               },
               danger: {
                 box: "border border-red-500/20 bg-red-500/10",
                 title: "text-red-400",
-                text: "text-[#6b7a9a]",
+                text: "text-[var(--text-muted)]",
               },
             };
             const style = styles[warning.level];
@@ -828,8 +828,8 @@ export default function AdminUebersichtPage() {
         </div>
       </div>
 
-      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-        <h3 className="m-0 text-lg font-semibold text-[#eef2ff]">
+      <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
+        <h3 className="m-0 text-lg font-semibold text-[var(--text-primary)]">
           Schnellzugriff
         </h3>
         <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
@@ -839,7 +839,7 @@ export default function AdminUebersichtPage() {
             linkText="Zum Co-Living-Dashboard"
             to="/admin/operations"
             icon="🏠"
-            iconBg="#111520"
+            iconBg="var(--bg-inner)"
             iconColor="#fb923c"
           />
           <SchnellzugriffKarte
@@ -848,7 +848,7 @@ export default function AdminUebersichtPage() {
             linkText="Zu den Objekten"
             to="/admin/apartments"
             icon="🏢"
-            iconBg="#111520"
+            iconBg="var(--bg-inner)"
             iconColor="#7aaeff"
           />
           <SchnellzugriffKarte
@@ -857,19 +857,19 @@ export default function AdminUebersichtPage() {
             linkText="Zu den Rechnungen"
             to="/admin/invoices"
             icon="💳"
-            iconBg="#111520"
+            iconBg="var(--bg-inner)"
             iconColor="#4ade80"
           />
         </div>
       </div>
 
-      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+      <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="m-0 text-lg font-semibold text-[#eef2ff]">
+            <h3 className="m-0 text-lg font-semibold text-[var(--text-primary)]">
               Letzte Rechnungen
             </h3>
-            <p className="mt-2 text-sm text-[#6b7a9a]">
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
               Die zuletzt erfassten Rechnungen aus deinem Billing-Modul.
             </p>
           </div>
@@ -881,36 +881,36 @@ export default function AdminUebersichtPage() {
           </Link>
         </div>
         {invoiceLoading ? (
-          <p className="text-[13px] text-[#6b7a9a]">Rechnungen werden geladen...</p>
+          <p className="text-[13px] text-[var(--text-muted)]">Rechnungen werden geladen...</p>
         ) : invoiceError ? (
           <p className="text-[13px] text-[#f87171]">{invoiceError}</p>
         ) : latestInvoices.length === 0 ? (
-          <p className="text-[13px] text-[#6b7a9a]">Noch keine Rechnungen vorhanden.</p>
+          <p className="text-[13px] text-[var(--text-muted)]">Noch keine Rechnungen vorhanden.</p>
         ) : (
-          <div className="overflow-x-auto rounded-[14px] border border-white/[0.07] bg-[#141824]">
-            <table className="w-full border-collapse text-sm text-[#eef2ff]">
-              <thead className="bg-[#111520]">
+          <div className="overflow-x-auto rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)]">
+            <table className="w-full border-collapse text-sm text-[var(--text-primary)]">
+              <thead className="bg-[var(--bg-inner)]">
                 <tr className="text-left">
-                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Rechnungsnummer
                   </th>
-                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Betrag
                   </th>
-                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Status
                   </th>
-                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Rechnungsdatum
                   </th>
-                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Fälligkeitsdatum
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {latestInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-b border-white/[0.05]">
+                  <tr key={invoice.id} className="border-b border-[var(--border)]">
                     <td className="px-3 py-3 font-semibold">
                       <Link
                         to={`/admin/invoices/${invoice.id}`}
@@ -919,7 +919,7 @@ export default function AdminUebersichtPage() {
                         {invoice.invoice_number}
                       </Link>
                     </td>
-                    <td className="px-3 py-3 font-medium text-[#eef2ff]">
+                    <td className="px-3 py-3 font-medium text-[var(--text-primary)]">
                       {formatCurrency(invoice.amount)}
                     </td>
                     <td className="px-3 py-3">
