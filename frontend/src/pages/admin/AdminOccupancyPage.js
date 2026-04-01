@@ -127,6 +127,16 @@ function AdminOccupancyPage() {
     return units.filter((unit) => unit.type === "Co-Living");
   }, [units]);
 
+  const { apartmentsCount, coLivingCount } = useMemo(() => {
+    let apt = 0;
+    let cl = 0;
+    for (const u of units) {
+      if (String(u?.type || "").trim() === "Co-Living") cl += 1;
+      else apt += 1;
+    }
+    return { apartmentsCount: apt, coLivingCount: cl };
+  }, [units]);
+
   const occupancyRows = useMemo(() => {
     if (occupancyFromApi && Array.isArray(occupancyFromApi.units) && occupancyFromApi.units.length > 0) {
       const unitMap = new Map(units.map((u) => [u.id || u.unitId, u]));
@@ -203,7 +213,6 @@ function AdminOccupancyPage() {
       totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
 
     return {
-      units: occupancyRows.length,
       totalRooms,
       occupiedRooms,
       reservedRooms,
@@ -225,15 +234,21 @@ function AdminOccupancyPage() {
         <h2 className="text-3xl font-bold text-slate-800 mt-1">Belegung</h2>
         <p className="text-slate-500 mt-1">
           Übersicht über Auslastung, freie Zimmer, Reservierungen und Belegungsquote
-          pro Co-Living Unit.
+          für Apartments und Co-Living Units.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <StatCard
+          label="Apartments"
+          value={apartmentsCount}
+          hint="Units ohne Typ Co-Living"
+          color="slate"
+        />
         <StatCard
           label="Co-Living Units"
-          value={summary.units}
-          hint="Alle Einheiten mit Room-Logik"
+          value={coLivingCount}
+          hint="Typ Co-Living"
           color="slate"
         />
         <StatCard
@@ -319,7 +334,7 @@ function AdminOccupancyPage() {
               {occupancyRows.length === 0 && (
                 <tr>
                   <td colSpan="10" className="py-8 text-center text-slate-500">
-                    Keine Co-Living Units mit Belegungsdaten gefunden.
+                    Keine Belegungsdaten gefunden.
                   </td>
                 </tr>
               )}
