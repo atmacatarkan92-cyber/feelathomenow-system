@@ -60,31 +60,38 @@ function AdminRoomsPage() {
     return units.filter((unit) => unit.type === "Co-Living");
   }, [units]);
 
+  const coLivingRooms = useMemo(() => {
+    const ids = new Set(
+      coLivingUnits.map((u) => u.unitId || u.id).filter(Boolean)
+    );
+    return rooms.filter((room) => ids.has(room.unitId ?? room.unit_id));
+  }, [rooms, coLivingUnits]);
+
   const roomStats = useMemo(() => {
-    const occupied = rooms.filter(
+    const occupied = coLivingRooms.filter(
       (room) => getRoomOccupancyStatus(room, tenancies) === "belegt"
     ).length;
-    const reserved = rooms.filter(
+    const reserved = coLivingRooms.filter(
       (room) => getRoomOccupancyStatus(room, tenancies) === "reserviert"
     ).length;
-    const free = rooms.filter(
+    const free = coLivingRooms.filter(
       (room) => getRoomOccupancyStatus(room, tenancies) === "frei"
     ).length;
 
     return {
-      total: rooms.length,
+      total: coLivingRooms.length,
       occupied,
       reserved,
       free,
     };
-  }, [rooms, tenancies]);
+  }, [coLivingRooms, tenancies]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-slate-800">Zimmer</h2>
+        <h2 className="text-3xl font-bold text-slate-800">Co-Living-Zimmer</h2>
         <p className="text-slate-500 mt-1">
-          Übersicht über alle Rooms, Status, Belegung und Vorschau pro Co-Living Unit.
+          Übersicht über alle Co-Living-Zimmer, deren Belegung und Verfügbarkeit.
         </p>
       </div>
 
@@ -92,32 +99,32 @@ function AdminRoomsPage() {
         <StatCard
           label="Rooms gesamt"
           value={roomStats.total}
-          hint="Alle erfassten Zimmer"
+          hint="Alle Co-Living-Zimmer"
           color="slate"
         />
         <StatCard
           label="Belegt"
           value={roomStats.occupied}
-          hint="Aktuell belegte Zimmer"
+          hint="Aktuell belegte Co-Living-Zimmer"
           color="green"
         />
         <StatCard
           label="Reserviert"
           value={roomStats.reserved}
-          hint="Noch nicht eingezogen"
+          hint="Reservierte Co-Living-Zimmer"
           color="amber"
         />
         <StatCard
           label="Frei"
           value={roomStats.free}
-          hint="Aktuell ohne Belegung"
+          hint="Freie Co-Living-Zimmer"
           color="rose"
         />
       </div>
 
       <SectionCard
         title="Room Map"
-        subtitle="Visuelle Übersicht aller Zimmer pro Co-Living Unit"
+        subtitle="Visuelle Übersicht aller Co-Living-Zimmer pro Unit"
       >
         <div className="space-y-6">
           {coLivingUnits.map((unit) => (
@@ -137,7 +144,7 @@ function AdminRoomsPage() {
 
       <SectionCard
         title="Belegungskalender"
-        subtitle="Monatsvorschau pro Room mit sicher, Risiko, reserviert und frei"
+        subtitle="Monatsvorschau pro Co-Living-Zimmer mit sicher, Risiko, reserviert und frei"
       >
         <div className="space-y-6">
           {coLivingUnits.map((unit) => (

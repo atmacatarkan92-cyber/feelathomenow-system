@@ -127,7 +127,7 @@ function AdminSidebar() {
           </NavLink>
 
           <NavLink to="/admin/rooms" style={unterLinkStyle}>
-            Zimmer
+            Co-Living-Zimmer
           </NavLink>
 
           <NavLink to="/admin/occupancy" style={unterLinkStyle}>
