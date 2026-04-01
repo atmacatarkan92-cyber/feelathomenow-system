@@ -2230,9 +2230,9 @@ function AdminUnitDetailPage() {
                 accent="slate"
               />
             </div>
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-800 mb-1">
-                Einnahmen Zusammensetzung
+            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm text-emerald-950">
+              <p className="font-semibold text-emerald-900 mb-2">
+                Monatliche Einnahmen (Details)
               </p>
               <p className="text-xs text-slate-500 mb-3">
                 Wiederkehrende Einnahmen nach Typ (Monatsäquivalent), summiert über
@@ -2250,10 +2250,10 @@ function AdminUnitDetailPage() {
                   {unitAggregatedRecurringBreakdown.map((b) => (
                     <li
                       key={b.typeKey}
-                      className="flex justify-between gap-4 text-slate-700"
+                      className="flex justify-between gap-4 text-emerald-900"
                     >
                       <span>{b.label}</span>
-                      <span className="font-medium tabular-nums">
+                      <span className="font-medium tabular-nums text-emerald-950">
                         {formatCurrency(b.total)}
                       </span>
                     </li>
@@ -2263,13 +2263,13 @@ function AdminUnitDetailPage() {
               {!unitTenancyRevenueLoading &&
               activeUnitTenancies.length > 0 &&
               unitAggregatedOneTimeTotal > 0 ? (
-                <div className="mt-3 pt-3 border-t border-slate-200">
-                  <p className="text-xs font-semibold text-slate-600 mb-2">
+                <div className="mt-3 pt-3 border-t border-emerald-100/80">
+                  <p className="text-xs font-semibold text-emerald-800 mb-2">
                     Einmalige Einnahmen
                   </p>
-                  <p className="text-sm text-slate-800 mb-2">
+                  <p className="text-sm text-emerald-900 mb-2">
                     Gesamt:{" "}
-                    <span className="font-semibold tabular-nums">
+                    <span className="font-semibold tabular-nums text-emerald-950">
                       {formatCurrency(unitAggregatedOneTimeTotal)}
                     </span>
                   </p>
@@ -2278,10 +2278,10 @@ function AdminUnitDetailPage() {
                       {unitAggregatedOneTimeBreakdown.map((b) => (
                         <li
                           key={`ot-${b.typeKey}`}
-                          className="flex justify-between gap-4 text-slate-600"
+                          className="flex justify-between gap-4 text-emerald-900"
                         >
                           <span>{b.label}</span>
-                          <span className="font-medium tabular-nums">
+                          <span className="font-medium tabular-nums text-emerald-950">
                             {formatCurrency(b.total)}
                           </span>
                         </li>
@@ -2291,19 +2291,21 @@ function AdminUnitDetailPage() {
                 </div>
               ) : null}
             </div>
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-800 mb-1">Kosten Zusammensetzung</p>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              <p className="font-semibold text-slate-600 mb-2">
+                Monatliche Kosten (Details)
+              </p>
               <p className="text-xs text-slate-500 mb-3">
                 Aus unit_costs und Kautionsversicherung (jährliche Prämie ÷ 12). «Laufende
                 Kosten» oben ist der Backend-KPI-Monat und kann bei Abweichungen in den
                 Stammdaten davon abweichen.
               </p>
               <div className="mb-3">
-                <p className="text-sm text-slate-800">
+                <p className="text-sm text-slate-600">
                   <span className="text-slate-600 font-medium">
                     Laufende Kosten gesamt:
                   </span>{" "}
-                  <span className="font-semibold tabular-nums">
+                  <span className="font-semibold tabular-nums text-slate-700">
                     {formatCurrency(runningCostsStammdatenTotal)}
                   </span>
                 </p>
@@ -2314,10 +2316,10 @@ function AdminUnitDetailPage() {
                     {recurringCostBreakdownDisplay.map((b) => (
                       <li
                         key={b.typeKey}
-                        className="flex justify-between gap-4 text-slate-700"
+                        className="flex justify-between gap-4 text-slate-600"
                       >
                         <span>{b.label}</span>
-                        <span className="font-medium tabular-nums">
+                        <span className="font-medium tabular-nums text-slate-700">
                           {formatCurrency(b.total)}
                         </span>
                       </li>
@@ -2326,11 +2328,11 @@ function AdminUnitDetailPage() {
                 )}
               </div>
               <div className="mt-3 pt-3 border-t border-slate-200">
-                <p className="text-sm text-slate-800 mb-2">
+                <p className="text-sm text-slate-600 mb-2">
                   <span className="text-slate-600 font-medium">
                     Einmalige Kosten gesamt:
                   </span>{" "}
-                  <span className="font-semibold tabular-nums">
+                  <span className="font-semibold tabular-nums text-slate-700">
                     {formatCurrency(oneTimeCostTotalDisplay)}
                   </span>
                 </p>
@@ -2344,7 +2346,7 @@ function AdminUnitDetailPage() {
                         className="flex justify-between gap-4 text-slate-600"
                       >
                         <span>{b.label}</span>
-                        <span className="font-medium tabular-nums">
+                        <span className="font-medium tabular-nums text-slate-700">
                           {formatCurrency(b.total)}
                         </span>
                       </li>
