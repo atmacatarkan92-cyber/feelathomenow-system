@@ -281,10 +281,10 @@ function calculateApartmentProfit(unit, unitCostsRows) {
 
 function SectionCard({ title, subtitle, children }) {
   return (
-    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6">
       <div className="mb-5">
-        <h3 className="text-[16px] font-bold text-[#eef2ff]">{title}</h3>
-        {subtitle ? <p className="mt-1 text-[12px] text-[#6b7a9a]">{subtitle}</p> : null}
+        <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
+        {subtitle ? <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p> : null}
       </div>
       {children}
     </div>
@@ -299,22 +299,22 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
     >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-[#111520]">
+          <thead className="bg-slate-100 dark:bg-[#111520]">
             <tr>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Unit ID</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Ort</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">PLZ</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Adresse</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Typ</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Liegenschaft</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Status</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Zimmer</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Mieterpreis</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Mietkosten</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Mieterpreis − Kosten</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Verfügbar ab</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Mietbeginn (Vertrag)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Aktionen</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Unit ID</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Ort</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">PLZ</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Typ</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Status</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Zimmer</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mieterpreis</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietkosten</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mieterpreis − Kosten</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Verfügbar ab</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietbeginn (Vertrag)</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Aktionen</th>
             </tr>
           </thead>
 
@@ -331,7 +331,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
               return (
               <tr
                 key={unit.id}
-                className={`border-b border-white/[0.05] text-[13px] text-[#eef2ff] ${
+                className={`border-b border-black/10 dark:border-white/[0.05] text-[13px] text-[#0f172a] dark:text-[#eef2ff] ${
                   leaseEnded ? "opacity-60" : ""
                 }`}
               >
@@ -342,7 +342,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                   >
                     {getDisplayUnitId(unit, index)}
                   </Link>
-                  <span className="mt-0.5 block break-all text-[10px] font-normal text-[#6b7a9a]">
+                  <span className="mt-0.5 block break-all text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
                     {unit.unitId}
                   </span>
                 </td>
@@ -361,7 +361,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                             "noopener,noreferrer"
                           )
                         }
-                        className="text-[#6b7a9a] hover:text-[#eef2ff]"
+                        className="text-[#64748b] dark:text-[#6b7a9a] hover:text-[#0f172a] dark:hover:text-[#eef2ff]"
                         title="In Google Maps öffnen"
                       >
                         📍
@@ -373,7 +373,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                 <td className="py-4 pr-4">{unit.property_title || "—"}</td>
                 <td className="py-4 pr-4">
                   {occ == null ? (
-                    <span className="text-[#6b7a9a]">—</span>
+                    <span className="text-[#64748b] dark:text-[#6b7a9a]">—</span>
                   ) : (
                     <span
                       className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${occupancyStatusBadgeClassName(
@@ -401,7 +401,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                 <td className="py-4 pr-4">
                   <Link
                     to={`/admin/units/${unit.unitId}`}
-                    className="inline-block rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                    className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                   >
                     Öffnen
                   </Link>
@@ -412,7 +412,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
 
             {items.length === 0 && (
               <tr>
-                <td colSpan="14" className="py-8 text-center text-[13px] text-[#6b7a9a]">
+                <td colSpan="14" className="py-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                   Keine Apartments gefunden.
                 </td>
               </tr>
@@ -432,23 +432,23 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
     >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-[#111520]">
+          <thead className="bg-slate-100 dark:bg-[#111520]">
             <tr>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Unit ID</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Ort</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">PLZ</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Adresse</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Liegenschaft</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Status</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Belegt</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Reserviert</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Frei</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Potenzial (Listen)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Einnahmen (Äquivalent)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Differenz (Listen − Äquivalent)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Deckungsbeitrag (Frontend)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Mietbeginn (Vertrag)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">Aktionen</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Unit ID</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Ort</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">PLZ</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Status</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Belegt</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Reserviert</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Frei</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Potenzial (Listen)</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Einnahmen (Äquivalent)</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Differenz (Listen − Äquivalent)</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Deckungsbeitrag (Frontend)</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietbeginn (Vertrag)</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Aktionen</th>
             </tr>
           </thead>
 
@@ -470,7 +470,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
               return (
                 <tr
                   key={unit.id}
-                  className={`border-b border-white/[0.05] text-[13px] text-[#eef2ff] ${
+                  className={`border-b border-black/10 dark:border-white/[0.05] text-[13px] text-[#0f172a] dark:text-[#eef2ff] ${
                     leaseEnded ? "opacity-60" : ""
                   }`}
                 >
@@ -481,7 +481,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                     >
                       {getDisplayUnitId(unit, index)}
                     </Link>
-                    <span className="mt-0.5 block break-all text-[10px] font-normal text-[#6b7a9a]">
+                    <span className="mt-0.5 block break-all text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
                       {unit.unitId}
                     </span>
                   </td>
@@ -500,7 +500,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                             "noopener,noreferrer"
                           )
                         }
-                        className="text-[#6b7a9a] hover:text-[#eef2ff]"
+                        className="text-[#64748b] dark:text-[#6b7a9a] hover:text-[#0f172a] dark:hover:text-[#eef2ff]"
                         title="In Google Maps öffnen"
                       >
                         📍
@@ -511,7 +511,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                 <td className="py-4 pr-4">{unit.property_title || "—"}</td>
                 <td className="py-4 pr-4">
                   {occ == null ? (
-                    <span className="text-[#6b7a9a]">—</span>
+                    <span className="text-[#64748b] dark:text-[#6b7a9a]">—</span>
                   ) : (
                     <span
                       className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${occupancyStatusBadgeClassName(
@@ -543,7 +543,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                   <td className="py-4 pr-4">
                     <Link
                       to={`/admin/units/${unit.unitId}`}
-                      className="inline-block rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                      className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                     >
                       Öffnen
                     </Link>
@@ -554,7 +554,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
 
             {items.length === 0 && (
               <tr>
-                <td colSpan="15" className="py-8 text-center text-[13px] text-[#6b7a9a]">
+                <td colSpan="15" className="py-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                   Keine Co-Living Einheiten gefunden.
                 </td>
               </tr>
@@ -568,10 +568,10 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-[#141824] p-5">
-      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{label}</p>
-      <p className="mt-2 text-[24px] font-bold text-[#eef2ff]">{value}</p>
-      {hint ? <p className="mt-2 text-[11px] text-[#6b7a9a]">{hint}</p> : null}
+    <div className="relative overflow-hidden rounded-[14px] border border-black/10 dark:border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-white dark:bg-[#141824] p-5">
+      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
+      <p className="mt-2 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{value}</p>
+      {hint ? <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
 }
@@ -1349,14 +1349,17 @@ function AdminApartmentsPage() {
     currentCoLivingRevenue - formRunningMonthlyCosts;
 
   return (
-    <div data-testid="admin-apartments-page" className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+    <div
+      data-testid="admin-apartments-page"
+      className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
+    >
       <div className="mx-auto max-w-[min(1400px,100%)] p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-[22px] font-bold text-[#eef2ff]">
+          <h2 className="text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
             Apartments / Units
           </h2>
-          <p className="mt-1 text-[12px] text-[#6b7a9a]">
+          <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
             Verwalte hier alle vermietbaren Einheiten, also Apartments und
             Co-Living Units.
           </p>
@@ -1372,7 +1375,7 @@ function AdminApartmentsPage() {
       </div>
 
       {loading && (
-        <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-8 text-center text-[13px] text-[#6b7a9a]">
+        <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
           Laden…
         </div>
       )}
@@ -1390,7 +1393,7 @@ function AdminApartmentsPage() {
       )}
 
       {!loading && !fetchError && units.length === 0 && (
-        <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-8 text-center text-[13px] text-[#6b7a9a]">
+        <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
           Keine Daten vorhanden
         </div>
       )}
@@ -1425,18 +1428,18 @@ function AdminApartmentsPage() {
             />
           </div>
 
-          <div className="mb-6 flex flex-wrap items-center gap-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+          <div className="mb-6 flex flex-wrap items-center gap-4 rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Suche nach Unit ID, Ort, PLZ, Adresse, Typ oder Belegung…"
-              className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none placeholder:text-[#6b7a9a] md:w-96"
+              className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none placeholder:text-[#64748b] dark:placeholder:text-[#6b7a9a] md:w-96"
             />
             <select
               value={propertyFilter}
               onChange={(e) => setPropertyFilter(e.target.value)}
-              className="min-w-[180px] rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+              className="min-w-[180px] rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
             >
               <option value="">Alle Liegenschaften</option>
               {properties.map((p) => (
@@ -1469,13 +1472,13 @@ function AdminApartmentsPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6 shadow-xl">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h3 className="text-[18px] font-bold text-[#eef2ff]">
+                <h3 className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                   {editingId ? "Unit bearbeiten" : "Neue Unit hinzufügen"}
                 </h3>
-                <p className="mt-1 text-[12px] text-[#6b7a9a]">
+                <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
                   {editingId
                     ? "Bearbeite hier die vorhandene Unit."
                     : "Die Unit ID wird automatisch vergeben."}
@@ -1485,17 +1488,17 @@ function AdminApartmentsPage() {
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="text-2xl leading-none text-[#6b7a9a] hover:text-[#eef2ff]"
+                className="text-2xl leading-none text-[#64748b] dark:text-[#6b7a9a] hover:text-[#0f172a] dark:hover:text-[#eef2ff]"
               >
                 ×
               </button>
             </div>
 
-            <div className="mb-6 rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-              <p className="text-[10px] text-[#6b7a9a]">
+            <div className="mb-6 rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+              <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                 {editingId ? "Unit ID" : "Automatische Unit ID"}
               </p>
-              <p className="mt-1 text-[16px] font-bold text-[#eef2ff]">
+              <p className="mt-1 text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                 {editingId
                   ? units.find((item) => item.id === editingId)?.unitId
                   : nextUnitId}
@@ -1508,7 +1511,7 @@ function AdminApartmentsPage() {
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Ort
                   </label>
                   <input
@@ -1517,12 +1520,12 @@ function AdminApartmentsPage() {
                     value={formData.place}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     PLZ
                   </label>
                   <input
@@ -1531,15 +1534,15 @@ function AdminApartmentsPage() {
                     value={formData.zip}
                     onChange={handleUnitPostalCodeChange}
                     required
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   />
                   {unitPlzNotFound ? (
-                    <p className="mt-1 text-xs text-[#6b7a9a]">PLZ nicht gefunden</p>
+                    <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">PLZ nicht gefunden</p>
                   ) : null}
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Adresse
                   </label>
                   <input
@@ -1548,13 +1551,13 @@ function AdminApartmentsPage() {
                     value={formData.address}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   />
                 </div>
 
                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
                   <div className="md:col-span-1">
-                    <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                    <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                       Kanton (optional)
                     </label>
                     <select
@@ -1564,7 +1567,7 @@ function AdminApartmentsPage() {
                         setFormData((f) => ({ ...f, canton: e.target.value }))
                       }
                       disabled={saving || unitCantonLockedByPlz}
-                      className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none disabled:opacity-50"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none disabled:opacity-50"
                     >
                       <option value="">—</option>
                       {formData.canton && !SWISS_CANTON_CODES.includes(formData.canton) ? (
@@ -1622,29 +1625,29 @@ function AdminApartmentsPage() {
                         !(String(formData.zip || "").trim()) ||
                         !(String(formData.place || "").trim())
                       }
-                      className="self-start rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="self-start rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {unitAddrBusy ? "…" : "Adresse prüfen"}
                     </button>
-                    <p className="text-xs text-[#6b7a9a]">
+                    <p className="text-xs text-[#64748b] dark:text-[#6b7a9a]">
                       Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
                       Abfrage einen Wert liefert.
                     </p>
                     {unitCantonHint ? (
-                      <p className="text-xs text-[#6b7a9a]">{unitCantonHint}</p>
+                      <p className="text-xs text-[#64748b] dark:text-[#6b7a9a]">{unitCantonHint}</p>
                     ) : null}
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Typ
                   </label>
                   <select
                     name="type"
                     value={formData.type}
                     onChange={handleChange}
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   >
                     <option value="Apartment">Apartment</option>
                     <option value="Co-Living">Co-Living</option>
@@ -1652,14 +1655,14 @@ function AdminApartmentsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Liegenschaft (optional)
                   </label>
                   <select
                     name="property_id"
                     value={formData.property_id}
                     onChange={handleChange}
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   >
                     <option value="">— Nicht zugewiesen</option>
                     {properties.map((p) => (
@@ -1671,7 +1674,7 @@ function AdminApartmentsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Verwaltung (optional)
                   </label>
                   <input
@@ -1679,14 +1682,14 @@ function AdminApartmentsPage() {
                     value={landlordFilter}
                     onChange={(e) => setLandlordFilter(e.target.value)}
                     placeholder="Suchen…"
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-2 mb-2 text-sm text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-2 mb-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
                     autoComplete="off"
                   />
                   <select
                     name="landlord_id"
                     value={formData.landlord_id}
                     onChange={handleChange}
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   >
                     <option value="">— Keine Auswahl</option>
                     {filteredLandlordsForSelect.map((l) => (
@@ -1698,7 +1701,7 @@ function AdminApartmentsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Bewirtschafter (optional)
                   </label>
                   <input
@@ -1706,14 +1709,14 @@ function AdminApartmentsPage() {
                     value={propertyManagerFilter}
                     onChange={(e) => setPropertyManagerFilter(e.target.value)}
                     placeholder="Suchen…"
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-2 mb-2 text-sm text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-2 mb-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
                     autoComplete="off"
                   />
                   <select
                     name="property_manager_id"
                     value={formData.property_manager_id}
                     onChange={handleChange}
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   >
                     <option value="">— Keine Auswahl</option>
                     {filteredPropertyManagersForSelect.map((pm) => (
@@ -1725,11 +1728,11 @@ function AdminApartmentsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Zimmer gesamt
                   </label>
                   {isCoLivingType ? (
-                    <p className="mb-2 text-xs text-[#6b7a9a]">
+                    <p className="mb-2 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                       Zimmer-Details erscheinen, sobald «Zimmer gesamt» größer als 0 ist.
                     </p>
                   ) : null}
@@ -1740,7 +1743,7 @@ function AdminApartmentsPage() {
                     onChange={handleChange}
                     required
                     placeholder="z. B. 3"
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   />
                 </div>
 
@@ -1750,14 +1753,14 @@ function AdminApartmentsPage() {
                   coLivingRowsForDisplay.map((row, idx) => (
                     <div
                       key={idx}
-                      className="md:col-span-2 rounded-[10px] border border-white/[0.08] bg-[#111520] p-4"
+                      className="md:col-span-2 rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4"
                     >
-                      <p className="mb-3 text-[13px] font-semibold text-[#eef2ff]">
+                      <p className="mb-3 text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                         Zimmer {idx + 1}
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         <div>
-                          <label className="mb-1 block text-[10px] text-[#6b7a9a]">Name</label>
+                          <label className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Name</label>
                           <input
                             type="text"
                             value={row.name}
@@ -1765,11 +1768,11 @@ function AdminApartmentsPage() {
                               handleCoLivingRoomChange(idx, "name", e.target.value)
                             }
                             required
-                            className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] outline-none"
+                            className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-[10px] text-[#6b7a9a]">
+                          <label className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                             Geplanter Zimmerpreis (CHF)
                           </label>
                           <input
@@ -1780,14 +1783,14 @@ function AdminApartmentsPage() {
                               handleCoLivingRoomChange(idx, "price", e.target.value)
                             }
                             required
-                            className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] outline-none"
+                            className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
                           />
-                          <p className="mt-1 text-[11px] text-[#6b7a9a]">
+                          <p className="mt-1 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
                             Wird für Prognosen und Vollbelegung verwendet
                           </p>
                         </div>
                         <div>
-                          <label className="mb-1 block text-[10px] text-[#6b7a9a]">Etage</label>
+                          <label className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Etage</label>
                           <input
                             type="number"
                             min="0"
@@ -1795,11 +1798,11 @@ function AdminApartmentsPage() {
                             onChange={(e) =>
                               handleCoLivingRoomChange(idx, "floor", e.target.value)
                             }
-                            className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] outline-none"
+                            className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-[10px] text-[#6b7a9a]">Fläche (m²)</label>
+                          <label className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Fläche (m²)</label>
                           <input
                             type="number"
                             min="0"
@@ -1808,20 +1811,20 @@ function AdminApartmentsPage() {
                             onChange={(e) =>
                               handleCoLivingRoomChange(idx, "size_m2", e.target.value)
                             }
-                            className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] outline-none"
+                            className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-[10px] text-[#6b7a9a]">Status</label>
-                          <div className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff]">
+                          <label className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Status</label>
+                          <div className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff]">
                             <span className="font-medium">Frei</span>
-                            <span className="mt-0.5 block text-[11px] text-[#6b7a9a]">
+                            <span className="mt-0.5 block text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
                               Wird automatisch berechnet
                             </span>
                           </div>
                         </div>
                         <div>
-                          <label className="mb-1 block text-[10px] text-[#6b7a9a]">
+                          <label className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                             Verfügbar ab
                           </label>
                           <input
@@ -1834,7 +1837,7 @@ function AdminApartmentsPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] outline-none"
+                            className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
                           />
                         </div>
                       </div>
@@ -1852,7 +1855,7 @@ function AdminApartmentsPage() {
 
                 {!isCoLivingType ? (
                   <div>
-                    <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                    <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                       Verfügbar ab
                     </label>
                     <input
@@ -1861,7 +1864,7 @@ function AdminApartmentsPage() {
                       value={formData.availableFrom}
                       onChange={handleChange}
                       required
-                      className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                     />
                   </div>
                 ) : null}
@@ -1869,33 +1872,33 @@ function AdminApartmentsPage() {
                 {isCoLivingType ? (
                   <div className="md:col-span-2 space-y-4">
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Monatliche geschätzte Einnahmen
                       </label>
                       <div
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff]"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff]"
                         aria-readonly="true"
                       >
                         {formatCurrency(coLivingFullOccupancyRevenue)}
-                        <span className="mt-1 block text-xs font-normal text-[#6b7a9a]">
+                        <span className="mt-1 block text-xs font-normal text-[#64748b] dark:text-[#6b7a9a]">
                           Summe der geplanten Zimmerpreise bei Vollbelegung
                         </span>
                       </div>
                     </div>
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Monatliche Gesamtkosten
                       </label>
                       <div
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff]"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff]"
                         aria-readonly="true"
                       >
                         {formatCurrencyChf2(derivedMonthlyTotalCosts)}
-                        <span className="mt-1 block text-xs font-normal text-[#6b7a9a]">
+                        <span className="mt-1 block text-xs font-normal text-[#64748b] dark:text-[#6b7a9a]">
                           Monatlich (voll) + jährlich (/12) + Kautionsversicherung (/12), einmalig ausgeschlossen.
                         </span>
                         {derivedOneTimeCostsTotal > 0 ? (
-                          <span className="mt-1 block text-xs font-normal text-[#6b7a9a]">
+                          <span className="mt-1 block text-xs font-normal text-[#64748b] dark:text-[#6b7a9a]">
                             Einmalige Kosten gesamt: {formatCurrencyChf2(derivedOneTimeCostsTotal)}
                           </span>
                         ) : null}
@@ -1904,19 +1907,19 @@ function AdminApartmentsPage() {
                   </div>
                 ) : (
                   <div>
-                    <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                    <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                       Monatliche Gesamtkosten
                     </label>
                     <div
-                      className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff]"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff]"
                       aria-readonly="true"
                     >
                       {formatCurrencyChf2(derivedMonthlyTotalCosts)}
-                          <span className="mt-1 block text-xs font-normal text-[#6b7a9a]">
+                          <span className="mt-1 block text-xs font-normal text-[#64748b] dark:text-[#6b7a9a]">
                         Monatlich (voll) + jährlich (/12) + Kautionsversicherung (/12), einmalig ausgeschlossen.
                       </span>
                       {derivedOneTimeCostsTotal > 0 ? (
-                        <span className="mt-1 block text-xs font-normal text-[#6b7a9a]">
+                        <span className="mt-1 block text-xs font-normal text-[#64748b] dark:text-[#6b7a9a]">
                           Einmalige Kosten gesamt: {formatCurrencyChf2(derivedOneTimeCostsTotal)}
                         </span>
                       ) : null}
@@ -1924,14 +1927,14 @@ function AdminApartmentsPage() {
                   </div>
                 )}
 
-                <div className="md:col-span-2 rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-                  <p className="mb-3 text-[13px] font-semibold text-[#eef2ff]">
+                <div className="md:col-span-2 rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+                  <p className="mb-3 text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                     Kostenpositionen
                   </p>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-[#eef2ff]">
+                    <table className="w-full text-left text-sm text-[#0f172a] dark:text-[#eef2ff]">
                       <thead>
-                        <tr className="border-b border-white/[0.05] bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
+                        <tr className="border-b border-black/10 dark:border-white/[0.05] bg-slate-100 dark:bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#64748b] dark:text-[#6b7a9a]">
                           <th className="py-2 pr-4">Kostenart</th>
                           <th className="py-2 pr-4">Frequenz</th>
                           <th className="py-2 pr-4">Betrag (CHF)</th>
@@ -1940,7 +1943,7 @@ function AdminApartmentsPage() {
                       </thead>
                       <tbody>
                         {modalCostRows.map((row) => (
-                          <tr key={row.id} className="border-b border-white/[0.05] align-top">
+                          <tr key={row.id} className="border-b border-black/10 dark:border-white/[0.05] align-top">
                             <td className="py-2 pr-4">
                               <select
                                 value={row.cost_type}
@@ -1952,7 +1955,7 @@ function AdminApartmentsPage() {
                                   });
                                 }}
                                 disabled={saving}
-                                className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none disabled:opacity-50"
+                                className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none disabled:opacity-50"
                               >
                                 <option value="">— wählen —</option>
                                 {MODAL_COST_TYPE_OPTIONS.map((opt) => (
@@ -1972,7 +1975,7 @@ function AdminApartmentsPage() {
                                   }
                                   disabled={saving}
                                   placeholder="Bezeichnung"
-                                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none mt-2 disabled:opacity-50"
+                                  className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none mt-2 disabled:opacity-50"
                                 />
                               ) : null}
                             </td>
@@ -1983,7 +1986,7 @@ function AdminApartmentsPage() {
                                   updateModalCostRow(row.id, { frequency: e.target.value })
                                 }
                                 disabled={saving}
-                                className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none disabled:opacity-50"
+                                className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none disabled:opacity-50"
                               >
                                 <option value="monthly">Monatlich</option>
                                 <option value="yearly">Jährlich</option>
@@ -2000,7 +2003,7 @@ function AdminApartmentsPage() {
                                   })
                                 }
                                 disabled={saving}
-                                className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none disabled:opacity-50"
+                                className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none disabled:opacity-50"
                               />
                             </td>
                             <td className="py-2 pr-4">
@@ -2022,21 +2025,21 @@ function AdminApartmentsPage() {
                     type="button"
                     disabled={saving}
                     onClick={addModalCostRow}
-                    className="mt-3 rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-medium text-[#8090b0] hover:bg-white/[0.04] disabled:opacity-50"
+                    className="mt-3 rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2 text-sm font-medium text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:opacity-50"
                   >
                     + Kostenart hinzufügen
                   </button>
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Kautionsart Vermieter
                   </label>
                   <select
                     name="landlordDepositType"
                     value={formData.landlordDepositType}
                     onChange={handleChange}
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   >
                     <option value="">—</option>
                     <option value="bank">Bank</option>
@@ -2047,7 +2050,7 @@ function AdminApartmentsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                  <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                     Kautionsbetrag Vermieter
                   </label>
                   <input
@@ -2058,13 +2061,13 @@ function AdminApartmentsPage() {
                     min="0"
                     step="0.01"
                     placeholder="z. B. 5000"
-                    className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                    className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   />
                 </div>
 
                 {formData.landlordDepositType === "insurance" ? (
                   <div>
-                    <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                    <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                       Jahresprämie Vermieter
                     </label>
                     <input
@@ -2075,25 +2078,25 @@ function AdminApartmentsPage() {
                       min="0"
                       step="0.01"
                       placeholder="z. B. 350"
-                      className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                     />
                   </div>
                 ) : null}
 
-                <div className="md:col-span-2 mt-1 border-t border-white/[0.05] pt-5">
-                  <p className="mb-3 text-[13px] font-semibold text-[#eef2ff]">
+                <div className="md:col-span-2 mt-1 border-t border-black/10 dark:border-white/[0.05] pt-5">
+                  <p className="mb-3 text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                     Vertrag Vermieter
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Vertragsart
                       </label>
                       <select
                         name="leaseType"
                         value={formData.leaseType}
                         onChange={handleChange}
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                       >
                         <option value="">—</option>
                         <option value="open_ended">Unbefristet</option>
@@ -2102,7 +2105,7 @@ function AdminApartmentsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Mietbeginn
                       </label>
                       <input
@@ -2110,13 +2113,13 @@ function AdminApartmentsPage() {
                         name="leaseStartDate"
                         value={formData.leaseStartDate}
                         onChange={handleChange}
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                       />
                     </div>
 
                     {formData.leaseType === "fixed_term" ? (
                       <div>
-                        <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                        <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                           Vertragsende
                         </label>
                         <input
@@ -2124,13 +2127,13 @@ function AdminApartmentsPage() {
                           name="leaseEndDate"
                           value={formData.leaseEndDate}
                           onChange={handleChange}
-                          className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                          className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                         />
                       </div>
                     ) : null}
 
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Kündigung eingereicht am
                       </label>
                       <input
@@ -2138,12 +2141,12 @@ function AdminApartmentsPage() {
                         name="noticeGivenDate"
                         value={formData.noticeGivenDate}
                         onChange={handleChange}
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Kündigung wirksam per
                       </label>
                       <input
@@ -2151,12 +2154,12 @@ function AdminApartmentsPage() {
                         name="terminationEffectiveDate"
                         value={formData.terminationEffectiveDate}
                         onChange={handleChange}
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Rückgabe erfolgt am
                       </label>
                       <input
@@ -2164,27 +2167,27 @@ function AdminApartmentsPage() {
                         name="returnedToLandlordDate"
                         value={formData.returnedToLandlordDate}
                         onChange={handleChange}
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Vertragsstatus
                       </label>
                       <div
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff]"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff]"
                         aria-readonly="true"
                       >
                         {leaseStatusLabel(computeLeaseStatusKey(formData))}
-                        <span className="mt-1 block text-xs font-normal text-[#6b7a9a]">
+                        <span className="mt-1 block text-xs font-normal text-[#64748b] dark:text-[#6b7a9a]">
                           Automatisch berechnet aus Mietbeginn / Kündigung / Rückgabe.
                         </span>
                       </div>
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="mb-2 block text-[10px] text-[#6b7a9a]">
+                      <label className="mb-2 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         Notizen
                       </label>
                       <textarea
@@ -2192,7 +2195,7 @@ function AdminApartmentsPage() {
                         value={formData.leaseNotes}
                         onChange={handleChange}
                         rows={3}
-                        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-[#eef2ff] outline-none resize-y min-h-[5rem]"
+                        className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none resize-y min-h-[5rem]"
                       />
                     </div>
                   </div>
@@ -2202,49 +2205,49 @@ function AdminApartmentsPage() {
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {!isCoLivingType ? (
                   <>
-                    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-                      <p className="text-[11px] text-[#6b7a9a]">Mieterpreis − Kosten (Stammdaten)</p>
+                    <div className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Mieterpreis − Kosten (Stammdaten)</p>
                       <p className="mt-1 text-[24px] font-bold text-[#4ade80]">
                         {formatCurrency(currentApartmentProfit)}
                       </p>
                     </div>
 
-                    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-                      <p className="text-[11px] text-[#6b7a9a]">Zimmer</p>
-                      <p className="mt-1 text-[24px] font-bold text-[#eef2ff]">
+                    <div className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Zimmer</p>
+                      <p className="mt-1 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                         {formData.rooms || 0}
                       </p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-                      <p className="text-[11px] text-[#6b7a9a]">Einnahmen (Mieter-Äquivalent)</p>
+                    <div className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Einnahmen (Mieter-Äquivalent)</p>
                       <p className="mt-1 text-[24px] font-bold text-[#4ade80]">
                         {formatCurrency(currentCoLivingRevenue)}
                       </p>
-                      <p className="mt-1 text-xs text-[#6b7a9a]">
+                      <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                         Aus TenancyRevenue-Äquivalent; kein Backend-KPI-Monat.
                       </p>
                     </div>
 
-                    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-                      <p className="text-[11px] text-[#6b7a9a]">Potenzial − Äquivalent</p>
+                    <div className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Potenzial − Äquivalent</p>
                       <p className="mt-1 text-[24px] font-bold text-[#fb923c]">
                         {formatCurrency(currentCoLivingVacancy)}
                       </p>
                     </div>
 
-                    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-                      <p className="text-[11px] text-[#6b7a9a]">Deckungsbeitrag (Frontend)</p>
+                    <div className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Deckungsbeitrag (Frontend)</p>
                       <p className="mt-1 text-[24px] font-bold text-[#4ade80]">
                         {formatCurrency(currentCoLivingProfit)}
                       </p>
                     </div>
 
-                    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-                      <p className="text-[11px] text-[#6b7a9a]">Freie Zimmer</p>
-                      <p className="mt-1 text-[24px] font-bold text-[#eef2ff]">
+                    <div className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
+                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Freie Zimmer</p>
+                      <p className="mt-1 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                         {currentFreeRooms}
                       </p>
                     </div>
@@ -2265,7 +2268,7 @@ function AdminApartmentsPage() {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-5 py-3 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-5 py-3 font-semibold text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>

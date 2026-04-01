@@ -81,13 +81,13 @@ function getStatusMeta(status) {
   if (normalized === "inactive" || normalized === "inaktiv") {
     return {
       label: "Inaktiv",
-      pillClass: `${pillBase} border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]`,
+      pillClass: `${pillBase} border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] text-[#64748b] dark:text-[#6b7a9a]`,
     };
   }
 
   return {
     label: status || "Offen",
-    pillClass: `${pillBase} border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]`,
+    pillClass: `${pillBase} border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] text-[#64748b] dark:text-[#6b7a9a]`,
   };
 }
 
@@ -347,7 +347,7 @@ function AdminTenantsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07090f] p-6 text-[#6b7a9a]">
+      <div className="min-h-screen bg-[#f8fafc] p-6 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
         Lade Mieter, Zimmer, Mietverhältnisse und Rechnungen …
       </div>
     );
@@ -355,7 +355,7 @@ function AdminTenantsPage() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#07090f] p-6 text-[#eef2ff]">
+      <div className="min-h-screen bg-[#f8fafc] p-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
         <div className="rounded-[14px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
           <strong className="font-semibold text-[#f87171]">Fehler beim Laden:</strong> {loadError}
         </div>
@@ -364,7 +364,7 @@ function AdminTenantsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <div className="mx-auto grid max-w-[min(1400px,100%)] gap-6 p-6">
         <TenantCreateModal
           open={createOpen}
@@ -374,7 +374,7 @@ function AdminTenantsPage() {
           }}
         />
         <div>
-          <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Vantio</div>
+          <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Vantio</div>
 
           {deleteError ? (
             <div className="mb-4 rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
@@ -384,8 +384,8 @@ function AdminTenantsPage() {
 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="m-0 text-[22px] font-bold text-[#eef2ff]">Mieter</h2>
-              <p className="mt-2 max-w-[560px] text-[12px] text-[#6b7a9a]">
+              <h2 className="m-0 text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Mieter</h2>
+              <p className="mt-2 max-w-[560px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
                 CRM-Übersicht: Mieter durchsuchen, anlegen und bearbeiten. Mietverhältnisse
                 und weitere Module folgen.
               </p>
@@ -401,42 +401,42 @@ function AdminTenantsPage() {
         </div>
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-slate-500 bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-slate-500 bg-white dark:bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Mieter gesamt
             </div>
-            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.totalCount}</div>
-            <div className="mt-2 text-[11px] text-[#6b7a9a]">Alle erfassten Mieter</div>
+            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.totalCount}</div>
+            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Alle erfassten Mieter</div>
           </div>
 
-          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-green-500 bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-green-500 bg-white dark:bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Aktive Mieter
             </div>
-            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.activeCount}</div>
-            <div className="mt-2 text-[11px] text-[#6b7a9a]">Aktuell laufende Mietverhältnisse</div>
+            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.activeCount}</div>
+            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Aktuell laufende Mietverhältnisse</div>
           </div>
 
-          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-amber-500 bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-amber-500 bg-white dark:bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Reserviert
             </div>
-            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.reservedCount}</div>
-            <div className="mt-2 text-[11px] text-[#6b7a9a]">Einzug geplant</div>
+            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.reservedCount}</div>
+            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Einzug geplant</div>
           </div>
 
-          <div className="rounded-[14px] border border-t-4 border-white/[0.07] border-t-red-500 bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-red-500 bg-white dark:bg-[#141824] p-5">
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Offene Rechnungen
             </div>
-            <div className="text-[24px] font-bold text-[#eef2ff]">{summary.totalOpenInvoices}</div>
-            <div className="mt-2 text-[11px] text-[#6b7a9a]">{formatCurrency(summary.totalOpenAmount)}</div>
+            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.totalOpenInvoices}</div>
+            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{formatCurrency(summary.totalOpenAmount)}</div>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+        <div className="overflow-x-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">Mieterübersicht</h3>
+            <h3 className="m-0 text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Mieterübersicht</h3>
 
             <div className="flex flex-wrap items-center gap-2.5">
               <input
@@ -444,13 +444,13 @@ function AdminTenantsPage() {
                 placeholder="Suche: Name, E-Mail, Telefon …"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="min-w-[200px] rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[13px] text-[#eef2ff] placeholder:text-[#6b7a9a]"
+                className="min-w-[200px] rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2.5 text-[13px] text-[#0f172a] dark:text-[#eef2ff] placeholder:text-[#64748b] dark:placeholder:text-[#6b7a9a]"
                 aria-label="Mieter suchen"
               />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[13px] text-[#eef2ff]"
+                className="rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2.5 text-[13px] text-[#0f172a] dark:text-[#eef2ff]"
                 aria-label="Status filtern"
               >
                 <option value="all">Alle Status</option>
@@ -462,51 +462,51 @@ function AdminTenantsPage() {
             </div>
           </div>
 
-          <div className="mb-3 text-[13px] text-[#6b7a9a]">
+          <div className="mb-3 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
             {filteredRows.length === rows.length
               ? `${rows.length} Einträge`
               : `${filteredRows.length} von ${rows.length} Einträgen (gefiltert)`}
           </div>
 
           {rows.length === 0 ? (
-            <p className="text-[13px] text-[#6b7a9a]">Keine Mieter erfasst.</p>
+            <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Mieter erfasst.</p>
           ) : filteredRows.length === 0 ? (
-            <p className="text-[13px] text-[#6b7a9a]">Keine Mieter für diese Filter.</p>
+            <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Mieter für diese Filter.</p>
           ) : (
-            <table className="w-full border-collapse text-[13px] text-[#eef2ff]">
-              <thead className="bg-[#111520]">
+            <table className="w-full border-collapse text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
+              <thead className="bg-slate-100 dark:bg-[#111520]">
                 <tr className="text-left">
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Mieter
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Kontakt
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Unit
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Zimmer
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Start
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Ende
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Einnahmen / Monat (Äquivalent)
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Rechnungen offen
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Offener Betrag
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Status
                   </th>
-                  <th className="min-w-[180px] px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="min-w-[180px] px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     Aktion
                   </th>
                 </tr>
@@ -519,46 +519,46 @@ function AdminTenantsPage() {
                   return (
                     <tr
                       key={row.id}
-                      className="cursor-pointer border-b border-white/[0.05]"
+                      className="cursor-pointer border-b border-black/10 dark:border-white/[0.05]"
                       onClick={() => navigate(`/admin/tenants/${row.id}`)}
                     >
                       <td className="px-3 py-3 align-top">
-                        <div className="text-[13px] font-medium text-[#eef2ff]">{row.fullName}</div>
+                        <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{row.fullName}</div>
                         {row.notes ? (
-                          <div className="mt-1 text-[12px] text-[#6b7a9a]">{row.notes}</div>
+                          <div className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{row.notes}</div>
                         ) : null}
                       </td>
 
                       <td className="px-3 py-3 align-top">
-                        <div className="text-[13px] font-medium text-[#eef2ff]">{row.email}</div>
-                        <div className="mt-1 text-[12px] text-[#6b7a9a]">{row.phone}</div>
+                        <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{row.email}</div>
+                        <div className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{row.phone}</div>
                       </td>
 
                       <td className="px-3 py-3 align-top">
                         <div className="text-[13px] font-medium text-[#7aaeff]">{row.unitAddress}</div>
-                        <div className="mt-0.5 text-[10px] text-[#6b7a9a]">{row.unitId}</div>
+                        <div className="mt-0.5 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">{row.unitId}</div>
                       </td>
 
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                         {row.roomName}
                       </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                         {formatDate(row.startDate)}
                       </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                         {formatDate(row.endDate)}
                       </td>
                       <td
                         className={`px-3 py-3 align-top text-[13px] font-semibold ${
-                          row.monthlyRent == null ? "text-[#6b7a9a]" : "text-[#4ade80]"
+                          row.monthlyRent == null ? "text-[#64748b] dark:text-[#6b7a9a]" : "text-[#4ade80]"
                         }`}
                       >
                         {row.monthlyRent == null ? "—" : formatCurrency(row.monthlyRent)}
                       </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                         {row.openInvoicesCount}
                       </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#eef2ff]">
+                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                         {formatCurrency(row.totalOpenAmount)}
                       </td>
                       <td className="px-3 py-3 align-top">
@@ -572,7 +572,7 @@ function AdminTenantsPage() {
                               e.stopPropagation();
                               navigate(`/admin/tenants/${row.id}`);
                             }}
-                            className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                            className="rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                           >
                             Öffnen
                           </button>

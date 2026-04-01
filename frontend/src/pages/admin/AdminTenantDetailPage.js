@@ -438,14 +438,14 @@ function revenueRowZeitraumDisplay(rr, tn) {
   return `${startLabel} – ${endLabel}`;
 }
 
-function RevenueTypeSelect({ value, onChange, disabled, id, selectStyle }) {
+function RevenueTypeSelect({ value, onChange, disabled, id, selectClassName }) {
   const v = String(value || "").trim();
   const legacy = v && !REVENUE_TYPE_VALUE_SET.has(v);
   const selectValue = legacy ? v : v || "rent";
   return (
     <select
       id={id}
-      style={{ ...selectStyle, cursor: disabled ? "default" : "pointer" }}
+      className={`${selectClassName} ${disabled ? "cursor-default" : "cursor-pointer"}`}
       value={selectValue}
       onChange={onChange}
       disabled={disabled}
@@ -547,77 +547,31 @@ const gridTwoCol = {
   gap: "12px 20px",
 };
 
-const pageWrap = {
-  maxWidth: "min(1400px, 100%)",
-  margin: "0 auto",
-  padding: "24px",
-};
+const pageWrapClass = "mx-auto max-w-[min(1400px,100%)] p-6";
 
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse",
-  fontSize: "14px",
-  color: "#eef2ff",
-};
+const tableClass =
+  "w-full border-collapse text-sm text-[#0f172a] dark:text-[#eef2ff]";
 
-const thCell = {
-  textAlign: "left",
-  padding: "10px 12px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  color: "#6b7a9a",
-  fontWeight: 600,
-  fontSize: "11px",
-};
+const thCellClass =
+  "border-b border-black/10 px-3 py-2.5 text-left text-[11px] font-semibold text-[#64748b] dark:border-white/[0.05] dark:text-[#6b7a9a]";
 
-const tdCell = {
-  padding: "10px 12px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  verticalAlign: "top",
-  color: "#eef2ff",
-};
+const tdCellClass =
+  "border-b border-black/10 px-3 py-2.5 align-top text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]";
 
-const sectionCard = {
-  background: "#141824",
-  border: "1px solid rgba(255,255,255,0.07)",
-  borderRadius: "14px",
-  padding: "16px",
-  marginBottom: "12px",
-};
+const sectionCardClass =
+  "mb-3 rounded-[14px] border border-black/10 bg-white p-4 dark:border-white/[0.07] dark:bg-[#141824]";
 
-const labelStyle = {
-  display: "block",
-  fontSize: "10px",
-  fontWeight: 400,
-  color: "#6b7a9a",
-  marginBottom: "3px",
-};
+const labelClass =
+  "mb-1 block text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]";
 
-const inputStyle = {
-  width: "100%",
-  padding: "8px 10px",
-  borderRadius: "9px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  fontSize: "14px",
-  boxSizing: "border-box",
-  background: "#111520",
-  color: "#eef2ff",
-};
+const inputClass =
+  "box-border w-full rounded-[9px] border border-black/10 bg-slate-100 px-2.5 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]";
 
-const textareaStyle = {
-  ...inputStyle,
-  minHeight: "88px",
-  resize: "vertical",
-  fontFamily: "inherit",
-};
+const textareaClass =
+  "box-border min-h-[88px] w-full resize-y rounded-[9px] border border-black/10 bg-slate-100 px-2.5 py-2 font-[inherit] text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]";
 
-const sectionTitle = {
-  fontSize: "9px",
-  fontWeight: 700,
-  color: "#6b7a9a",
-  textTransform: "uppercase",
-  letterSpacing: "1px",
-  margin: "0 0 10px 0",
-};
+const sectionTitleClass =
+  "mb-2.5 mt-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]";
 
 function TenantNotesBlock({
   notes,
@@ -629,20 +583,20 @@ function TenantNotesBlock({
   onSubmit,
 }) {
   return (
-    <div style={sectionCard}>
-      <div style={sectionTitle}>Notizen</div>
+    <div className={sectionCardClass}>
+      <div className={sectionTitleClass}>Notizen</div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit();
         }}
       >
-        <label htmlFor="td-note" style={{ ...labelStyle, marginBottom: "6px" }}>
+        <label htmlFor="td-note" className={`${labelClass} mb-1.5`}>
           Neue Notiz
         </label>
         <textarea
           id="td-note"
-          style={textareaStyle}
+          className={textareaClass}
           value={noteDraft}
           onChange={(e) => setNoteDraft(e.target.value)}
           disabled={noteSaving}
@@ -667,29 +621,23 @@ function TenantNotesBlock({
           </button>
         </div>
       </form>
-      <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <div style={{ ...labelStyle, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 700 }}>
+      <div className="mt-4 border-t border-black/10 pt-3.5 dark:border-white/[0.05]">
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
           Alle Notizen
         </div>
         {!notes.length ? (
-          <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Noch keine Notizen</p>
+          <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch keine Notizen</p>
         ) : (
-          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+          <ul className="m-0 list-none p-0">
             {notes.map((n) => (
               <li
                 key={n.id}
-                style={{
-                  marginBottom: "12px",
-                  padding: "12px",
-                  borderRadius: "10px",
-                  background: "#111520",
-                  border: "1px solid rgba(255,255,255,0.05)",
-                }}
+                className="mb-3 rounded-[10px] border border-black/10 bg-slate-100 p-3 last:mb-0 dark:border-white/[0.05] dark:bg-[#111520]"
               >
-                <div style={{ fontSize: "13px", color: "#eef2ff", whiteSpace: "pre-wrap", fontWeight: 500 }}>
+                <div className="whitespace-pre-wrap text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                   {n.content}
                 </div>
-                <div style={{ fontSize: "12px", color: "#6b7a9a", marginTop: "6px" }}>
+                <div className="mt-1.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                   {formatDateTime(n.created_at)} · {n.author_name || "—"}
                 </div>
               </li>
@@ -703,12 +651,12 @@ function TenantNotesBlock({
 
 function TenantHistoryBlock({ events }) {
   return (
-    <div style={sectionCard}>
-      <div style={sectionTitle}>Verlauf / Aktivität</div>
+    <div className={sectionCardClass}>
+      <div className={sectionTitleClass}>Verlauf / Aktivität</div>
       {!events.length ? (
-        <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Noch kein Verlauf</p>
+        <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch kein Verlauf</p>
       ) : (
-        <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+        <ul className="m-0 list-none p-0">
           {events.map((ev) => {
             const showDiff =
               ev.action_type === "tenant_updated" &&
@@ -717,19 +665,15 @@ function TenantHistoryBlock({ events }) {
             return (
               <li
                 key={ev.id}
-                style={{
-                  marginBottom: "0",
-                  padding: "12px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                }}
+                className="border-b border-black/10 py-3 last:border-b-0 dark:border-white/[0.05]"
               >
-                <div style={{ fontWeight: 600, fontSize: "13px", color: "#eef2ff" }}>{ev.summary}</div>
+                <div className="text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">{ev.summary}</div>
                 {showDiff ? (
-                  <div style={{ fontSize: "12px", color: "#6b7a9a", marginTop: "4px" }}>
+                  <div className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                     {ev.old_value ?? "—"} → {ev.new_value ?? "—"}
                   </div>
                 ) : null}
-                <div style={{ fontSize: "12px", color: "#6b7a9a", marginTop: "6px" }}>
+                <div className="mt-1.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                   {formatDateTime(ev.created_at)} · {ev.author_name || "—"}
                 </div>
               </li>
@@ -744,8 +688,8 @@ function TenantHistoryBlock({ events }) {
 function Row({ label, value }) {
   return (
     <div style={{ marginBottom: "12px" }}>
-      <span style={labelStyle}>{label}</span>
-      <div style={{ fontSize: "13px", fontWeight: 500, color: "#eef2ff" }}>{value || "—"}</div>
+      <span className={labelClass}>{label}</span>
+      <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{value || "—"}</div>
     </div>
   );
 }
@@ -1564,24 +1508,24 @@ export default function AdminTenantDetailPage() {
         ? "inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400"
         : statusMeta?.label === "Ausgezogen"
           ? "inline-flex rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold text-red-400"
-          : "inline-flex rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-bold text-[#eef2ff]";
+          : "inline-flex rounded-full border border-black/10 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-[#0f172a] dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-[#eef2ff]";
 
   return (
-    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
-      <div style={pageWrap}>
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-white/[0.07] bg-[#07090f] pb-5">
+    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
+      <div className={pageWrapClass}>
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-black/10 bg-[#f8fafc] pb-5 dark:border-white/[0.07] dark:bg-[#07090f]">
           <div className="flex min-w-0 flex-wrap items-start gap-3">
             <button
               type="button"
               onClick={goToTenantList}
-              className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+              className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
               style={{ cursor: "pointer" }}
             >
               ← Zurück
             </button>
             <div style={{ minWidth: 0 }}>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Mieter</div>
-              <h1 className="mt-1 break-words text-[22px] font-bold text-[#eef2ff]">
+              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Mieter</div>
+              <h1 className="mt-1 break-words text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                 {loading ? "…" : displayName}
               </h1>
               {!loading && tenant && (
@@ -1599,7 +1543,7 @@ export default function AdminTenantDetailPage() {
                   setEditing(true);
                   setSaveError(null);
                 }}
-                className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                 style={{ cursor: "pointer" }}
               >
                 Bearbeiten
@@ -1610,14 +1554,14 @@ export default function AdminTenantDetailPage() {
 
         <main>
           {loading ? (
-            <p className="text-[#6b7a9a]">Lade Daten …</p>
+            <p className="text-[#64748b] dark:text-[#6b7a9a]">Lade Daten …</p>
           ) : loadError ? (
             <div className="rounded-[14px] border border-red-500/20 bg-red-500/10 p-4 text-[#f87171]">
               <p style={{ margin: "0 0 12px 0" }}>{loadError}</p>
               <button
                 type="button"
                 onClick={goToTenantList}
-                className="rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[#8090b0]"
+                className="rounded-[8px] border border-black/10 bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[#64748b] dark:border-white/[0.1] dark:text-[#8090b0]"
                 style={{ cursor: "pointer" }}
               >
                 Zurück zur Übersicht
@@ -1627,23 +1571,23 @@ export default function AdminTenantDetailPage() {
             <>
               {!editing ? (
                 <>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Stammdaten</div>
+                  <div className={sectionCardClass}>
+                    <div className={sectionTitleClass}>Stammdaten</div>
                     <div style={gridTwoCol}>
                       <Row label="Vorname" value={tenant.first_name} />
                       <Row label="Nachname" value={tenant.last_name} />
                       <Row label="Geburtsdatum" value={formatDateOnly(tenant.birth_date)} />
                       <Row label="Nationalität" value={tenant.nationality} />
                     </div>
-                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                      <span style={labelStyle}>Erfasst am</span>
-                      <div style={{ fontSize: "13px", fontWeight: 500, color: "#eef2ff" }}>
+                    <div className="mt-3 border-t border-black/10 pt-3 dark:border-white/[0.05]">
+                      <span className={labelClass}>Erfasst am</span>
+                      <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                         {formatDateTime(tenant.created_at)}
                       </div>
                     </div>
                   </div>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Aufenthalt</div>
+                  <div className={sectionCardClass}>
+                    <div className={sectionTitleClass}>Aufenthalt</div>
                     <div style={gridTwoCol}>
                       <Row
                         label="Schweizer/in"
@@ -1663,18 +1607,18 @@ export default function AdminTenantDetailPage() {
                       ) : null}
                     </div>
                   </div>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Kontakt</div>
+                  <div className={sectionCardClass}>
+                    <div className={sectionTitleClass}>Kontakt</div>
                     <div style={gridTwoCol}>
                       <Row label="E-Mail" value={tenant.email} />
                       <Row label="Telefon" value={tenant.phone} />
                       <Row label="Firma" value={tenant.company} />
                     </div>
                   </div>
-                  <section className="mb-3 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-                    <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Adresse</h2>
+                  <section className="mb-3 rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+                    <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</h2>
                     <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1 space-y-1 text-[13px] font-medium text-[#eef2ff]">
+                      <div className="min-w-0 flex-1 space-y-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                         <p>{tenantAddrLine1 ? tenantAddrLine1 : "—"}</p>
                         <p>{tenantAddrLine2 ? tenantAddrLine2 : "—"}</p>
                         <p>{tenantAddrLine3 ? tenantAddrLine3 : "—"}</p>
@@ -1695,7 +1639,7 @@ export default function AdminTenantDetailPage() {
                               "noopener,noreferrer"
                             )
                           }
-                          className="inline-flex shrink-0 items-center justify-center rounded-[8px] border border-white/[0.1] bg-transparent p-1.5 text-[#8090b0] hover:bg-white/[0.05] hover:text-[#eef2ff]"
+                          className="inline-flex shrink-0 items-center justify-center rounded-[8px] border border-black/10 bg-transparent p-1.5 text-[#64748b] hover:bg-slate-100 hover:text-[#0f172a] dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.05] dark:hover:text-[#eef2ff]"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1719,28 +1663,28 @@ export default function AdminTenantDetailPage() {
                 </>
               ) : (
                 <form onSubmit={handleSave}>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Stammdaten</div>
+                  <div className={sectionCardClass}>
+                    <div className={sectionTitleClass}>Stammdaten</div>
                     <div style={gridTwoCol}>
                       <div>
-                        <label htmlFor="td-fn" style={labelStyle}>
+                        <label htmlFor="td-fn" className={labelClass}>
                           Vorname *
                         </label>
                         <input
                           id="td-fn"
-                          style={inputStyle}
+                          className={inputClass}
                           value={form.firstName}
                           onChange={setField("firstName")}
                           disabled={saving}
                         />
                       </div>
                       <div>
-                        <label htmlFor="td-ln" style={labelStyle}>
+                        <label htmlFor="td-ln" className={labelClass}>
                           Nachname *
                         </label>
                         <input
                           id="td-ln"
-                          style={inputStyle}
+                          className={inputClass}
                           value={form.lastName}
                           onChange={setField("lastName")}
                           disabled={saving}
@@ -1748,40 +1692,41 @@ export default function AdminTenantDetailPage() {
                       </div>
                     </div>
                     <div style={{ marginTop: "10px" }}>
-                      <label htmlFor="td-bd" style={labelStyle}>
+                      <label htmlFor="td-bd" className={labelClass}>
                         Geburtsdatum
                       </label>
                       <input
                         id="td-bd"
                         type="date"
-                        style={inputStyle}
+                        className={inputClass}
                         value={form.birthDate}
                         onChange={setField("birthDate")}
                         disabled={saving}
                       />
                     </div>
                     <div style={{ marginTop: "10px" }}>
-                      <label htmlFor="td-nat" style={labelStyle}>
+                      <label htmlFor="td-nat" className={labelClass}>
                         Nationalität
                       </label>
                       <input
                         id="td-nat"
-                        style={inputStyle}
+                        className={inputClass}
                         value={form.nationality}
                         onChange={setField("nationality")}
                         disabled={saving}
                       />
                     </div>
                   </div>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Aufenthalt</div>
+                  <div className={sectionCardClass}>
+                    <div className={sectionTitleClass}>Aufenthalt</div>
                     <div style={{ marginBottom: "10px" }}>
-                      <label htmlFor="td-swiss" style={labelStyle}>
+                      <label htmlFor="td-swiss" className={labelClass}>
                         Schweizer/in
                       </label>
                       <select
                         id="td-swiss"
-                        style={{ ...inputStyle, cursor: saving ? "default" : "pointer" }}
+                        className={inputClass}
+                        style={{ cursor: saving ? "default" : "pointer" }}
                         value={
                           form.isSwiss === null
                             ? ""
@@ -1799,12 +1744,13 @@ export default function AdminTenantDetailPage() {
                     </div>
                     {form.isSwiss !== true ? (
                       <div style={{ marginTop: "10px" }}>
-                        <label htmlFor="td-permit" style={labelStyle}>
+                        <label htmlFor="td-permit" className={labelClass}>
                           Aufenthaltsbewilligung
                         </label>
                         <select
                           id="td-permit"
-                          style={{ ...inputStyle, cursor: saving ? "default" : "pointer" }}
+                          className={inputClass}
+                          style={{ cursor: saving ? "default" : "pointer" }}
                           value={form.residencePermit}
                           onChange={setField("residencePermit")}
                           disabled={saving}
@@ -1819,55 +1765,55 @@ export default function AdminTenantDetailPage() {
                       </div>
                     ) : null}
                   </div>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Kontakt</div>
+                  <div className={sectionCardClass}>
+                    <div className={sectionTitleClass}>Kontakt</div>
                     <div style={{ marginBottom: "10px" }}>
-                      <label htmlFor="td-email" style={labelStyle}>
+                      <label htmlFor="td-email" className={labelClass}>
                         E-Mail
                       </label>
                       <input
                         id="td-email"
                         type="email"
-                        style={inputStyle}
+                        className={inputClass}
                         value={form.email}
                         onChange={setField("email")}
                         disabled={saving}
                       />
                     </div>
                     <div style={{ marginBottom: "10px" }}>
-                      <label htmlFor="td-phone" style={labelStyle}>
+                      <label htmlFor="td-phone" className={labelClass}>
                         Telefon
                       </label>
                       <input
                         id="td-phone"
-                        style={inputStyle}
+                        className={inputClass}
                         value={form.phone}
                         onChange={setField("phone")}
                         disabled={saving}
                       />
                     </div>
                     <div style={{ marginBottom: "10px" }}>
-                      <label htmlFor="td-company" style={labelStyle}>
+                      <label htmlFor="td-company" className={labelClass}>
                         Firma
                       </label>
                       <input
                         id="td-company"
-                        style={inputStyle}
+                        className={inputClass}
                         value={form.company}
                         onChange={setField("company")}
                         disabled={saving}
                       />
                     </div>
                   </div>
-                  <div style={sectionCard}>
-                    <div style={sectionTitle}>Adresse</div>
+                  <div className={sectionCardClass}>
+                    <div className={sectionTitleClass}>Adresse</div>
                     <div style={{ marginBottom: "10px" }}>
-                      <label htmlFor="td-street" style={labelStyle}>
+                      <label htmlFor="td-street" className={labelClass}>
                         Strasse
                       </label>
                       <input
                         id="td-street"
-                        style={inputStyle}
+                        className={inputClass}
                         value={form.street}
                         onChange={setField("street")}
                         disabled={saving}
@@ -1875,24 +1821,24 @@ export default function AdminTenantDetailPage() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "10px" }}>
                       <div>
-                        <label htmlFor="td-plz" style={labelStyle}>
+                        <label htmlFor="td-plz" className={labelClass}>
                           PLZ
                         </label>
                         <input
                           id="td-plz"
-                          style={inputStyle}
+                          className={inputClass}
                           value={form.postalCode}
                           onChange={setField("postalCode")}
                           disabled={saving}
                         />
                       </div>
                       <div>
-                        <label htmlFor="td-city" style={labelStyle}>
+                        <label htmlFor="td-city" className={labelClass}>
                           Ort
                         </label>
                         <input
                           id="td-city"
-                          style={inputStyle}
+                          className={inputClass}
                           value={form.city}
                           onChange={setField("city")}
                           disabled={saving}
@@ -1900,12 +1846,12 @@ export default function AdminTenantDetailPage() {
                       </div>
                     </div>
                     <div style={{ marginTop: "10px", marginBottom: "12px" }}>
-                      <label htmlFor="td-country" style={labelStyle}>
+                      <label htmlFor="td-country" className={labelClass}>
                         Land
                       </label>
                       <input
                         id="td-country"
-                        style={inputStyle}
+                        className={inputClass}
                         value={form.country}
                         onChange={setField("country")}
                         disabled={saving}
@@ -1936,7 +1882,7 @@ export default function AdminTenantDetailPage() {
                           setSaveError(null);
                           setForm(tenantToForm(tenant));
                         }}
-                        className="rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                        className="rounded-[8px] border border-black/10 bg-transparent px-3.5 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-default"
                         style={{ cursor: saving ? "default" : "pointer" }}
                       >
                         Abbrechen
@@ -1946,23 +1892,13 @@ export default function AdminTenantDetailPage() {
                   </form>
                 )}
 
-              <div
-                style={{
-                  marginTop: "8px",
-                  marginBottom: "8px",
-                  fontWeight: 700,
-                  color: "#6b7a9a",
-                  fontSize: "10px",
-                  letterSpacing: "1px",
-                  textTransform: "uppercase",
-                }}
-              >
+              <div className="my-2 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
                 Verknüpfungen &amp; CRM
               </div>
-              <div style={sectionCard}>
-                <div style={sectionTitle}>Mietverhältnisse</div>
+              <div className={sectionCardClass}>
+                <div className={sectionTitleClass}>Mietverhältnisse</div>
                 {!tenancies.length ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>
+                  <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">
                     Keine Mietverhältnisse vorhanden
                   </p>
                 ) : (
@@ -1986,7 +1922,7 @@ export default function AdminTenantDetailPage() {
                           const urgencyNote = tenancyEndUrgencyNote(tn);
                           return (
                             <React.Fragment key={rowKey}>
-                              <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+                              <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                   <div className="min-w-0 flex-1 space-y-2">
                                     <span
@@ -1998,8 +1934,8 @@ export default function AdminTenantDetailPage() {
                                             : dStat === "notice_given"
                                               ? "border border-amber-500/25 bg-amber-500/10 text-amber-300"
                                               : dStat === "ended"
-                                                ? "border border-white/[0.08] bg-white/[0.04] text-[#cbd5e1]"
-                                                : "border border-white/[0.1] bg-white/[0.06] text-[#eef2ff]"
+                                                ? "border border-black/10 bg-slate-100 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-[#cbd5e1]"
+                                                : "border border-black/10 bg-slate-100 text-[#0f172a] dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-[#eef2ff]"
                                       }`}
                                     >
                                       {tenancyDisplayStatusLabelDe(derivedStatusKey)}
@@ -2007,7 +1943,7 @@ export default function AdminTenantDetailPage() {
                                     <p className="text-[12px] text-[#7f8daa]">
                                       seit {formatDateOnly(dateOnlyOrNull(tn.move_in_date) || "") || "—"}
                                     </p>
-                                    <p className="text-[11px] leading-snug text-[#7f8daa]/90">
+                                    <p className="text-[11px] leading-snug text-[#64748b]/90 dark:text-[#7f8daa]/90">
                                       {tenancyDateRangeLabel(tn)}
                                     </p>
                                   </div>
@@ -2016,7 +1952,7 @@ export default function AdminTenantDetailPage() {
                                       type="button"
                                       onClick={() => startTenancyEdit(tn)}
                                       disabled={tenancyEditSaving}
-                                      className="rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-1.5 text-[12px] font-semibold text-[#eef2ff] hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
+                                      className="rounded-lg border border-black/10 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-[#0f172a] hover:bg-slate-200/80 dark:border-white/[0.1] dark:bg-white/[0.05] dark:text-[#eef2ff] dark:hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
                                       style={{
                                         cursor: tenancyEditSaving ? "default" : "pointer",
                                       }}
@@ -2028,7 +1964,7 @@ export default function AdminTenantDetailPage() {
                                         type="button"
                                         onClick={() => navigate(`/admin/units/${tn.unit_id}`)}
                                         disabled={tenancyEditSaving}
-                                        className="rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-1.5 text-[12px] font-semibold text-[#eef2ff] hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
+                                        className="rounded-lg border border-black/10 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-[#0f172a] hover:bg-slate-200/80 dark:border-white/[0.1] dark:bg-white/[0.05] dark:text-[#eef2ff] dark:hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
                                         style={{
                                           cursor: tenancyEditSaving ? "default" : "pointer",
                                         }}
@@ -2045,24 +1981,24 @@ export default function AdminTenantDetailPage() {
                                   const loadingRow = tenancyRevenueLoadingId === tidStr;
                                   if (revRowsForCell === undefined || loadingRow) {
                                     return (
-                                      <div className="mt-5 flex flex-col divide-y divide-white/[0.05] overflow-hidden rounded-[10px] border border-white/[0.05] bg-[#111520] sm:flex-row sm:divide-x sm:divide-y-0">
+                                      <div className="mt-5 flex flex-col divide-y divide-black/10 overflow-hidden rounded-[10px] border border-black/10 bg-slate-100 sm:flex-row sm:divide-x sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05] dark:bg-[#111520]">
                                         <div className="flex-1 px-4 py-4">
-                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Monatliche Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">…</p>
+                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">…</p>
                                         </div>
                                         <div className="flex-1 px-4 py-4">
-                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Einmalige Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">…</p>
+                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">…</p>
                                         </div>
                                         <div className="flex-1 px-4 py-4">
-                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Kaution
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
                                             {formatChfRent(tn.tenant_deposit_amount)}
                                           </p>
                                           <p className="mt-1 text-[11px] text-[#7f8daa]">
@@ -2077,28 +2013,28 @@ export default function AdminTenantDetailPage() {
                                   }
                                   if (!revRowsForCell.length) {
                                     return (
-                                      <div className="mt-5 flex flex-col divide-y divide-white/[0.05] overflow-hidden rounded-[10px] border border-white/[0.05] bg-[#111520] sm:flex-row sm:divide-x sm:divide-y-0">
+                                      <div className="mt-5 flex flex-col divide-y divide-black/10 overflow-hidden rounded-[10px] border border-black/10 bg-slate-100 sm:flex-row sm:divide-x sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05] dark:bg-[#111520]">
                                         <div className="flex-1 px-4 py-4">
-                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Monatliche Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
                                             Keine Einnahmen definiert
                                           </p>
                                         </div>
                                         <div className="flex-1 px-4 py-4">
-                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Einmalige Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
                                             Keine Einnahmen definiert
                                           </p>
                                         </div>
                                         <div className="flex-1 px-4 py-4">
-                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Kaution
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
                                             {formatChfRent(tn.tenant_deposit_amount)}
                                           </p>
                                           <p className="mt-1 text-[11px] text-[#7f8daa]">
@@ -2114,28 +2050,28 @@ export default function AdminTenantDetailPage() {
                                   const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
                                   const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
                                   return (
-                                    <div className="mt-5 flex flex-col divide-y divide-white/[0.05] overflow-hidden rounded-[10px] border border-white/[0.05] bg-[#111520] sm:flex-row sm:divide-x sm:divide-y-0">
+                                    <div className="mt-5 flex flex-col divide-y divide-black/10 overflow-hidden rounded-[10px] border border-black/10 bg-slate-100 sm:flex-row sm:divide-x sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05] dark:bg-[#111520]">
                                       <div className="flex-1 px-4 py-4">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Monatliche Einnahmen
                                         </p>
-                                        <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                        <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
                                           {formatChfRent(monthlyFromSaved)}
                                         </p>
                                       </div>
                                       <div className="flex-1 px-4 py-4">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Einmalige Einnahmen
                                         </p>
-                                        <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                        <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
                                           {formatChfRent(oneTimeTotal)}
                                         </p>
                                       </div>
                                       <div className="flex-1 px-4 py-4">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Kaution
                                         </p>
-                                        <p className="text-[18px] font-bold text-[#eef2ff] md:text-[20px]">
+                                        <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
                                           {formatChfRent(tn.tenant_deposit_amount)}
                                         </p>
                                         <p className="mt-1 text-[11px] text-[#7f8daa]">
@@ -2149,85 +2085,85 @@ export default function AdminTenantDetailPage() {
                                   );
                                 })()}
 
-                                <div className="mt-6 border-t border-white/[0.05] pt-6">
-                                  <div className="rounded-[10px] border border-white/[0.05] bg-[#111520] p-4">
-                                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                <div className="mt-6 border-t border-black/10 pt-6 dark:border-white/[0.05]">
+                                  <div className="rounded-[10px] border border-black/10 bg-slate-100 p-4 dark:border-white/[0.05] dark:bg-[#111520]">
+                                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                       Vertragsdaten
                                     </p>
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Einzug
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {formatDateOnly(dateOnlyOrNull(tn.move_in_date) || "") || "—"}
                                         </p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Auszug
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {formatDateOnly(tenancyDisplayEndIso(tn) || "") || "—"}
                                         </p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Kautionsart
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {tenantDepositTypeLabel(tn.tenant_deposit_type)}
                                         </p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Kautionsbetrag
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {formatChfRent(tn.tenant_deposit_amount)}
                                         </p>
                                       </div>
                                     </div>
-                                    <div className="my-5 border-t border-white/[0.05]" />
-                                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                    <div className="my-5 border-t border-black/10 dark:border-white/[0.05]" />
+                                    <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                       Kündigung
                                     </p>
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Kündigungsfrist
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">—</p>
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">—</p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Eingegangen am
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {formatDateOnly(dateOnlyOrNull(tn.notice_given_at) || "") || "—"}
                                         </p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Wirksam am
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {formatDateOnly(dateOnlyOrNull(tn.termination_effective_date) || "") || "—"}
                                         </p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Rückgabe am
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {formatDateOnly(dateOnlyOrNull(tn.actual_move_out_date) || "") || "—"}
                                         </p>
                                       </div>
                                       <div className="md:col-span-2 xl:col-span-4">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Gekündigt durch
                                         </p>
-                                        <p className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           {(() => {
                                             const v = String(tn.terminated_by || "").toLowerCase();
                                             if (v === "tenant") return "Mieter";
@@ -2245,8 +2181,8 @@ export default function AdminTenantDetailPage() {
                                   <p className="mt-3 text-[11px] font-semibold text-[#7f8daa]">{urgencyNote}</p>
                                 ) : null}
 
-                                <div className="mt-6 border-t border-white/[0.05] pt-5">
-                                  <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                                <div className="mt-6 border-t border-black/10 pt-5 dark:border-white/[0.05]">
+                                  <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                     Einnahmen-Übersicht
                                   </p>
                                   {(() => {
@@ -2260,7 +2196,7 @@ export default function AdminTenantDetailPage() {
                                     }
                                     if (!revRowsForCell.length) {
                                       return (
-                                        <span className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <span className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                           Keine Einnahmen definiert
                                         </span>
                                       );
@@ -2270,20 +2206,20 @@ export default function AdminTenantDetailPage() {
                                     const recBrCell = recurringMonthlyBreakdownEntries(revRowsForCell);
                                     const otBrCell = oneTimeBreakdownEntries(revRowsForCell);
                                     return (
-                                      <div className="rounded-[10px] border border-white/[0.05] bg-[#111520] p-4">
-                                        <div className="flex items-center justify-between gap-4 border-b border-white/[0.05] py-3">
-                                          <span className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                      <div className="rounded-[10px] border border-black/10 bg-slate-100 p-4 dark:border-white/[0.05] dark:bg-[#111520]">
+                                        <div className="flex items-center justify-between gap-4 border-b border-black/10 py-3 dark:border-white/[0.05]">
+                                          <span className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                             Gesamteinnahmen / Monat
                                           </span>
-                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                             {formatChfRent(monthlyFromSaved)}
                                           </span>
                                         </div>
-                                        <div className="flex items-center justify-between gap-4 border-b border-white/[0.05] py-3">
-                                          <span className="text-[13px] font-medium text-[#eef2ff] md:text-[14px]">
+                                        <div className="flex items-center justify-between gap-4 border-b border-black/10 py-3 dark:border-white/[0.05]">
+                                          <span className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                             Einmalige Einnahmen
                                           </span>
-                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                             {formatChfRent(oneTimeTotal)}
                                           </span>
                                         </div>
@@ -2297,7 +2233,7 @@ export default function AdminTenantDetailPage() {
                                                 <span className="text-[13px] font-medium text-[#7f8daa] md:text-[14px]">
                                                   {b.label}
                                                 </span>
-                                                <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                                <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                                   {formatChfRent(b.total)}
                                                 </span>
                                               </div>
@@ -2305,7 +2241,7 @@ export default function AdminTenantDetailPage() {
                                           </div>
                                         ) : null}
                                         {otBrCell.length ? (
-                                          <div className="border-t border-white/[0.05] pt-4">
+                                          <div className="border-t border-black/10 pt-4 dark:border-white/[0.05]">
                                             <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.8px] text-[#7f8daa]">
                                               Einmalige Einnahmen
                                             </p>
@@ -2318,7 +2254,7 @@ export default function AdminTenantDetailPage() {
                                                   <span className="text-[13px] font-medium text-[#7f8daa] md:text-[14px]">
                                                     {b.label}
                                                   </span>
-                                                  <span className="text-[13px] font-semibold whitespace-nowrap text-[#eef2ff] md:text-[14px]">
+                                                  <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
                                                     {formatChfRent(b.total)}
                                                   </span>
                                                 </div>
@@ -2332,21 +2268,21 @@ export default function AdminTenantDetailPage() {
                                 </div>
                               </div>
                               {String(tenancyEditingId) === String(tn.id) ? (
-                                <div className="mt-4 rounded-[14px] border border-white/[0.07] bg-[#111520] p-5">
-                                    <div className="mb-2 text-[12px] font-bold text-[#eef2ff]">
+                                <div className="mt-4 rounded-[14px] border border-black/10 bg-slate-100 p-5 dark:border-white/[0.07] dark:bg-[#111520]">
+                                    <div className="mb-2 text-[12px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                                       Mietverhältnis bearbeiten
                                     </div>
                                     <div
                                       className="mb-2.5 w-full text-[11px] leading-snug text-[#7f8daa]"
                                       style={{ lineHeight: 1.45 }}
                                     >
-                                      <div className="font-bold text-[#eef2ff]">
+                                      <div className="font-bold text-[#0f172a] dark:text-[#eef2ff]">
                                         Mietende (automatisch berechnet)
                                       </div>
                                       <div className="mt-0.5 mb-1 text-[10px] text-[#7f8daa]">
                                         ergibt sich aus Kündigung &amp; Rückgabe
                                       </div>
-                                      <strong className="text-[13px] font-extrabold text-[#eef2ff]">
+                                      <strong className="text-[13px] font-extrabold text-[#0f172a] dark:text-[#eef2ff]">
                                         {formatDateOnly(
                                           tenancyDraftDisplayEndIso(
                                             tenancyEditActualMoveOut,
@@ -2357,51 +2293,52 @@ export default function AdminTenantDetailPage() {
                                     </div>
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end" }}>
                                       <div>
-                                        <label htmlFor={`ten-ng-${rowKey}`} style={labelStyle}>
+                                        <label htmlFor={`ten-ng-${rowKey}`} className={labelClass}>
                                           Kündigung eingegangen am
                                         </label>
                                         <input
                                           id={`ten-ng-${rowKey}`}
                                           type="date"
-                                          style={inputStyle}
+                                          className={inputClass}
                                           value={tenancyEditNoticeGivenAt}
                                           onChange={(e) => setTenancyEditNoticeGivenAt(e.target.value)}
                                           disabled={tenancyEditSaving}
                                         />
                                       </div>
                                       <div>
-                                        <label htmlFor={`ten-te-${rowKey}`} style={labelStyle}>
+                                        <label htmlFor={`ten-te-${rowKey}`} className={labelClass}>
                                           Kündigung wirksam per
                                         </label>
                                         <input
                                           id={`ten-te-${rowKey}`}
                                           type="date"
-                                          style={inputStyle}
+                                          className={inputClass}
                                           value={tenancyEditTerminationEffective}
                                           onChange={(e) => setTenancyEditTerminationEffective(e.target.value)}
                                           disabled={tenancyEditSaving}
                                         />
                                       </div>
                                       <div>
-                                        <label htmlFor={`ten-am-${rowKey}`} style={labelStyle}>
+                                        <label htmlFor={`ten-am-${rowKey}`} className={labelClass}>
                                           Rückgabe erfolgt am
                                         </label>
                                         <input
                                           id={`ten-am-${rowKey}`}
                                           type="date"
-                                          style={inputStyle}
+                                          className={inputClass}
                                           value={tenancyEditActualMoveOut}
                                           onChange={(e) => setTenancyEditActualMoveOut(e.target.value)}
                                           disabled={tenancyEditSaving}
                                         />
                                       </div>
                                       <div>
-                                        <label htmlFor={`ten-tb-${rowKey}`} style={labelStyle}>
+                                        <label htmlFor={`ten-tb-${rowKey}`} className={labelClass}>
                                           Gekündigt durch
                                         </label>
                                         <select
                                           id={`ten-tb-${rowKey}`}
-                                          style={{ ...inputStyle, cursor: tenancyEditSaving ? "default" : "pointer" }}
+                                          className={inputClass}
+                                          style={{ cursor: tenancyEditSaving ? "default" : "pointer" }}
                                           value={tenancyEditTerminatedBy}
                                           onChange={(e) => setTenancyEditTerminatedBy(e.target.value)}
                                           disabled={tenancyEditSaving}
@@ -2413,18 +2350,10 @@ export default function AdminTenantDetailPage() {
                                         </select>
                                       </div>
                                       <div>
-                                        <label htmlFor={`ten-st-${rowKey}`} style={labelStyle}>
+                                        <label htmlFor={`ten-st-${rowKey}`} className={labelClass}>
                                           Status (abgeleitet)
                                         </label>
-                                        <div
-                                          style={{
-                                            ...inputStyle,
-                                            background: "#111520",
-                                            border: "1px solid rgba(255,255,255,0.08)",
-                                            display: "flex",
-                                            alignItems: "center",
-                                          }}
-                                        >
+                                        <div className={`${inputClass} flex items-center`}>
                                           {(() => {
                                             const key = deriveTenancyLifecyclePreviewForAssign(
                                               tn.move_in_date,
@@ -2443,12 +2372,13 @@ export default function AdminTenantDetailPage() {
                                         </div>
                                       </div>
                                       <div>
-                                        <label htmlFor={`ten-tdt-${rowKey}`} style={labelStyle}>
+                                        <label htmlFor={`ten-tdt-${rowKey}`} className={labelClass}>
                                           Kautionsart Mieter
                                         </label>
                                         <select
                                           id={`ten-tdt-${rowKey}`}
-                                          style={{ ...inputStyle, cursor: tenancyEditSaving ? "default" : "pointer" }}
+                                          className={inputClass}
+                                          style={{ cursor: tenancyEditSaving ? "default" : "pointer" }}
                                           value={tenancyEditTenantDepositType}
                                           onChange={(e) => {
                                             const v = e.target.value;
@@ -2465,7 +2395,7 @@ export default function AdminTenantDetailPage() {
                                         </select>
                                       </div>
                                       <div>
-                                        <label htmlFor={`ten-tda-${rowKey}`} style={labelStyle}>
+                                        <label htmlFor={`ten-tda-${rowKey}`} className={labelClass}>
                                           Kautionsbetrag Mieter (CHF)
                                         </label>
                                         <input
@@ -2473,7 +2403,7 @@ export default function AdminTenantDetailPage() {
                                           type="number"
                                           min="0"
                                           step="0.01"
-                                          style={inputStyle}
+                                          className={inputClass}
                                           value={tenancyEditTenantDepositAmount}
                                           onChange={(e) => setTenancyEditTenantDepositAmount(e.target.value)}
                                           disabled={tenancyEditSaving}
@@ -2481,12 +2411,13 @@ export default function AdminTenantDetailPage() {
                                       </div>
                                       {tenancyEditTenantDepositType === "insurance" ? (
                                         <div>
-                                          <label htmlFor={`ten-tdp-${rowKey}`} style={labelStyle}>
+                                          <label htmlFor={`ten-tdp-${rowKey}`} className={labelClass}>
                                             Anbieter
                                           </label>
                                           <select
                                             id={`ten-tdp-${rowKey}`}
-                                            style={{ ...inputStyle, cursor: tenancyEditSaving ? "default" : "pointer" }}
+                                            className={inputClass}
+                                            style={{ cursor: tenancyEditSaving ? "default" : "pointer" }}
                                             value={tenancyEditTenantDepositProvider}
                                             onChange={(e) =>
                                               setTenancyEditTenantDepositProvider(e.target.value)
@@ -2518,7 +2449,7 @@ export default function AdminTenantDetailPage() {
                                           type="button"
                                           onClick={cancelTenancyEdit}
                                           disabled={tenancyEditSaving}
-                                          className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                                          className="rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-xs font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-default"
                                           style={{ cursor: tenancyEditSaving ? "default" : "pointer" }}
                                         >
                                           Abbrechen
@@ -2526,8 +2457,8 @@ export default function AdminTenantDetailPage() {
                                       </div>
                                     </div>
 
-                                    <div className="mb-2 border-t border-white/[0.05] pt-3">
-                                      <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+                                    <div className="mb-2 border-t border-black/10 pt-3 dark:border-white/[0.05]">
+                                      <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
                                         Einnahmen
                                       </div>
 
@@ -2537,17 +2468,7 @@ export default function AdminTenantDetailPage() {
                                         const kpiLoading = tenancyRevenueLoadingId === tidKpi;
                                         if (rowsKpi === undefined || kpiLoading) {
                                           return (
-                                            <div
-                                              style={{
-                                                marginBottom: "10px",
-                                                padding: "10px 12px",
-                                                background: "#111520",
-                                                borderRadius: "8px",
-                                                fontSize: "12px",
-                                                color: "#6b7a9a",
-                                                border: "1px solid rgba(255,255,255,0.05)",
-                                              }}
-                                            >
+                                            <div className="mb-2.5 rounded-lg border border-black/10 bg-slate-100 px-3 py-2.5 text-xs text-[#64748b] dark:border-white/[0.05] dark:bg-[#111520] dark:text-[#6b7a9a]">
                                               …
                                             </div>
                                           );
@@ -2557,64 +2478,32 @@ export default function AdminTenantDetailPage() {
                                         const recBr = recurringMonthlyBreakdownEntries(rowsKpi);
                                         const otBr = oneTimeBreakdownEntries(rowsKpi);
                                         return (
-                                          <div
-                                            style={{
-                                              marginBottom: "10px",
-                                              padding: "10px 12px",
-                                              background: "#111520",
-                                              borderRadius: "8px",
-                                              fontSize: "12px",
-                                              color: "#eef2ff",
-                                              border: "1px solid rgba(255,255,255,0.05)",
-                                            }}
-                                          >
-                                            <div style={{ fontWeight: 800, color: "#6b7a9a", marginBottom: "8px", fontSize: "9px", letterSpacing: "1px", textTransform: "uppercase" }}>
+                                          <div className="mb-2.5 rounded-lg border border-black/10 bg-slate-100 px-3 py-2.5 text-xs text-[#0f172a] dark:border-white/[0.05] dark:bg-[#111520] dark:text-[#eef2ff]">
+                                            <div className="mb-2 text-[9px] font-extrabold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
                                               Einnahmen-Übersicht
                                             </div>
-                                            <div style={{ marginBottom: "4px" }}>
-                                              <span style={{ color: "#6b7a9a", fontWeight: 600 }}>Gesamteinnahmen / Monat:</span>{" "}
-                                              <span style={{ fontWeight: 700, color: "#eef2ff" }}>{formatChfRent(monthlyKpi)}</span>
+                                            <div className="mb-1">
+                                              <span className="font-semibold text-[#64748b] dark:text-[#6b7a9a]">Gesamteinnahmen / Monat:</span>{" "}
+                                              <span className="font-bold text-[#0f172a] dark:text-[#eef2ff]">{formatChfRent(monthlyKpi)}</span>
                                             </div>
-                                            <div style={{ marginBottom: recBr.length || otBr.length ? "8px" : 0 }}>
-                                              <span style={{ color: "#6b7a9a", fontWeight: 600 }}>Einmalige Einnahmen:</span>{" "}
-                                              <span style={{ fontWeight: 700, color: "#eef2ff" }}>{formatChfRent(oneTimeKpi)}</span>
+                                            <div className={recBr.length || otBr.length ? "mb-2" : ""}>
+                                              <span className="font-semibold text-[#64748b] dark:text-[#6b7a9a]">Einmalige Einnahmen:</span>{" "}
+                                              <span className="font-bold text-[#0f172a] dark:text-[#eef2ff]">{formatChfRent(oneTimeKpi)}</span>
                                             </div>
                                             {recBr.length || otBr.length ? (
-                                              <div
-                                                style={{
-                                                  marginTop: "8px",
-                                                  paddingTop: "8px",
-                                                  borderTop: "1px solid rgba(255,255,255,0.05)",
-                                                }}
-                                              >
+                                              <div className="mt-2 border-t border-black/10 pt-2 dark:border-white/[0.05]">
                                                 {recBr.length ? (
-                                                  <div style={{ marginBottom: otBr.length ? "8px" : 0 }}>
-                                                    <div
-                                                      style={{
-                                                        fontSize: "10px",
-                                                        fontWeight: 700,
-                                                        color: "#6b7a9a",
-                                                        marginBottom: "4px",
-                                                        textTransform: "uppercase",
-                                                        letterSpacing: "0.5px",
-                                                      }}
-                                                    >
+                                                  <div className={otBr.length ? "mb-2" : ""}>
+                                                    <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.5px] text-[#64748b] dark:text-[#6b7a9a]">
                                                       Einnahmen Zusammensetzung
                                                     </div>
                                                     {recBr.map((b) => (
                                                       <div
                                                         key={b.typeKey}
-                                                        style={{
-                                                          display: "flex",
-                                                          justifyContent: "space-between",
-                                                          gap: "12px",
-                                                          fontSize: "12px",
-                                                          lineHeight: 1.45,
-                                                          color: "#eef2ff",
-                                                        }}
+                                                        className="flex justify-between gap-3 text-xs leading-snug text-[#0f172a] dark:text-[#eef2ff]"
                                                       >
-                                                        <span style={{ color: "#7f8daa" }}>{b.label}</span>
-                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap", color: "#eef2ff" }}>
+                                                        <span className="text-[#64748b] dark:text-[#7f8daa]">{b.label}</span>
+                                                        <span className="whitespace-nowrap font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                                                           {formatChfRent(b.total)}
                                                         </span>
                                                       </div>
@@ -2623,32 +2512,16 @@ export default function AdminTenantDetailPage() {
                                                 ) : null}
                                                 {otBr.length ? (
                                                   <div>
-                                                    <div
-                                                      style={{
-                                                        fontSize: "10px",
-                                                        fontWeight: 700,
-                                                        color: "#6b7a9a",
-                                                        marginBottom: "4px",
-                                                        textTransform: "uppercase",
-                                                        letterSpacing: "0.5px",
-                                                      }}
-                                                    >
+                                                    <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.5px] text-[#64748b] dark:text-[#6b7a9a]">
                                                       Einmalige Einnahmen
                                                     </div>
                                                     {otBr.map((b) => (
                                                       <div
                                                         key={b.typeKey}
-                                                        style={{
-                                                          display: "flex",
-                                                          justifyContent: "space-between",
-                                                          gap: "12px",
-                                                          fontSize: "12px",
-                                                          lineHeight: 1.45,
-                                                          color: "#eef2ff",
-                                                        }}
+                                                        className="flex justify-between gap-3 text-xs leading-snug text-[#0f172a] dark:text-[#eef2ff]"
                                                       >
-                                                        <span style={{ color: "#7f8daa" }}>{b.label}</span>
-                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap", color: "#eef2ff" }}>
+                                                        <span className="text-[#64748b] dark:text-[#7f8daa]">{b.label}</span>
+                                                        <span className="whitespace-nowrap font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                                                           {formatChfRent(b.total)}
                                                         </span>
                                                       </div>
@@ -2669,23 +2542,23 @@ export default function AdminTenantDetailPage() {
 
                                       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
                                         <div>
-                                          <label htmlFor={`rev-type-${String(tn.id)}`} style={labelStyle}>
+                                          <label htmlFor={`rev-type-${String(tn.id)}`} className={labelClass}>
                                             Typ
                                           </label>
                                           <RevenueTypeSelect
                                             id={`rev-type-${String(tn.id)}`}
-                                            selectStyle={inputStyle}
+                                            selectClassName={inputClass}
                                             value={revenueForm.type}
                                             onChange={(e) => setRevenueForm((f) => ({ ...f, type: e.target.value }))}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
                                           />
                                         </div>
                                         <div>
-                                          <label style={labelStyle}>Betrag (CHF)</label>
+                                          <label className={labelClass}>Betrag (CHF)</label>
                                           <input
                                             type="text"
                                             inputMode="decimal"
-                                            style={inputStyle}
+                                            className={inputClass}
                                             value={revenueForm.amount_chf}
                                             onChange={(e) => setRevenueForm((f) => ({ ...f, amount_chf: e.target.value }))}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
@@ -2693,9 +2566,10 @@ export default function AdminTenantDetailPage() {
                                           />
                                         </div>
                                         <div>
-                                          <label style={labelStyle}>Frequenz</label>
+                                          <label className={labelClass}>Frequenz</label>
                                           <select
-                                            style={{ ...inputStyle, cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer" }}
+                                            className={inputClass}
+                                            style={{ cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer" }}
                                             value={revenueForm.frequency}
                                             onChange={(e) =>
                                               setRevenueForm((f) =>
@@ -2719,10 +2593,10 @@ export default function AdminTenantDetailPage() {
                                           </select>
                                         </div>
                                         <div>
-                                          <label style={labelStyle}>Start (optional)</label>
+                                          <label className={labelClass}>Start (optional)</label>
                                           <input
                                             type="date"
-                                            style={inputStyle}
+                                            className={inputClass}
                                             value={revenueForm.start_date}
                                             onChange={(e) => setRevenueForm((f) => ({ ...f, start_date: e.target.value }))}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
@@ -2730,10 +2604,10 @@ export default function AdminTenantDetailPage() {
                                         </div>
                                         {normalizeRevenueFrequency(revenueForm.frequency) === "one_time" ? (
                                           <div>
-                                            <label style={labelStyle}>Ende (optional)</label>
+                                            <label className={labelClass}>Ende (optional)</label>
                                             <input
                                               type="date"
-                                              style={inputStyle}
+                                              className={inputClass}
                                               value={revenueForm.end_date}
                                               onChange={(e) => setRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
                                               disabled={tenancyRevenueLoadingId === String(tn.id)}
@@ -2741,16 +2615,8 @@ export default function AdminTenantDetailPage() {
                                           </div>
                                         ) : (
                                           <div>
-                                            <label style={labelStyle}>Ende (Mietende)</label>
-                                            <div
-                                              style={{
-                                                ...inputStyle,
-                                                background: "#111520",
-                                                border: "1px solid rgba(255,255,255,0.08)",
-                                                color: "#eef2ff",
-                                                fontWeight: 600,
-                                              }}
-                                            >
+                                            <label className={labelClass}>Ende (Mietende)</label>
+                                            <div className={`${inputClass} font-semibold`}>
                                               {formatDateOnly(
                                                 tenancyDraftDisplayEndIso(
                                                   tenancyEditActualMoveOut,
@@ -2759,23 +2625,16 @@ export default function AdminTenantDetailPage() {
                                                   ""
                                               )}
                                             </div>
-                                            <div
-                                              style={{
-                                                fontSize: "10px",
-                                                color: "#6b7a9a",
-                                                marginTop: "4px",
-                                                maxWidth: "220px",
-                                              }}
-                                            >
+                                            <div className="mt-1 max-w-[220px] text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                                               Ende wird automatisch aus Mietende übernommen.
                                             </div>
                                           </div>
                                         )}
                                         <div style={{ minWidth: "240px", flex: "1 1 240px" }}>
-                                          <label style={labelStyle}>Notizen (optional)</label>
+                                          <label className={labelClass}>Notizen (optional)</label>
                                           <input
                                             type="text"
-                                            style={inputStyle}
+                                            className={inputClass}
                                             value={revenueForm.notes}
                                             onChange={(e) => setRevenueForm((f) => ({ ...f, notes: e.target.value }))}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
@@ -2798,7 +2657,7 @@ export default function AdminTenantDetailPage() {
                                             type="button"
                                             onClick={() => cancelRevenueEdit(tn)}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                            className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                                            className="rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-xs font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-default"
                                             style={{ cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer", fontWeight: 700 }}
                                           >
                                             Abbrechen
@@ -2807,15 +2666,15 @@ export default function AdminTenantDetailPage() {
                                       </div>
 
                                       <div style={{ marginTop: "10px", overflowX: "auto" }}>
-                                        <table style={tableStyle}>
+                                        <table className={tableClass}>
                                           <thead>
                                             <tr>
-                                              <th style={thCell}>Typ</th>
-                                              <th style={{ ...thCell, textAlign: "right" }}>Betrag</th>
-                                              <th style={thCell}>Frequenz</th>
-                                              <th style={thCell}>Zeitraum (optional)</th>
-                                              <th style={thCell}>Notizen</th>
-                                              <th style={{ ...thCell, textAlign: "right", whiteSpace: "nowrap" }}>Aktion</th>
+                                              <th className={thCellClass}>Typ</th>
+                                              <th className={`${thCellClass} text-right`}>Betrag</th>
+                                              <th className={thCellClass}>Frequenz</th>
+                                              <th className={thCellClass}>Zeitraum (optional)</th>
+                                              <th className={thCellClass}>Notizen</th>
+                                              <th className={`${thCellClass} whitespace-nowrap text-right`}>Aktion</th>
                                             </tr>
                                           </thead>
                                           <tbody>
@@ -2826,20 +2685,20 @@ export default function AdminTenantDetailPage() {
                                                 const range = revenueRowZeitraumDisplay(rr, tn);
                                                 return (
                                                   <tr key={rid}>
-                                                    <td style={tdCell}>{revenueTypeLabelForDisplay(rr.type)}</td>
-                                                    <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#eef2ff" }}>
+                                                    <td className={tdCellClass}>{revenueTypeLabelForDisplay(rr.type)}</td>
+                                                    <td className={`${tdCellClass} text-right font-bold text-[#0f172a] dark:text-[#eef2ff]`}>
                                                       {formatChfRent(rr.amount_chf)}
                                                     </td>
-                                                    <td style={tdCell}>{revenueFrequencyLabel(rr.frequency)}</td>
-                                                    <td style={tdCell}>{range}</td>
-                                                    <td style={tdCell}>{rr.notes || "—"}</td>
-                                                    <td style={{ ...tdCell, textAlign: "right", whiteSpace: "nowrap" }}>
+                                                    <td className={tdCellClass}>{revenueFrequencyLabel(rr.frequency)}</td>
+                                                    <td className={tdCellClass}>{range}</td>
+                                                    <td className={tdCellClass}>{rr.notes || "—"}</td>
+                                                    <td className={`${tdCellClass} whitespace-nowrap text-right`}>
                                                       <div style={{ display: "inline-flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
                                                         <button
                                                           type="button"
                                                           onClick={() => startRevenueEdit(rr)}
                                                           disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                                          className="rounded-[8px] border border-white/[0.1] bg-transparent px-2.5 py-1 text-xs font-bold text-[#8090b0] hover:bg-white/[0.05] disabled:cursor-default"
+                                                          className="rounded-[8px] border border-black/10 bg-transparent px-2.5 py-1 text-xs font-bold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.05] disabled:cursor-default"
                                                           style={{ cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer" }}
                                                         >
                                                           Bearbeiten
@@ -2860,7 +2719,7 @@ export default function AdminTenantDetailPage() {
                                               })
                                             ) : (
                                               <tr>
-                                                <td colSpan={6} style={{ ...tdCell, color: "#6b7a9a" }}>
+                                                <td colSpan={6} className={`${tdCellClass} text-[#64748b] dark:text-[#6b7a9a]`}>
                                                   {tenancyRevenueLoadingId === String(tn.id) ? "Lade …" : "Keine Einnahmen erfasst."}
                                                 </td>
                                               </tr>
@@ -2869,7 +2728,7 @@ export default function AdminTenantDetailPage() {
                                         </table>
                                       </div>
 
-                                      <p style={{ margin: "10px 0 0 0", fontSize: "11px", color: "#6b7a9a" }}>
+                                      <p className="mt-2.5 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
                                         Berechnung Gesamteinnahmen / Monat: monatlich voll, jährlich ÷12; einmalige Beträge unter „Einmalige Einnahmen“.
                                       </p>
                                     </div>
@@ -2883,7 +2742,7 @@ export default function AdminTenantDetailPage() {
                 <button
                   type="button"
                   onClick={openAssignForm}
-                  className="mt-3.5 rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="mt-3.5 rounded-[8px] border border-black/10 bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                   style={{ cursor: "pointer" }}
                 >
                   Mietverhältnis zuweisen
@@ -2891,7 +2750,7 @@ export default function AdminTenantDetailPage() {
                 {assignOpen ? (
                   <form
                     onSubmit={handleAssignSubmit}
-                    className="mt-3.5 border-t border-white/[0.05] pt-3.5"
+                    className="mt-3.5 border-t border-black/10 pt-3.5 dark:border-white/[0.05]"
                   >
                     {assignUnitsErr ? (
                       <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#f87171" }}>
@@ -2905,12 +2764,13 @@ export default function AdminTenantDetailPage() {
                     ) : null}
                     <div style={gridTwoCol}>
                       <div>
-                        <label htmlFor="assign-unit" style={labelStyle}>
+                        <label htmlFor="assign-unit" className={labelClass}>
                           Einheit *
                         </label>
                         <select
                           id="assign-unit"
-                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          className={inputClass}
+                          style={{ cursor: assignSaving ? "default" : "pointer" }}
                           value={assignUnitId}
                           onChange={(e) => {
                             setAssignUnitId(e.target.value);
@@ -2935,12 +2795,13 @@ export default function AdminTenantDetailPage() {
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="assign-room" style={labelStyle}>
+                        <label htmlFor="assign-room" className={labelClass}>
                           Zimmer *
                         </label>
                         <select
                           id="assign-room"
-                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          className={inputClass}
+                          style={{ cursor: assignSaving ? "default" : "pointer" }}
                           value={assignRoomId}
                           onChange={(e) => {
                             setAssignRoomId(e.target.value);
@@ -2962,13 +2823,13 @@ export default function AdminTenantDetailPage() {
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="assign-move-in" style={labelStyle}>
+                        <label htmlFor="assign-move-in" className={labelClass}>
                           Einzugsdatum *
                         </label>
                         <input
                           id="assign-move-in"
                           type="date"
-                          style={inputStyle}
+                          className={inputClass}
                           value={assignMoveIn}
                           onChange={(e) => setAssignMoveIn(e.target.value)}
                           disabled={assignSaving}
@@ -2976,51 +2837,52 @@ export default function AdminTenantDetailPage() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="assign-notice" style={labelStyle}>
+                        <label htmlFor="assign-notice" className={labelClass}>
                           Kündigung eingegangen am
                         </label>
                         <input
                           id="assign-notice"
                           type="date"
-                          style={inputStyle}
+                          className={inputClass}
                           value={assignNoticeGivenAt}
                           onChange={(e) => setAssignNoticeGivenAt(e.target.value)}
                           disabled={assignSaving}
                         />
                       </div>
                       <div>
-                        <label htmlFor="assign-te" style={labelStyle}>
+                        <label htmlFor="assign-te" className={labelClass}>
                           Kündigung wirksam per
                         </label>
                         <input
                           id="assign-te"
                           type="date"
-                          style={inputStyle}
+                          className={inputClass}
                           value={assignTerminationEffective}
                           onChange={(e) => setAssignTerminationEffective(e.target.value)}
                           disabled={assignSaving}
                         />
                       </div>
                       <div>
-                        <label htmlFor="assign-am" style={labelStyle}>
+                        <label htmlFor="assign-am" className={labelClass}>
                           Rückgabe erfolgt am
                         </label>
                         <input
                           id="assign-am"
                           type="date"
-                          style={inputStyle}
+                          className={inputClass}
                           value={assignActualMoveOut}
                           onChange={(e) => setAssignActualMoveOut(e.target.value)}
                           disabled={assignSaving}
                         />
                       </div>
                       <div>
-                        <label htmlFor="assign-tb" style={labelStyle}>
+                        <label htmlFor="assign-tb" className={labelClass}>
                           Gekündigt durch
                         </label>
                         <select
                           id="assign-tb"
-                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          className={inputClass}
+                          style={{ cursor: assignSaving ? "default" : "pointer" }}
                           value={assignTerminatedBy}
                           onChange={(e) => setAssignTerminatedBy(e.target.value)}
                           disabled={assignSaving}
@@ -3032,28 +2894,14 @@ export default function AdminTenantDetailPage() {
                         </select>
                       </div>
                       <div>
-                        <label style={labelStyle}>Einnahmen / Monat</label>
-                        <div
-                          style={{
-                            ...inputStyle,
-                            background: "#111520",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            color: "#eef2ff",
-                          }}
-                        >
+                        <label className={labelClass}>Einnahmen / Monat</label>
+                        <div className={inputClass}>
                           {formatChfRent(monthlyEquivalentFromRevenueRows(assignRevenueRows))}
                         </div>
                       </div>
                       <div>
-                        <label style={labelStyle}>Status (abgeleitet)</label>
-                        <div
-                          style={{
-                            ...inputStyle,
-                            background: "#111520",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            color: "#eef2ff",
-                          }}
-                        >
+                        <label className={labelClass}>Status (abgeleitet)</label>
+                        <div className={inputClass}>
                           {tenancyDisplayStatusLabelDe(
                             deriveTenancyLifecyclePreviewForAssign(
                               assignMoveIn,
@@ -3064,28 +2912,28 @@ export default function AdminTenantDetailPage() {
                         </div>
                       </div>
                       <div style={{ gridColumn: "1 / -1" }}>
-                        <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+                        <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
                           Einnahmen
                         </div>
                         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
                           <div>
-                            <label htmlFor="assign-rev-type" style={labelStyle}>
+                            <label htmlFor="assign-rev-type" className={labelClass}>
                               Typ
                             </label>
                             <RevenueTypeSelect
                               id="assign-rev-type"
-                              selectStyle={inputStyle}
+                              selectClassName={inputClass}
                               value={assignRevenueForm.type}
                               onChange={(e) => setAssignRevenueForm((f) => ({ ...f, type: e.target.value }))}
                               disabled={assignSaving}
                             />
                           </div>
                           <div>
-                            <label style={labelStyle}>Betrag (CHF)</label>
+                            <label className={labelClass}>Betrag (CHF)</label>
                             <input
                               type="text"
                               inputMode="decimal"
-                              style={inputStyle}
+                              className={inputClass}
                               value={assignRevenueForm.amount_chf}
                               onChange={(e) => {
                                 setAssignRevenueForm((f) => ({ ...f, amount_chf: e.target.value }));
@@ -3094,9 +2942,10 @@ export default function AdminTenantDetailPage() {
                             />
                           </div>
                           <div>
-                            <label style={labelStyle}>Frequenz</label>
+                            <label className={labelClass}>Frequenz</label>
                             <select
-                              style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                              className={inputClass}
+                              style={{ cursor: assignSaving ? "default" : "pointer" }}
                               value={assignRevenueForm.frequency}
                               onChange={(e) =>
                                 setAssignRevenueForm((f) =>
@@ -3116,10 +2965,10 @@ export default function AdminTenantDetailPage() {
                             </select>
                           </div>
                           <div>
-                            <label style={labelStyle}>Start (optional)</label>
+                            <label className={labelClass}>Start (optional)</label>
                             <input
                               type="date"
-                              style={inputStyle}
+                              className={inputClass}
                               value={assignRevenueForm.start_date}
                               onChange={(e) => setAssignRevenueForm((f) => ({ ...f, start_date: e.target.value }))}
                               disabled={assignSaving}
@@ -3127,10 +2976,10 @@ export default function AdminTenantDetailPage() {
                           </div>
                           {normalizeRevenueFrequency(assignRevenueForm.frequency) === "one_time" ? (
                             <div>
-                              <label style={labelStyle}>Ende (optional)</label>
+                              <label className={labelClass}>Ende (optional)</label>
                               <input
                                 type="date"
-                                style={inputStyle}
+                                className={inputClass}
                                 value={assignRevenueForm.end_date}
                                 onChange={(e) => setAssignRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
                                 disabled={assignSaving}
@@ -3138,30 +2987,22 @@ export default function AdminTenantDetailPage() {
                             </div>
                           ) : (
                             <div>
-                              <label style={labelStyle}>Ende (Mietende)</label>
-                              <div
-                                style={{
-                                  ...inputStyle,
-                                  background: "#111520",
-                                  border: "1px solid rgba(255,255,255,0.08)",
-                                  color: "#eef2ff",
-                                  fontWeight: 600,
-                                }}
-                              >
+                              <label className={labelClass}>Ende (Mietende)</label>
+                              <div className={`${inputClass} font-semibold`}>
                                 {formatDateOnly(
                                   tenancyDraftDisplayEndIso(assignActualMoveOut, assignTerminationEffective) || ""
                                 )}
                               </div>
-                              <div style={{ fontSize: "10px", color: "#6b7a9a", marginTop: "4px", maxWidth: "220px" }}>
+                              <div className="mt-1 max-w-[220px] text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                                 Ende wird automatisch aus Mietende übernommen.
                               </div>
                             </div>
                           )}
                           <div style={{ minWidth: "240px", flex: "1 1 240px" }}>
-                            <label style={labelStyle}>Notizen (optional)</label>
+                            <label className={labelClass}>Notizen (optional)</label>
                             <input
                               type="text"
-                              style={inputStyle}
+                              className={inputClass}
                               value={assignRevenueForm.notes}
                               onChange={(e) => setAssignRevenueForm((f) => ({ ...f, notes: e.target.value }))}
                               disabled={assignSaving}
@@ -3192,7 +3033,7 @@ export default function AdminTenantDetailPage() {
                               setAssignRevenueRows((prev) => [...(Array.isArray(prev) ? prev : []), row]);
                               setAssignRevenueForm((f) => ({ ...f, amount_chf: "", notes: "" }));
                             }}
-                            className={`rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-xs font-bold text-[#8090b0] hover:bg-white/[0.05] ${
+                            className={`rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-xs font-bold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.05] ${
                               assignSaving ? "cursor-default opacity-50" : "cursor-pointer"
                             }`}
                           >
@@ -3201,24 +3042,24 @@ export default function AdminTenantDetailPage() {
                         </div>
 
                         <div style={{ marginTop: "10px", overflowX: "auto" }}>
-                          <table style={tableStyle}>
+                          <table className={tableClass}>
                             <thead>
                               <tr>
-                                <th style={thCell}>Typ</th>
-                                <th style={{ ...thCell, textAlign: "right" }}>Betrag</th>
-                                <th style={thCell}>Frequenz</th>
-                                <th style={thCell}>Aktion</th>
+                                <th className={thCellClass}>Typ</th>
+                                <th className={`${thCellClass} text-right`}>Betrag</th>
+                                <th className={thCellClass}>Frequenz</th>
+                                <th className={thCellClass}>Aktion</th>
                               </tr>
                             </thead>
                             <tbody>
                               {(Array.isArray(assignRevenueRows) ? assignRevenueRows : []).map((rr) => (
                                 <tr key={rr.id}>
-                                  <td style={tdCell}>{revenueTypeLabelForDisplay(rr.type)}</td>
-                                  <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#eef2ff" }}>
+                                  <td className={tdCellClass}>{revenueTypeLabelForDisplay(rr.type)}</td>
+                                  <td className={`${tdCellClass} text-right font-bold text-[#0f172a] dark:text-[#eef2ff]`}>
                                     {formatChfRent(parseRevenueAmount(rr.amount_chf) ?? rr.amount_chf)}
                                   </td>
-                                  <td style={tdCell}>{revenueFrequencyLabel(rr.frequency)}</td>
-                                  <td style={tdCell}>
+                                  <td className={tdCellClass}>{revenueFrequencyLabel(rr.frequency)}</td>
+                                  <td className={tdCellClass}>
                                     <button
                                       type="button"
                                       disabled={assignSaving}
@@ -3238,12 +3079,13 @@ export default function AdminTenantDetailPage() {
                         </div>
                       </div>
                       <div>
-                        <label htmlFor="assign-tenant-deposit-type" style={labelStyle}>
+                        <label htmlFor="assign-tenant-deposit-type" className={labelClass}>
                           Kautionsart Mieter
                         </label>
                         <select
                           id="assign-tenant-deposit-type"
-                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          className={inputClass}
+                          style={{ cursor: assignSaving ? "default" : "pointer" }}
                           value={assignTenantDepositType}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -3260,7 +3102,7 @@ export default function AdminTenantDetailPage() {
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="assign-tenant-deposit-amount" style={labelStyle}>
+                        <label htmlFor="assign-tenant-deposit-amount" className={labelClass}>
                           Kautionsbetrag Mieter (CHF)
                         </label>
                         <input
@@ -3268,7 +3110,7 @@ export default function AdminTenantDetailPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          style={inputStyle}
+                          className={inputClass}
                           value={assignTenantDepositAmount}
                           onChange={(e) => setAssignTenantDepositAmount(e.target.value)}
                           disabled={assignSaving}
@@ -3276,12 +3118,13 @@ export default function AdminTenantDetailPage() {
                       </div>
                       {assignTenantDepositType === "insurance" ? (
                         <div>
-                          <label htmlFor="assign-tenant-deposit-provider" style={labelStyle}>
+                          <label htmlFor="assign-tenant-deposit-provider" className={labelClass}>
                             Anbieter
                           </label>
                           <select
                             id="assign-tenant-deposit-provider"
-                            style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                            className={inputClass}
+                            style={{ cursor: assignSaving ? "default" : "pointer" }}
                             value={assignTenantDepositProvider}
                             onChange={(e) => setAssignTenantDepositProvider(e.target.value)}
                             disabled={assignSaving}
@@ -3314,7 +3157,7 @@ export default function AdminTenantDetailPage() {
                           setAssignOpen(false);
                           resetAssignForm();
                         }}
-                        className="rounded-[8px] border border-white/[0.1] bg-transparent px-3.5 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-default"
+                        className="rounded-[8px] border border-black/10 bg-transparent px-3.5 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-default"
                         style={{ cursor: assignSaving ? "default" : "pointer" }}
                       >
                         Abbrechen
@@ -3323,38 +3166,38 @@ export default function AdminTenantDetailPage() {
                   </form>
                 ) : null}
               </div>
-              <div style={sectionCard}>
-                <div style={sectionTitle}>Rechnungen</div>
+              <div className={sectionCardClass}>
+                <div className={sectionTitleClass}>Rechnungen</div>
                 {!invoices.length ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>
+                  <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">
                     Keine Rechnungen vorhanden
                   </p>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
-                    <table style={tableStyle}>
+                    <table className={tableClass}>
                       <thead>
                         <tr>
-                          <th style={thCell}>Rechnung</th>
-                          <th style={{ ...thCell, textAlign: "right" }}>Betrag</th>
-                          <th style={thCell}>Fällig</th>
-                          <th style={thCell}>Status</th>
+                          <th className={thCellClass}>Rechnung</th>
+                          <th className={`${thCellClass} text-right`}>Betrag</th>
+                          <th className={thCellClass}>Fällig</th>
+                          <th className={thCellClass}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {invoices.map((inv) => {
                           return (
                             <tr key={inv.id != null ? String(inv.id) : `${inv.invoice_number}-${inv.due_date}`}>
-                              <td style={{ ...tdCell, fontWeight: 700, color: "#eef2ff" }}>
+                              <td className={`${tdCellClass} font-bold text-[#0f172a] dark:text-[#eef2ff]`}>
                                 {inv.invoice_number || "—"}
                               </td>
-                              <td style={{ ...tdCell, textAlign: "right", color: "#eef2ff" }}>
+                              <td className={`${tdCellClass} text-right text-[#0f172a] dark:text-[#eef2ff]`}>
                                 {formatInvoiceAmount(inv.amount, inv.currency)}
                               </td>
-                              <td style={{ ...tdCell, fontSize: "13px", color: "#6b7a9a" }}>
+                              <td className={`${tdCellClass} text-sm text-[#64748b] dark:text-[#6b7a9a]`}>
                                 {formatDateOnly(inv.due_date)}
                               </td>
-                              <td style={tdCell}>
-                                <span className="inline-flex rounded-full border border-white/[0.1] bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-[#7aaeff]">
+                              <td className={tdCellClass}>
+                                <span className="inline-flex rounded-full border border-black/10 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-[#7aaeff] dark:border-white/[0.1] dark:bg-white/[0.06]">
                                   {inv.status || "—"}
                                 </span>
                               </td>
@@ -3378,7 +3221,7 @@ export default function AdminTenantDetailPage() {
                 noteSubmitError={noteSubmitError}
                 onSubmit={saveNote}
               />
-              <div style={sectionCard}>
+              <div className={sectionCardClass}>
                 <div
                   style={{
                     display: "flex",
@@ -3388,7 +3231,7 @@ export default function AdminTenantDetailPage() {
                     marginBottom: "10px",
                   }}
                 >
-                  <div style={sectionTitle}>Dokumente</div>
+                  <div className={sectionTitleClass}>Dokumente</div>
                   <div
                     style={{
                       display: "flex",
@@ -3398,21 +3241,17 @@ export default function AdminTenantDetailPage() {
                       justifyContent: "flex-end",
                     }}
                   >
-                    <label className="flex items-center gap-2 text-[13px] text-[#6b7a9a]">
+                    <label className="flex items-center gap-2 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                       <span>Kategorie</span>
                       <select
                         value={tenantDocCategory}
                         onChange={(e) => setTenantDocCategory(e.target.value)}
                         disabled={tenantDocUploading || !tenantId}
-                        style={{
-                          fontSize: "13px",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderRadius: "9px",
-                          padding: "6px 8px",
-                          color: "#eef2ff",
-                          background: tenantDocUploading || !tenantId ? "rgba(255,255,255,0.04)" : "#111520",
-                          cursor: tenantDocUploading || !tenantId ? "not-allowed" : "pointer",
-                        }}
+                        className={`rounded-[9px] border border-black/10 bg-slate-100 px-2 py-1.5 text-[13px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] ${
+                          tenantDocUploading || !tenantId
+                            ? "cursor-not-allowed opacity-60 dark:bg-white/[0.04]"
+                            : "cursor-pointer"
+                        }`}
                       >
                         <option value="">—</option>
                         <option value="rent_contract">Mietvertrag</option>
@@ -3432,7 +3271,7 @@ export default function AdminTenantDetailPage() {
                       type="button"
                       onClick={handleTenantDocPick}
                       disabled={tenantDocUploading || !tenantId}
-                      className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
                       style={{ cursor: tenantDocUploading || !tenantId ? "not-allowed" : "pointer" }}
                     >
                       {tenantDocUploading ? "Wird hochgeladen …" : "Hochladen"}
@@ -3445,37 +3284,37 @@ export default function AdminTenantDetailPage() {
                   </p>
                 ) : null}
                 {loading ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Lade Dokumente …</p>
+                  <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Dokumente …</p>
                 ) : tenantDocuments.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Keine Dokumente vorhanden</p>
+                  <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Keine Dokumente vorhanden</p>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", color: "#eef2ff" }}>
+                    <table className={tableClass}>
                       <thead>
                         <tr>
-                          <th style={thCell}>Datei</th>
-                          <th style={thCell}>Typ</th>
-                          <th style={thCell}>Kategorie</th>
-                          <th style={thCell}>Datum</th>
-                          <th style={thCell}>Von</th>
-                          <th style={thCell}>Aktionen</th>
+                          <th className={thCellClass}>Datei</th>
+                          <th className={thCellClass}>Typ</th>
+                          <th className={thCellClass}>Kategorie</th>
+                          <th className={thCellClass}>Datum</th>
+                          <th className={thCellClass}>Von</th>
+                          <th className={thCellClass}>Aktionen</th>
                         </tr>
                       </thead>
                       <tbody>
                         {tenantDocuments.map((doc) => (
                           <tr key={String(doc.id)}>
-                            <td style={{ ...tdCell, fontWeight: 600, color: "#eef2ff" }}>{doc.file_name || "—"}</td>
-                            <td style={{ ...tdCell, color: "#6b7a9a" }}>{formatTenantDocumentType(doc)}</td>
-                            <td style={{ ...tdCell, color: "#6b7a9a" }}>
+                            <td className={`${tdCellClass} font-semibold text-[#0f172a] dark:text-[#eef2ff]`}>{doc.file_name || "—"}</td>
+                            <td className={`${tdCellClass} text-[#64748b] dark:text-[#6b7a9a]`}>{formatTenantDocumentType(doc)}</td>
+                            <td className={`${tdCellClass} text-[#64748b] dark:text-[#6b7a9a]`}>
                               {formatTenantDocumentCategoryLabel(doc.category)}
                             </td>
-                            <td style={{ ...tdCell, color: "#6b7a9a" }}>{formatTenantDocumentDate(doc.created_at)}</td>
-                            <td style={{ ...tdCell, color: "#6b7a9a" }}>
+                            <td className={`${tdCellClass} text-[#64748b] dark:text-[#6b7a9a]`}>{formatTenantDocumentDate(doc.created_at)}</td>
+                            <td className={`${tdCellClass} text-[#64748b] dark:text-[#6b7a9a]`}>
                               {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
                                 ? doc.uploaded_by_name
                                 : "—"}
                             </td>
-                            <td style={tdCell}>
+                            <td className={tdCellClass}>
                               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" }}>
                                 <button
                                   type="button"
@@ -3488,7 +3327,7 @@ export default function AdminTenantDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteTenantDocument(doc.id)}
-                                  className="border-none bg-transparent p-0 text-[13px] font-semibold text-[#6b7a9a] underline hover:text-[#f87171]"
+                                  className="border-none bg-transparent p-0 text-[13px] font-semibold text-[#64748b] dark:text-[#6b7a9a] underline hover:text-[#f87171]"
                                   style={{ cursor: "pointer" }}
                                 >
                                   Löschen
@@ -3505,7 +3344,7 @@ export default function AdminTenantDetailPage() {
               <TenantHistoryBlock events={mergedHistoryEvents} />
             </>
           ) : (
-            <p className="text-[#6b7a9a]">Keine Daten.</p>
+            <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Daten.</p>
           )}
         </main>
       </div>
