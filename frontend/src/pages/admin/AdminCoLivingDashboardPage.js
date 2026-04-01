@@ -339,7 +339,7 @@ function HeroCard({
     },
     slate: {
       card: "border-t-slate-500",
-      value: "text-[#eef2ff]",
+      value: "text-[var(--text-primary)]",
       dot: "bg-slate-500",
     },
     rose: {
@@ -363,22 +363,22 @@ function HeroCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 bg-[#141824] p-6 ${style.card}`}
+      className={`relative overflow-hidden rounded-[14px] border border-[var(--border)] border-t-4 bg-[var(--bg-card)] p-6 ${style.card}`}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
-            <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{title}</p>
+            <p className="text-[9px] font-bold uppercase tracking-[1px] text-[var(--text-muted)]">{title}</p>
           </div>
           <p className={`mt-3 text-[24px] font-bold tracking-tight ${style.value}`}>
             {value}
           </p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">{subtitle}</p>
+          <p className="mt-2 text-[11px] text-[var(--text-muted)]">{subtitle}</p>
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-1 text-[10px] font-bold text-[#6b7a9a]">
+          <span className="rounded-full border border-[var(--border)] bg-white/[0.06] px-2.5 py-1 text-[10px] font-bold text-[var(--text-muted)]">
             Live
           </span>
           {trend ? (
@@ -400,12 +400,12 @@ function HeroCard({
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
-    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+    <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-card)] p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-[16px] font-bold text-[#eef2ff]">{title}</h3>
+          <h3 className="text-[16px] font-bold text-[var(--text-primary)]">{title}</h3>
           {subtitle ? (
-            <p className="mt-1 text-[12px] text-[#6b7a9a]">{subtitle}</p>
+            <p className="mt-1 text-[12px] text-[var(--text-muted)]">{subtitle}</p>
           ) : null}
         </div>
         {rightSlot}
@@ -417,10 +417,10 @@ function SectionCard({ title, subtitle, children, rightSlot = null }) {
 
 function SmallStatCard({ label, value, hint }) {
   return (
-    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
-      <p className="text-[10px] text-[#6b7a9a]">{label}</p>
-      <p className="mt-2 text-[24px] font-bold text-[#eef2ff]">{value}</p>
-      {hint ? <p className="mt-2 text-[11px] text-[#6b7a9a]">{hint}</p> : null}
+    <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg-inner)] p-4">
+      <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-2 text-[24px] font-bold text-[var(--text-primary)]">{value}</p>
+      {hint ? <p className="mt-2 text-[11px] text-[var(--text-muted)]">{hint}</p> : null}
     </div>
   );
 }
@@ -430,7 +430,7 @@ function ProgressRow({
   value,
   count,
   colorClass,
-  trackClass = "bg-[#111520]",
+  trackClass = "bg-[var(--bg-inner)]",
 }) {
   const safeValue = Math.max(0, Math.min(Number(value || 0), 100));
 
@@ -438,12 +438,12 @@ function ProgressRow({
     <div>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <p className="text-[13px] font-medium text-[#eef2ff]">{label}</p>
-          <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-[#6b7a9a]">
+          <p className="text-[13px] font-medium text-[var(--text-primary)]">{label}</p>
+          <span className="rounded-full border border-[var(--border)] bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
             {count}
           </span>
         </div>
-        <p className="text-[13px] font-semibold text-[#eef2ff]">
+        <p className="text-[13px] font-semibold text-[var(--text-primary)]">
           {formatPercent(safeValue)}
         </p>
       </div>
@@ -462,7 +462,7 @@ function RankingBadge({ value, type }) {
     success: "border-green-500/20 bg-green-500/10 text-green-400",
     warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
     danger: "border-red-500/20 bg-red-500/10 text-red-400",
-    neutral: "border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]",
+    neutral: "border-[var(--border)] bg-white/[0.06] text-[var(--text-muted)]",
     blue: "border-blue-500/20 bg-blue-500/10 text-[#7aaeff]",
   };
 
@@ -478,11 +478,11 @@ function RankingBadge({ value, type }) {
 function FilterSelect({ label, value, onChange, children }) {
   return (
     <div className="min-w-[180px]">
-      <label className="mb-2 block text-[10px] text-[#6b7a9a]">{label}</label>
+      <label className="mb-2 block text-[10px] text-[var(--text-muted)]">{label}</label>
       <select
         value={value}
         onChange={onChange}
-        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-sm text-[#eef2ff] outline-none"
+        className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--bg-inner)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none"
       >
         {children}
       </select>
@@ -874,17 +874,17 @@ function AdminCoLivingDashboardPage() {
   const occupancyTrend = null;
 
   return (
-    <div className="-m-6 min-h-screen bg-[#07090f] p-6 text-[#eef2ff] md:p-8">
+    <div className="-m-6 min-h-screen bg-[var(--bg-page)] p-6 text-[var(--text-primary)] md:p-8">
       <div className="mx-auto max-w-[1800px] space-y-8">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+            <p className="text-[9px] font-bold uppercase tracking-[1px] text-[var(--text-muted)]">
               Vantio
             </p>
-            <h2 className="mt-2 text-[22px] font-bold tracking-tight text-[#eef2ff] md:text-[24px]">
+            <h2 className="mt-2 text-[22px] font-bold tracking-tight text-[var(--text-primary)] md:text-[24px]">
               Co-Living Dashboard
             </h2>
-            <p className="mt-3 max-w-3xl text-[12px] text-[#6b7a9a]">
+            <p className="mt-3 max-w-3xl text-[12px] text-[var(--text-muted)]">
               Übersicht über aktuelle Belegung, Kosten, Umsatz, Gewinn und die
               wichtigsten operativen Signale deiner Co-Living Units.
             </p>
@@ -893,7 +893,7 @@ function AdminCoLivingDashboardPage() {
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff]"
+                className="rounded-[8px] border border-[var(--border)] bg-[var(--bg-inner)] px-3 py-2 text-sm text-[var(--text-primary)]"
               >
                 <option value="month">Dieser Monat</option>
                 <option value="lastMonth">Letzter Monat</option>
@@ -911,10 +911,10 @@ function AdminCoLivingDashboardPage() {
           )}
 
           <div className="flex items-center gap-2">
-            <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
+            <span className="rounded-full border border-[var(--border)] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[var(--text-muted)]">
               Live KPI
             </span>
-            <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
+            <span className="rounded-full border border-[var(--border)] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[var(--text-muted)]">
               Co-Living only
             </span>
           </div>
@@ -1101,7 +1101,7 @@ function AdminCoLivingDashboardPage() {
                   {warning.title}
                 </p>
                 <p
-                  className={`mt-2 text-[13px] font-medium text-[#6b7a9a] ${
+                  className={`mt-2 text-[13px] font-medium text-[var(--text-muted)] ${
                     warning.type === "danger" ? "" : ""
                   }`}
                 >
@@ -1115,7 +1115,7 @@ function AdminCoLivingDashboardPage() {
                 <p className="text-[13px] font-semibold text-green-400">
                   Keine kritischen Warnungen
                 </p>
-                <p className="mt-2 text-[13px] text-[#6b7a9a]">
+                <p className="mt-2 text-[13px] text-[var(--text-muted)]">
                   Aktuell wurden keine dringenden Risiken erkannt.
                 </p>
               </div>
@@ -1268,24 +1268,24 @@ function AdminCoLivingDashboardPage() {
         >
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
-              <thead className="bg-[#111520]">
+              <thead className="bg-[var(--bg-inner)]">
                 <tr className="text-left">
-                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[var(--text-muted)]">
                     Monat
                   </th>
-                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[var(--text-muted)]">
                     Sicher
                   </th>
-                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[var(--text-muted)]">
                     Reserviert
                   </th>
-                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[var(--text-muted)]">
                     Risiko
                   </th>
-                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[var(--text-muted)]">
                     Offenes Potenzial
                   </th>
-                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[var(--text-muted)]">
                     Forecast Umsatz
                   </th>
                 </tr>
@@ -1294,9 +1294,9 @@ function AdminCoLivingDashboardPage() {
                 {monthlyRevenueForecast.map((row) => (
                   <tr
                     key={row.month}
-                    className="border-b border-white/[0.05] text-[13px] text-[#eef2ff]"
+                    className="border-b border-[var(--border)] text-[13px] text-[var(--text-primary)]"
                   >
-                    <td className="py-4 pr-4 font-semibold text-[#eef2ff]">
+                    <td className="py-4 pr-4 font-semibold text-[var(--text-primary)]">
                       {row.month}
                     </td>
                     <td className="py-4 pr-4 font-medium text-[#4ade80]">
@@ -1311,7 +1311,7 @@ function AdminCoLivingDashboardPage() {
                     <td className="py-4 pr-4 font-medium text-[#f87171]">
                       {formatChfOrDash(row.freeRevenue)}
                     </td>
-                    <td className="py-4 pr-4 font-bold text-[#eef2ff]">
+                    <td className="py-4 pr-4 font-bold text-[var(--text-primary)]">
                       {formatChfOrDash(row.forecastRevenue)}
                     </td>
                   </tr>
@@ -1333,9 +1333,9 @@ function AdminCoLivingDashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                     <XAxis
                       dataKey="month"
-                      tick={{ fill: "#6b7a9a", fontSize: 12 }}
+                      tick={{ fill: "var(--text-muted)", fontSize: 12 }}
                     />
-                    <YAxis tick={{ fill: "#6b7a9a", fontSize: 12 }} />
+                    <YAxis tick={{ fill: "var(--text-muted)", fontSize: 12 }} />
                     <Tooltip
                       formatter={(value) =>
                         value === null || value === undefined
@@ -1370,11 +1370,11 @@ function AdminCoLivingDashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                     <XAxis
                       dataKey="name"
-                      tick={{ fill: "#6b7a9a", fontSize: 12 }}
+                      tick={{ fill: "var(--text-muted)", fontSize: 12 }}
                     />
                     <YAxis
                       allowDecimals={false}
-                      tick={{ fill: "#6b7a9a", fontSize: 12 }}
+                      tick={{ fill: "var(--text-muted)", fontSize: 12 }}
                     />
                     <Tooltip />
                     <Bar

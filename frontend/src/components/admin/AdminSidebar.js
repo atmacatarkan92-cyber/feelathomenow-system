@@ -11,12 +11,12 @@ function createNavLinkClass(theme) {
       if (isActive) {
         return `${base} border border-blue-500/25 bg-blue-500/10 font-semibold text-blue-800`;
       }
-      return `${base} font-medium text-[#64748b] hover:bg-black/[0.05]`;
+      return `${base} font-medium text-[var(--text-muted)] hover:bg-black/[0.05]`;
     }
     if (isActive) {
       return `${base} border border-blue-500/[0.15] bg-blue-500/[0.12] font-semibold text-[#8fb3ff]`;
     }
-    return `${base} font-medium text-[#6b7a9a] hover:bg-white/[0.04]`;
+    return `${base} font-medium text-[var(--text-muted)] hover:bg-white/[0.04]`;
   };
 }
 
@@ -31,10 +31,12 @@ function Bereich({ title, children, defaultOpen = true, theme }) {
   const [open, setOpen] = useState(defaultOpen);
   const titleClass =
     theme === "light"
-      ? "text-[9px] font-bold uppercase tracking-[1.5px] text-[#64748b]"
+      ? "text-[9px] font-bold uppercase tracking-[1.5px] text-[var(--text-muted)]"
       : "text-[9px] font-bold uppercase tracking-[1.5px] text-[#4a5680]";
   const chevronClass =
-    theme === "light" ? "text-[11px] text-[#64748b]" : "text-[11px] text-[#6b7a9a]";
+    theme === "light"
+      ? "text-[11px] text-[var(--text-muted)]"
+      : "text-[11px] text-[var(--text-muted)]";
 
   return (
     <div className="mb-2">
@@ -81,8 +83,8 @@ function AdminSidebar() {
 
   const sidebarShell =
     theme === "light"
-      ? "box-border flex min-h-screen w-[280px] flex-col border-r border-black/[0.08] bg-white px-4 pb-4 pt-6 text-[#0f172a]"
-      : "box-border flex min-h-screen w-[280px] flex-col border-r border-white/[0.07] bg-[#0c1018] px-4 pb-4 pt-6 text-[#eef2ff]";
+      ? "box-border flex min-h-screen w-[280px] flex-col border-r border-black/[0.08] bg-white px-4 pb-4 pt-6 text-[var(--text-primary)]"
+      : "box-border flex min-h-screen w-[280px] flex-col border-r border-[var(--border)] bg-[#0c1018] px-4 pb-4 pt-6 text-[var(--text-primary)]";
 
   const orgPillClass =
     theme === "light"
@@ -90,14 +92,14 @@ function AdminSidebar() {
       : "mt-3 flex max-w-full items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold text-[#8fb3ff]";
 
   const footerBorder =
-    theme === "light" ? "border-t border-black/[0.08]" : "border-t border-white/[0.07]";
+    theme === "light" ? "border-t border-black/[0.08]" : "border-t border-[var(--border)]";
 
   const secondaryBtn =
     theme === "light"
-      ? "w-full cursor-pointer rounded-[8px] border border-black/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-black/[0.04]"
-      : "w-full cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]";
+      ? "w-full cursor-pointer rounded-[8px] border border-black/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[var(--text-muted)] hover:bg-black/[0.04]"
+      : "w-full cursor-pointer rounded-[8px] border border-[var(--border)] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]";
 
-  const logoLight = theme === "light" ? "text-[#0f172a]" : "text-[#eef2ff]";
+  const logoLight = theme === "light" ? "text-[var(--text-primary)]" : "text-[var(--text-primary)]";
 
   return (
     <div className={sidebarShell}>
@@ -216,8 +218,8 @@ function AdminSidebar() {
             <div
               className={
                 theme === "light"
-                  ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[0.1] bg-[#f1f5f9] text-[11px] font-bold text-[#0f172a]"
-                  : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.06] text-[11px] font-bold text-[#eef2ff]"
+                  ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[0.1] bg-[#f1f5f9] text-[11px] font-bold text-[var(--text-primary)]"
+                  : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-white/[0.06] text-[11px] font-bold text-[var(--text-primary)]"
               }
               aria-hidden
             >
@@ -227,8 +229,8 @@ function AdminSidebar() {
               <div
                 className={
                   theme === "light"
-                    ? "truncate text-[12px] font-semibold text-[#0f172a]"
-                    : "truncate text-[12px] font-semibold text-[#eef2ff]"
+                    ? "truncate text-[12px] font-semibold text-[var(--text-primary)]"
+                    : "truncate text-[12px] font-semibold text-[var(--text-primary)]"
                 }
               >
                 {user.full_name || "—"}
@@ -236,8 +238,8 @@ function AdminSidebar() {
               <div
                 className={
                   theme === "light"
-                    ? "truncate text-[10px] text-[#64748b]"
-                    : "truncate text-[10px] text-[#6b7a9a]"
+                    ? "truncate text-[10px] text-[var(--text-muted)]"
+                    : "truncate text-[10px] text-[var(--text-muted)]"
                 }
               >
                 {user.email}
