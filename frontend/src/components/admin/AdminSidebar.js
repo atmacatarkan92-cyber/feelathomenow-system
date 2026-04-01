@@ -2,217 +2,200 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
-function hauptLinkStyle({ isActive }) {
-  return {
-    display: "block",
-    padding: "10px 12px",
-    borderRadius: "12px",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: isActive ? 700 : 500,
-    color: "#FFFFFF",
-    background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
-  };
+function navLinkClass({ isActive }) {
+  const base =
+    "block rounded-[8px] px-[9px] py-[7px] text-[11px] no-underline transition-colors";
+  if (isActive) {
+    return `${base} border border-blue-500/[0.15] bg-blue-500/[0.12] font-semibold text-[#8fb3ff]`;
+  }
+  return `${base} font-medium text-[#6b7a9a] hover:bg-white/[0.04]`;
 }
 
-function unterLinkStyle({ isActive }) {
-  return {
-    display: "block",
-    padding: "8px 12px",
-    borderRadius: "10px",
-    textDecoration: "none",
-    fontSize: "13px",
-    fontWeight: isActive ? 700 : 500,
-    color: isActive ? "#FFFFFF" : "rgba(255,255,255,0.78)",
-    background: isActive ? "rgba(255,255,255,0.10)" : "transparent",
-    marginLeft: "8px",
-  };
+function navSubLinkClass({ isActive }) {
+  return `${navLinkClass({ isActive })} ml-2`;
 }
 
 function Bereich({ title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div style={{ marginBottom: "14px" }}>
+    <div className="mb-2">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "transparent",
-          border: "none",
-          color: "#FFFFFF",
-          padding: "10px 12px",
-          borderRadius: "12px",
-          cursor: "pointer",
-          fontSize: "15px",
-          fontWeight: 700,
-          textAlign: "left",
-        }}
+        className="flex w-full items-center justify-between bg-transparent px-2 pb-1 pt-3 text-left"
+        style={{ cursor: "pointer" }}
       >
-        <span>{title}</span>
-        <span style={{ opacity: 0.8 }}>{open ? "−" : "+"}</span>
+        <span className="text-[9px] font-bold uppercase tracking-[1.5px] text-[#3a4460]">{title}</span>
+        <span className="text-[11px] text-[#6b7a9a]">{open ? "−" : "+"}</span>
       </button>
 
-      {open && (
-        <div style={{ display: "grid", gap: "6px", marginTop: "4px" }}>
-          {children}
-        </div>
-      )}
+      {open && <div className="mt-1 grid gap-0.5">{children}</div>}
     </div>
   );
 }
 
+function userInitials(user) {
+  if (!user) return "?";
+  const n = String(user.full_name || "").trim();
+  if (n) {
+    const parts = n.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+    }
+    return n.slice(0, 2).toUpperCase();
+  }
+  const e = String(user.email || "").trim();
+  return e.slice(0, 2).toUpperCase() || "?";
+}
+
 function AdminSidebar() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout().then(() => navigate("/admin/login", { replace: true }));
   };
 
   return (
-    <div
-      style={{
-        width: "280px",
-        minHeight: "100vh",
-        background: "#071633",
-        color: "#FFFFFF",
-        padding: "24px 16px",
-        boxSizing: "border-box",
-        borderRight: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <div style={{ marginBottom: "28px" }}>
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: 800,
-            margin: 0,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Vantio
+    <div className="box-border flex min-h-screen w-[280px] flex-col border-r border-white/[0.07] bg-[#0c1018] px-4 pb-4 pt-6 text-[#eef2ff]">
+      <div className="mb-6 shrink-0">
+        <h2 className="m-0 text-[20px] font-extrabold tracking-[-0.02em]">
+          <span className="text-[#eef2ff]">Van</span>
+          <span className="text-[#7aaeff]">tio</span>
         </h2>
+        {user ? (
+          <div
+            className="mt-3 flex max-w-full items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold text-[#8fb3ff]"
+            title={user.organization_id}
+          >
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-400" aria-hidden />
+            <span className="min-w-0 truncate font-mono text-[10px]">{user.organization_id}</span>
+          </div>
+        ) : null}
       </div>
 
-      <nav style={{ display: "grid", gap: "6px" }}>
+      <nav className="flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto">
         <Bereich title="Dashboard" defaultOpen={true}>
-          <NavLink to="/admin" end style={hauptLinkStyle}>
-            Unternehmensübersicht
+          <NavLink to="/admin" end className={navLinkClass}>
+            📊 Unternehmensübersicht
           </NavLink>
 
-          <NavLink to="/admin/operations" style={unterLinkStyle}>
-            Co-Living-Dashboard
+          <NavLink to="/admin/operations" className={navSubLinkClass}>
+            🏠 Co-Living-Dashboard
           </NavLink>
 
-          <NavLink to="/admin/business-apartments-dashboard" style={unterLinkStyle}>
-            Business-Apartment-Dashboard
+          <NavLink to="/admin/business-apartments-dashboard" className={navSubLinkClass}>
+            🏢 Business-Apartment-Dashboard
           </NavLink>
         </Bereich>
 
         <Bereich title="Betrieb" defaultOpen={true}>
-          <NavLink to="/admin/objekte-dashboard" style={hauptLinkStyle}>
-            Objekte-Dashboard
+          <NavLink to="/admin/objekte-dashboard" className={navLinkClass}>
+            🗂️ Objekte-Dashboard
           </NavLink>
 
-          <NavLink to="/admin/properties" style={unterLinkStyle}>
-            Liegenschaften
+          <NavLink to="/admin/properties" className={navSubLinkClass}>
+            🚪 Liegenschaften
           </NavLink>
 
-          <NavLink to="/admin/apartments" style={unterLinkStyle}>
-            Apartments / Units
+          <NavLink to="/admin/apartments" className={navSubLinkClass}>
+            🚪 Apartments / Units
           </NavLink>
 
-          <NavLink to="/admin/rooms" style={unterLinkStyle}>
-            Co-Living-Zimmer
+          <NavLink to="/admin/rooms" className={navSubLinkClass}>
+            🛏️ Co-Living-Zimmer
           </NavLink>
 
-          <NavLink to="/admin/occupancy" style={unterLinkStyle}>
-            Belegung
+          <NavLink to="/admin/occupancy" className={navSubLinkClass}>
+            📅 Belegung
           </NavLink>
 
-          <NavLink to="/admin/listings" style={unterLinkStyle}>
-            Website Listings
+          <NavLink to="/admin/listings" className={navSubLinkClass}>
+            🌐 Website Listings
           </NavLink>
         </Bereich>
 
         <Bereich title="Finanzen" defaultOpen={true}>
-          <NavLink to="/admin/invoices" style={hauptLinkStyle}>
-            Rechnungen
+          <NavLink to="/admin/invoices" className={navLinkClass}>
+            🧾 Rechnungen
           </NavLink>
 
-          <NavLink to="/admin/revenue" style={unterLinkStyle}>
-            Einnahmen
+          <NavLink to="/admin/revenue" className={navSubLinkClass}>
+            💰 Einnahmen
           </NavLink>
 
-          <NavLink to="/admin/ausgaben" style={unterLinkStyle}>
-            Ausgaben
+          <NavLink to="/admin/ausgaben" className={navSubLinkClass}>
+            💸 Ausgaben
           </NavLink>
         </Bereich>
 
         <Bereich title="Analyse" defaultOpen={false}>
-          <NavLink to="/admin/performance" style={hauptLinkStyle}>
-            Performance
+          <NavLink to="/admin/performance" className={navLinkClass}>
+            📈 Performance
           </NavLink>
 
-          <NavLink to="/admin/break-even" style={unterLinkStyle}>
-            Break-Even
+          <NavLink to="/admin/break-even" className={navSubLinkClass}>
+            ⚖️ Break-Even
           </NavLink>
 
-          <NavLink to="/admin/prognose" style={unterLinkStyle}>
-            Prognose
+          <NavLink to="/admin/prognose" className={navSubLinkClass}>
+            🔮 Prognose
           </NavLink>
         </Bereich>
 
         <Bereich title="CRM" defaultOpen={false}>
-          <NavLink to="/admin/tenants" style={hauptLinkStyle}>
-            Mieter
+          <NavLink to="/admin/tenants" className={navLinkClass}>
+            👥 Mieter
           </NavLink>
 
-          <NavLink to="/admin/users" style={unterLinkStyle}>
-            Users
+          <NavLink to="/admin/users" className={navSubLinkClass}>
+            👤 Users
           </NavLink>
 
-          <NavLink to="/admin/landlords" style={unterLinkStyle}>
-            Verwaltungen
+          <NavLink to="/admin/landlords" className={navSubLinkClass}>
+            🏦 Verwaltungen
           </NavLink>
 
-          <NavLink to="/admin/bewirtschafter" style={unterLinkStyle}>
-            Bewirtschafter
+          <NavLink to="/admin/bewirtschafter" className={navSubLinkClass}>
+            👔 Bewirtschafter
           </NavLink>
 
-          <NavLink to="/admin/owners" style={unterLinkStyle}>
-            Eigentümer
+          <NavLink to="/admin/owners" className={navSubLinkClass}>
+            🔑 Eigentümer
           </NavLink>
 
-          <NavLink to="/admin/leads" style={unterLinkStyle}>
-            Leads
+          <NavLink to="/admin/leads" className={navSubLinkClass}>
+            🎯 Leads
           </NavLink>
         </Bereich>
-
-        <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.12)" }}>
-          <button
-            type="button"
-            onClick={handleLogout}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: "12px",
-              border: "1px solid rgba(255,255,255,0.2)",
-              background: "transparent",
-              color: "#FFFFFF",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Abmelden
-          </button>
-        </div>
       </nav>
+
+      <div className="mt-auto shrink-0 border-t border-white/[0.07] pt-4">
+        {user ? (
+          <div className="mb-3 flex items-center gap-3 px-1">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.06] text-[11px] font-bold text-[#eef2ff]"
+              aria-hidden
+            >
+              {userInitials(user)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[12px] font-semibold text-[#eef2ff]">
+                {user.full_name || "—"}
+              </div>
+              <div className="truncate text-[10px] text-[#6b7a9a]">{user.email}</div>
+            </div>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+        >
+          Abmelden
+        </button>
+      </div>
     </div>
   );
 }
