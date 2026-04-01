@@ -473,7 +473,7 @@ function SectionCard({ title, subtitle, children, rightSlot = null }) {
   );
 }
 
-function SmallStatCard({ label, value, hint, accent = "slate" }) {
+function SmallStatCard({ label, value, hint, accent = "slate", valueTone = "strong" }) {
   const accentStyles = {
     slate: "bg-slate-50 border-slate-200 text-slate-900",
     green: "bg-emerald-50 border-emerald-200 text-emerald-700",
@@ -483,15 +483,26 @@ function SmallStatCard({ label, value, hint, accent = "slate" }) {
     blue: "bg-sky-50 border-sky-200 text-sky-700",
   };
 
+  const labelClass =
+    valueTone === "muted" ? "text-sm text-slate-500" : "text-sm opacity-70";
+  const valueClass =
+    valueTone === "muted"
+      ? "text-xl font-semibold text-slate-500 mt-2"
+      : "text-2xl font-bold mt-2";
+  const hintClass =
+    valueTone === "muted"
+      ? "text-[11px] text-slate-500 mt-2 leading-relaxed"
+      : "text-xs opacity-70 mt-2";
+
   return (
     <div
       className={`rounded-2xl border p-4 ${
         accentStyles[accent] || accentStyles.slate
       }`}
     >
-      <p className="text-sm opacity-70">{label}</p>
-      <p className="text-2xl font-bold mt-2">{value}</p>
-      {hint ? <p className="text-xs opacity-70 mt-2">{hint}</p> : null}
+      <p className={labelClass}>{label}</p>
+      <p className={valueClass}>{value}</p>
+      {hint ? <p className={hintClass}>{hint}</p> : null}
     </div>
   );
 }
@@ -2043,7 +2054,7 @@ function AdminUnitDetailPage() {
 
           <SectionCard
             title="Finanzübersicht"
-            subtitle={`KPI-Monat ${String(kpiMonth).padStart(2, "0")}/${kpiYear} (Backend revenue_forecast / profit_service)`}
+            subtitle={`Monat ${String(kpiMonth).padStart(2, "0")}/${kpiYear} · Backend-KPI (revenue_forecast / profit_service)`}
           >
             {unitKpiErr ? (
               <p className="text-sm text-red-600 mb-3">{unitKpiErr}</p>
@@ -2053,31 +2064,28 @@ function AdminUnitDetailPage() {
             ) : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SmallStatCard
-                label="Vollbelegung Umsatz"
+                label="Potenzial bei Vollbelegung"
                 value={formatChfOrDash(metrics.fullRevenue)}
-                hint="Listenpreis-Potenzial (Zimmer / Unit); nicht Backend-KPI"
+                hint="Basierend auf Listenpreisen / Zimmerpreisen (kein Backend KPI)"
                 accent="orange"
+                valueTone="muted"
               />
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(metrics.currentRevenue)}
-                hint={`Erwarteter Monatsumsatz (GET /api/admin/profit, ${kpiMonth}/${kpiYear})`}
+                hint={`Berechnet aus tatsächlichen Einnahmen (Backend KPI). Zeitraum: ${String(kpiMonth).padStart(2, "0")}/${kpiYear}.`}
                 accent="green"
               />
               <SmallStatCard
                 label="Laufende Kosten"
                 value={formatChfOrDash(metrics.runningCosts)}
-                hint={
-                  landlordDepositInsuranceMonthly(unit) > 0
-                    ? "Wie Backend: unit_costs (Monat/Jahr/12) + Kautionsversicherung/12; einmalige Kosten ausgeschlossen."
-                    : "Wie Backend: unit_costs (Monat/Jahr/12); einmalige Kosten ausgeschlossen."
-                }
+                hint="Monatliche Kosten inkl. Fixkosten und Versicherung"
                 accent="slate"
               />
               <SmallStatCard
                 label="Gewinn aktuell"
                 value={formatChfOrDash(metrics.currentProfit)}
-                hint="Umsatz − Kosten (Backend profit_service)"
+                hint="Umsatz minus Kosten (Backend berechnet)"
                 accent="slate"
               />
             </div>
@@ -2566,8 +2574,9 @@ function AdminUnitDetailPage() {
           <SmallStatCard
             label="Leerstand"
             value={formatChfOrDash(metrics.vacancyLoss)}
-            hint="Listenpreis-Potenzial minus Backend-KPI-Umsatz (Monat)"
+            hint="Potenzial bei Vollbelegung minus Aktueller Umsatz (Backend-KPI); kein separater Forecast"
             accent="rose"
+            valueTone="muted"
           />
         </div>
 
@@ -2618,49 +2627,79 @@ function AdminUnitDetailPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <SectionCard
             title="Forecast für diese Unit"
-            subtitle="KPI-Umsatz/Gewinn aus Backend; 30-Tage-Heuristik hier nicht berechnet"
+            subtitle="Echte KPIs wie in der Finanzübersicht; Kurzprognosen hier nicht angebunden"
           >
             <div className="grid grid-cols-1 gap-4">
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(nextUnitForecast.revenue)}
-                hint={`Gleich KPI-Monat (${kpiMonth}/${kpiYear}), Backend`}
+                hint={`Berechnet aus tatsächlichen Einnahmen (Backend KPI). Zeitraum: ${String(kpiMonth).padStart(2, "0")}/${kpiYear}.`}
                 accent="green"
               />
               <SmallStatCard
-                label="Erwarteter Umsatz in 30 Tagen"
-                value={formatChfOrDash(nextUnitForecast.forecast30)}
-                hint="— (keine separate Frontend-Berechnung)"
-                accent="blue"
-              />
-              <SmallStatCard
-                label="Wegfallender Umsatz"
-                value={formatChfOrDash(nextUnitForecast.expiringRevenue)}
-                hint="—"
-                accent="amber"
-              />
-              <SmallStatCard
-                label="Bereits geplanter Umsatz"
-                value={formatChfOrDash(nextUnitForecast.futureBookedRevenue)}
-                hint="—"
-                accent="orange"
-              />
-              <SmallStatCard
-                label="Netto-Veränderung vs heute"
-                value={formatChfNetChange(nextUnitForecast.netChange)}
-                hint="—"
-                accent={
-                  nextUnitForecast.netChange == null
-                    ? "slate"
-                    : nextUnitForecast.netChange < 0
-                      ? "rose"
-                      : "green"
+                label="Prognose (geschätzt) · 30 Tage"
+                value={
+                  nextUnitForecast.forecast30 != null
+                    ? formatChfOrDash(nextUnitForecast.forecast30)
+                    : "—"
                 }
+                hint={
+                  nextUnitForecast.forecast30 != null
+                    ? "Schätzung; kein Backend KPI"
+                    : "Noch nicht aktiviert"
+                }
+                accent="slate"
+                valueTone="muted"
+              />
+              <SmallStatCard
+                label="Prognose (geschätzt) · Wegfall"
+                value={
+                  nextUnitForecast.expiringRevenue != null
+                    ? formatChfOrDash(nextUnitForecast.expiringRevenue)
+                    : "—"
+                }
+                hint={
+                  nextUnitForecast.expiringRevenue != null
+                    ? "Schätzung; kein Backend KPI"
+                    : "Noch nicht aktiviert"
+                }
+                accent="slate"
+                valueTone="muted"
+              />
+              <SmallStatCard
+                label="Prognose (geschätzt) · Neu geplant"
+                value={
+                  nextUnitForecast.futureBookedRevenue != null
+                    ? formatChfOrDash(nextUnitForecast.futureBookedRevenue)
+                    : "—"
+                }
+                hint={
+                  nextUnitForecast.futureBookedRevenue != null
+                    ? "Schätzung; kein Backend KPI"
+                    : "Noch nicht aktiviert"
+                }
+                accent="slate"
+                valueTone="muted"
+              />
+              <SmallStatCard
+                label="Prognose (geschätzt) · Veränderung"
+                value={
+                  nextUnitForecast.netChange != null
+                    ? formatChfNetChange(nextUnitForecast.netChange)
+                    : "—"
+                }
+                hint={
+                  nextUnitForecast.netChange != null
+                    ? "Schätzung; kein Backend KPI"
+                    : "Noch nicht aktiviert"
+                }
+                accent="slate"
+                valueTone="muted"
               />
               <SmallStatCard
                 label="Gewinn aktuell"
                 value={formatChfOrDash(nextUnitForecast.profit)}
-                hint="Backend profit_service"
+                hint="Umsatz minus Kosten (Backend berechnet)"
                 accent="slate"
               />
             </div>
@@ -2727,13 +2766,13 @@ function AdminUnitDetailPage() {
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(metrics.currentRevenue)}
-                hint={`Backend KPI ${kpiMonth}/${kpiYear}`}
+                hint={`Berechnet aus tatsächlichen Einnahmen (Backend KPI). Zeitraum: ${String(kpiMonth).padStart(2, "0")}/${kpiYear}.`}
                 accent="green"
               />
               <SmallStatCard
                 label="Break-Even"
                 value={formatChfOrDash(metrics.runningCosts)}
-                hint="Notwendiger Monatsumsatz (Backend)"
+                hint="Laufende Kosten (Backend) als Referenz für Deckung"
                 accent="slate"
               />
               <SmallStatCard
