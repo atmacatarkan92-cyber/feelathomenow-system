@@ -29,7 +29,7 @@ import {
   getCoLivingMetrics,
   getRoomsForUnit,
 } from "../../utils/adminUnitCoLivingMetrics";
-import { getUnitMonthlyRunningCosts, getUnitCostsTotal } from "../../utils/adminUnitRunningCosts";
+import { getUnitMonthlyRunningCosts } from "../../utils/adminUnitRunningCosts";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
@@ -1863,21 +1863,47 @@ function AdminApartmentsPage() {
                   </div>
                 ) : null}
 
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">
-                    Monatliche Gesamtkosten
-                  </label>
-                  {isCoLivingType ? (
-                    <div
-                      className="w-full border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 text-slate-800"
-                      aria-readonly="true"
-                    >
-                      {formatCurrency(coLivingFullOccupancyRevenue)}
-                      <span className="block text-xs text-slate-500 mt-1 font-normal">
-                        Summe der Zimmerpreise (nicht editierbar)
-                      </span>
+                {isCoLivingType ? (
+                  <div className="md:col-span-2 space-y-4">
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Monatliche geschätzte Einnahmen
+                      </label>
+                      <div
+                        className="w-full border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 text-slate-800"
+                        aria-readonly="true"
+                      >
+                        {formatCurrency(coLivingFullOccupancyRevenue)}
+                        <span className="block text-xs text-slate-500 mt-1 font-normal">
+                          Summe der geplanten Zimmerpreise bei Vollbelegung
+                        </span>
+                      </div>
                     </div>
-                  ) : (
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Monatliche Gesamtkosten
+                      </label>
+                      <div
+                        className="w-full border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 text-slate-800"
+                        aria-readonly="true"
+                      >
+                        {formatCurrencyChf2(derivedMonthlyTotalCosts)}
+                        <span className="block text-xs text-slate-500 mt-1 font-normal">
+                          Monatlich (voll) + jährlich (/12) + Kautionsversicherung (/12), einmalig ausgeschlossen.
+                        </span>
+                        {derivedOneTimeCostsTotal > 0 ? (
+                          <span className="block text-xs text-slate-500 mt-1 font-normal">
+                            Einmalige Kosten gesamt: {formatCurrencyChf2(derivedOneTimeCostsTotal)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm text-slate-600 mb-2">
+                      Monatliche Gesamtkosten
+                    </label>
                     <div
                       className="w-full border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 text-slate-800"
                       aria-readonly="true"
@@ -1892,8 +1918,8 @@ function AdminApartmentsPage() {
                         </span>
                       ) : null}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <div className="md:col-span-2 border border-slate-200 rounded-xl p-4 bg-slate-50/90">
                   <p className="text-sm font-semibold text-slate-800 mb-3">
