@@ -636,6 +636,7 @@ export function fetchAdminInvoiceSummary() {
 
 /**
  * Fetch profit per unit (revenue - costs) for a given month.
+ * Revenue/costs match backend `revenue_forecast` + `profit_service` for the period.
  * Params: year?, month? (default current), unit_id? (optional filter).
  */
 export function fetchAdminProfit(params = {}) {

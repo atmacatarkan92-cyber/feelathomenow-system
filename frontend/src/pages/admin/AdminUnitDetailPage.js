@@ -26,6 +26,8 @@ import {
   updateAdminUnitCost,
   deleteAdminUnitCost,
   updateAdminUnit,
+  fetchAdminProfit,
+  fetchAdminOccupancy,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -42,18 +44,10 @@ import {
   parseIsoDate,
   isTenancyActiveByDates,
   isTenancyFuture,
-  sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
-import {
-  getUnitRevenueForecast,
-  getPhase4OperationalWarnings,
-} from "../../utils/unitOperationalIntelligence";
-import {
-  getUnitCostsTotal,
-  landlordDepositInsuranceMonthly,
-  getUnitMonthlyRunningCosts,
-} from "../../utils/adminUnitRunningCosts";
+import { getPhase4OperationalWarnings } from "../../utils/unitOperationalIntelligence";
+import { getUnitCostsTotal, landlordDepositInsuranceMonthly } from "../../utils/adminUnitRunningCosts";
 
 const UNIT_AUDIT_FIELD_LABELS = {
   landlord_id: "Verwaltung",
@@ -864,6 +858,52 @@ function AdminUnitDetailPage() {
   });
   const [assignListsLoading, setAssignListsLoading] = useState(false);
 
+  const [kpiYear] = useState(() => new Date().getFullYear());
+  const [kpiMonth] = useState(() => new Date().getMonth() + 1);
+  const [unitKpiProfit, setUnitKpiProfit] = useState(null);
+  const [unitKpiOcc, setUnitKpiOcc] = useState(null);
+  const [unitKpiLoading, setUnitKpiLoading] = useState(false);
+  const [unitKpiErr, setUnitKpiErr] = useState(null);
+
+  const reloadUnitKpi = useCallback(async () => {
+    if (!unitId) return;
+    setUnitKpiLoading(true);
+    setUnitKpiErr(null);
+    try {
+      const [profitRes, occRes] = await Promise.all([
+        fetchAdminProfit({ unit_id: unitId, year: kpiYear, month: kpiMonth }),
+        fetchAdminOccupancy({ unit_id: unitId }),
+      ]);
+      const row = Array.isArray(profitRes?.units)
+        ? profitRes.units.find((x) => String(x.unit_id) === String(unitId))
+        : null;
+      setUnitKpiProfit(
+        row
+          ? {
+              revenue: Number(row.revenue),
+              costs: Number(row.costs),
+              profit: Number(row.profit),
+            }
+          : null
+      );
+      const occ =
+        occRes?.units && Array.isArray(occRes.units)
+          ? occRes.units.find((x) => String(x.unit_id) === String(unitId))
+          : null;
+      setUnitKpiOcc(occ || null);
+    } catch (e) {
+      setUnitKpiErr(e?.message || "KPI konnten nicht geladen werden.");
+      setUnitKpiProfit(null);
+      setUnitKpiOcc(null);
+    } finally {
+      setUnitKpiLoading(false);
+    }
+  }, [unitId, kpiYear, kpiMonth]);
+
+  useEffect(() => {
+    reloadUnitKpi();
+  }, [reloadUnitKpi]);
+
   useEffect(() => {
     if (!unitId) {
       setLoading(false);
@@ -1176,62 +1216,124 @@ function AdminUnitDetailPage() {
     const isApt = safeUnit.type === "Apartment";
 
     if (unitTenancies === null) {
+      const fromOccEarly = unitKpiOcc != null;
+      let tr = base.totalRooms;
+      let oc = base.occupiedCount;
+      let rc = base.reservedCount;
+      let fc = base.freeCount;
+      if (fromOccEarly && unitKpiOcc.total_rooms != null) {
+        tr = unitKpiOcc.total_rooms;
+        oc = unitKpiOcc.occupied_rooms ?? base.occupiedCount;
+        rc = unitKpiOcc.reserved_rooms ?? base.reservedCount;
+        fc = unitKpiOcc.free_rooms ?? base.freeCount;
+      }
+      const r0 = unitKpiProfit?.revenue ?? null;
+      const c0 = unitKpiProfit?.costs ?? null;
+      const p0 = unitKpiProfit?.profit ?? null;
       if (isApt) {
         return {
           ...base,
+          totalRooms: tr,
+          occupiedCount: oc,
+          reservedCount: rc,
+          freeCount: fc,
           apartmentTenanciesLoaded: false,
           apartmentHasActiveTenancy: null,
+          currentRevenue: r0,
+          runningCosts: c0,
+          currentProfit: p0,
         };
       }
-      return base;
+      return {
+        ...base,
+        totalRooms: tr,
+        occupiedCount: oc,
+        reservedCount: rc,
+        freeCount: fc,
+        currentRevenue: r0,
+        runningCosts: c0,
+        currentProfit: p0,
+      };
     }
 
-    const activeRentSum = sumActiveTenancyMonthlyRentForUnit(
-      safeUnit,
-      unitTenancies
-    );
-    const tenancyRevenueKpi = activeRentSum;
-    const runningCosts = getUnitMonthlyRunningCosts(safeUnit, unitCosts);
+    const rev = unitKpiProfit?.revenue;
+    const costs = unitKpiProfit?.costs;
+    const prof = unitKpiProfit?.profit;
+
+    const fromOcc = unitKpiOcc != null;
+    let totalRooms = base.totalRooms;
+    let occupiedCount = base.occupiedCount;
+    let reservedCount = base.reservedCount;
+    let freeCount = base.freeCount;
+    if (fromOcc && unitKpiOcc.total_rooms != null) {
+      totalRooms = unitKpiOcc.total_rooms;
+      occupiedCount = unitKpiOcc.occupied_rooms ?? base.occupiedCount;
+      reservedCount = unitKpiOcc.reserved_rooms ?? base.reservedCount;
+      freeCount = unitKpiOcc.free_rooms ?? base.freeCount;
+    }
+
+    const vacancyLoss =
+      base.fullRevenue != null && rev != null && Number.isFinite(Number(rev))
+        ? Math.max(0, Number(base.fullRevenue) - Number(rev))
+        : null;
 
     if (isApt) {
       const occupied = activeUnitTenancies.length > 0;
-      const profit =
-        runningCosts != null ? activeRentSum - runningCosts : null;
+      const aptFull =
+        base.fullRevenue != null
+          ? base.fullRevenue
+          : Number(safeUnit.tenantPriceMonthly ?? safeUnit.tenant_price_monthly_chf ?? 0) > 0
+            ? Number(safeUnit.tenantPriceMonthly ?? safeUnit.tenant_price_monthly_chf ?? 0)
+            : null;
+      const aptVacancy =
+        aptFull != null && rev != null && Number.isFinite(Number(rev))
+          ? Math.max(0, Number(aptFull) - Number(rev))
+          : null;
       return {
         ...base,
-        currentRevenue: tenancyRevenueKpi,
-        runningCosts,
-        currentProfit: profit,
-        fullRevenue: tenancyRevenueKpi,
-        occupiedCount: occupied ? 1 : 0,
-        freeCount: occupied ? 0 : 1,
-        reservedCount: 0,
-        totalRooms: 1,
-        vacancyLoss: 0,
+        totalRooms,
+        occupiedCount,
+        reservedCount,
+        freeCount,
+        currentRevenue: rev ?? null,
+        runningCosts: costs ?? null,
+        currentProfit: prof ?? null,
+        fullRevenue: aptFull,
+        vacancyLoss: aptVacancy,
         apartmentTenanciesLoaded: true,
         apartmentHasActiveTenancy: occupied,
       };
     }
 
-    const profit =
-      runningCosts != null ? activeRentSum - runningCosts : null;
     return {
       ...base,
-      currentRevenue: tenancyRevenueKpi,
-      runningCosts,
-      currentProfit: profit,
-      vacancyLoss:
-        base.fullRevenue != null
-          ? Math.max(0, Number(base.fullRevenue) - activeRentSum)
-          : base.vacancyLoss,
+      totalRooms,
+      occupiedCount,
+      reservedCount,
+      freeCount,
+      currentRevenue: rev ?? null,
+      runningCosts: costs ?? null,
+      currentProfit: prof ?? null,
+      vacancyLoss,
       apartmentTenanciesLoaded: true,
     };
-  }, [safeUnit, rooms, unitTenancies, activeUnitTenancies, unitCosts]);
+  }, [
+    safeUnit,
+    rooms,
+    unitTenancies,
+    activeUnitTenancies,
+    unitKpiProfit,
+    unitKpiOcc,
+  ]);
 
-  const occupancyRate =
-    metrics.totalRooms > 0
+  const occupancyRate = useMemo(() => {
+    if (unitKpiOcc != null && unitKpiOcc.occupancy_rate != null) {
+      return Number(unitKpiOcc.occupancy_rate);
+    }
+    return metrics.totalRooms > 0
       ? (metrics.occupiedCount / metrics.totalRooms) * 100
       : 0;
+  }, [unitKpiOcc, metrics.totalRooms, metrics.occupiedCount]);
 
   const unitWarnings = useMemo(() => {
     return buildUnitWarnings(safeUnit, unitRooms, metrics, unitTenancies);
@@ -1247,36 +1349,23 @@ function AdminUnitDetailPage() {
     [unit, rooms, unitTenancies]
   );
 
-  const unitRevenueForecast = useMemo(() => {
-    if (unitTenancies == null) return null;
-    return getUnitRevenueForecast(safeUnit, rooms, unitTenancies, 30);
-  }, [safeUnit, rooms, unitTenancies]);
-
   const nextUnitForecast = useMemo(() => {
-    const f = unitRevenueForecast;
-    const fullPot =
-      f?.fullPotential != null
-        ? f.fullPotential
-        : metrics.fullRevenue != null
-          ? metrics.fullRevenue
-          : null;
+    const fullPot = metrics.fullRevenue != null ? metrics.fullRevenue : null;
     const openPot =
-      f?.openPotential != null
-        ? f.openPotential
-        : fullPot != null && metrics.currentRevenue != null
-          ? Math.max(fullPot - metrics.currentRevenue, 0)
-          : null;
+      fullPot != null && metrics.currentRevenue != null
+        ? Math.max(fullPot - metrics.currentRevenue, 0)
+        : null;
     return {
-      revenue: f?.currentRevenue ?? metrics.currentRevenue,
-      forecast30: f?.forecastRevenue ?? null,
-      expiringRevenue: f?.expiringRevenue ?? null,
-      futureBookedRevenue: f?.futureBookedRevenue ?? null,
-      netChange: f?.netChange ?? null,
+      revenue: metrics.currentRevenue,
+      forecast30: null,
+      expiringRevenue: null,
+      futureBookedRevenue: null,
+      netChange: null,
       openPotential: openPot,
       fullPotential: fullPot,
       profit: metrics.currentProfit,
     };
-  }, [unitRevenueForecast, metrics]);
+  }, [metrics]);
 
   const unitNumber =
     safeUnit.unitId && safeUnit.unitId.split("-")[2]
@@ -1624,6 +1713,7 @@ function AdminUnitDetailPage() {
       }
       await reloadUnitCosts();
       await reloadUnitSnapshot();
+      await reloadUnitKpi();
       setCostForm({ cost_type: "", custom_type: "", amount_chf: "", frequency: "monthly" });
       setEditingCostId(null);
     } catch (err) {
@@ -1675,6 +1765,7 @@ function AdminUnitDetailPage() {
       }
       await reloadUnitCosts();
       await reloadUnitSnapshot();
+      await reloadUnitKpi();
     } catch (err) {
       setCostError(err.message || "Löschen fehlgeschlagen.");
     } finally {
@@ -1952,19 +2043,25 @@ function AdminUnitDetailPage() {
 
           <SectionCard
             title="Finanzübersicht"
-            subtitle="Aktuelle Finanzlogik und Potenzial dieser Unit"
+            subtitle={`KPI-Monat ${String(kpiMonth).padStart(2, "0")}/${kpiYear} (Backend revenue_forecast / profit_service)`}
           >
+            {unitKpiErr ? (
+              <p className="text-sm text-red-600 mb-3">{unitKpiErr}</p>
+            ) : null}
+            {unitKpiLoading ? (
+              <p className="text-sm text-slate-500 mb-3">KPI werden geladen …</p>
+            ) : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SmallStatCard
                 label="Vollbelegung Umsatz"
                 value={formatChfOrDash(metrics.fullRevenue)}
-                hint="Maximum bei voller Belegung"
+                hint="Listenpreis-Potenzial (Zimmer / Unit); nicht Backend-KPI"
                 accent="orange"
               />
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(metrics.currentRevenue)}
-                hint="Summe Monatsmiete aktiver Mietverhältnisse"
+                hint={`Erwarteter Monatsumsatz (GET /api/admin/profit, ${kpiMonth}/${kpiYear})`}
                 accent="green"
               />
               <SmallStatCard
@@ -1972,15 +2069,15 @@ function AdminUnitDetailPage() {
                 value={formatChfOrDash(metrics.runningCosts)}
                 hint={
                   landlordDepositInsuranceMonthly(unit) > 0
-                    ? "Monatlich (voll) + jährlich (/12) + Kautionsversicherung (/12). Einmalige Kosten werden nicht berücksichtigt."
-                    : "Monatlich (voll) + jährlich (/12). Einmalige Kosten werden nicht berücksichtigt."
+                    ? "Wie Backend: unit_costs (Monat/Jahr/12) + Kautionsversicherung/12; einmalige Kosten ausgeschlossen."
+                    : "Wie Backend: unit_costs (Monat/Jahr/12); einmalige Kosten ausgeschlossen."
                 }
                 accent="slate"
               />
               <SmallStatCard
                 label="Gewinn aktuell"
                 value={formatChfOrDash(metrics.currentProfit)}
-                hint="Umsatz minus laufende Kosten"
+                hint="Umsatz − Kosten (Backend profit_service)"
                 accent="slate"
               />
             </div>
@@ -2459,13 +2556,17 @@ function AdminUnitDetailPage() {
           <SmallStatCard
             label="Belegt in %"
             value={formatPercent(occupancyRate)}
-            hint="Aktuelle Auslastung"
+            hint={
+              unitKpiOcc != null
+                ? "Backend GET /api/admin/occupancy (heute)"
+                : "Aus Zimmer- und Mietverhältnis-Heuristik (nicht KPI-Monat)"
+            }
             accent="blue"
           />
           <SmallStatCard
             label="Leerstand"
             value={formatChfOrDash(metrics.vacancyLoss)}
-            hint="Fehlender Umsatz"
+            hint="Listenpreis-Potenzial minus Backend-KPI-Umsatz (Monat)"
             accent="rose"
           />
         </div>
@@ -2517,37 +2618,37 @@ function AdminUnitDetailPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <SectionCard
             title="Forecast für diese Unit"
-            subtitle="Operative Vorschau auf Umsatz und Potenzial"
+            subtitle="KPI-Umsatz/Gewinn aus Backend; 30-Tage-Heuristik hier nicht berechnet"
           >
             <div className="grid grid-cols-1 gap-4">
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(nextUnitForecast.revenue)}
-                hint="Aus aktiven Mietverhältnissen (heute)"
+                hint={`Gleich KPI-Monat (${kpiMonth}/${kpiYear}), Backend`}
                 accent="green"
               />
               <SmallStatCard
                 label="Erwarteter Umsatz in 30 Tagen"
                 value={formatChfOrDash(nextUnitForecast.forecast30)}
-                hint="Aktuell − wegfallend + bereits geplant (30 Tage)"
+                hint="— (keine separate Frontend-Berechnung)"
                 accent="blue"
               />
               <SmallStatCard
                 label="Wegfallender Umsatz"
                 value={formatChfOrDash(nextUnitForecast.expiringRevenue)}
-                hint="Aktive Verträge enden im Horizont"
+                hint="—"
                 accent="amber"
               />
               <SmallStatCard
                 label="Bereits geplanter Umsatz"
                 value={formatChfOrDash(nextUnitForecast.futureBookedRevenue)}
-                hint="Neue Verträge starten im Horizont"
+                hint="—"
                 accent="orange"
               />
               <SmallStatCard
                 label="Netto-Veränderung vs heute"
                 value={formatChfNetChange(nextUnitForecast.netChange)}
-                hint="Erwarteter Umsatz minus aktueller Umsatz"
+                hint="—"
                 accent={
                   nextUnitForecast.netChange == null
                     ? "slate"
@@ -2559,7 +2660,7 @@ function AdminUnitDetailPage() {
               <SmallStatCard
                 label="Gewinn aktuell"
                 value={formatChfOrDash(nextUnitForecast.profit)}
-                hint="Aktuelle Unit-Marge"
+                hint="Backend profit_service"
                 accent="slate"
               />
             </div>
@@ -2626,35 +2727,28 @@ function AdminUnitDetailPage() {
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(metrics.currentRevenue)}
-                hint="Live Umsatz"
+                hint={`Backend KPI ${kpiMonth}/${kpiYear}`}
                 accent="green"
               />
               <SmallStatCard
                 label="Break-Even"
                 value={formatChfOrDash(metrics.runningCosts)}
-                hint="Notwendiger Monatsumsatz"
+                hint="Notwendiger Monatsumsatz (Backend)"
                 accent="slate"
               />
               <SmallStatCard
                 label="Differenz"
-                value={formatChfOrDash(
-                  metrics.currentRevenue != null &&
-                    metrics.runningCosts != null
-                    ? metrics.currentRevenue - metrics.runningCosts
-                    : null
-                )}
+                value={formatChfOrDash(metrics.currentProfit)}
                 hint={
-                  metrics.currentRevenue != null &&
-                  metrics.runningCosts != null
-                    ? metrics.currentRevenue - metrics.runningCosts >= 0
-                      ? "Über Break-Even"
-                      : "Unter Break-Even"
+                  metrics.currentProfit != null
+                    ? metrics.currentProfit >= 0
+                      ? "Über Break-Even (Backend-Gewinn)"
+                      : "Unter Break-Even (Backend-Gewinn)"
                     : "Keine Daten vorhanden"
                 }
                 accent={
-                  metrics.currentRevenue != null &&
-                  metrics.runningCosts != null
-                    ? metrics.currentRevenue - metrics.runningCosts >= 0
+                  metrics.currentProfit != null
+                    ? metrics.currentProfit >= 0
                       ? "green"
                       : "rose"
                     : "slate"
