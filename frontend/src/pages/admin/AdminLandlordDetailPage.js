@@ -15,9 +15,13 @@ import {
   fetchAdminLandlordUnits,
   normalizeUnit,
   restoreAdminLandlord,
+  updateAdminLandlord,
   updateAdminLandlordNote,
   uploadAdminLandlordDocument,
+  verifyAdminAddress,
 } from "../../api/adminData";
+import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
+import { lookupSwissPlz } from "../../data/swissPlzLookup";
 import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
 import { resolveAuditFkDisplay } from "../../utils/auditFkDisplay";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
@@ -224,6 +228,27 @@ function AdminLandlordDetailPage() {
   const [userNameById, setUserNameById] = useState({});
   const userIdLookupFetchedRef = useRef(false);
 
+  const [landlordEditOpen, setLandlordEditOpen] = useState(false);
+  const [landlordEditSaving, setLandlordEditSaving] = useState(false);
+  const [landlordEditErr, setLandlordEditErr] = useState(null);
+  const [landlordEditForm, setLandlordEditForm] = useState({
+    company_name: "",
+    contact_name: "",
+    email: "",
+    phone: "",
+    address_line1: "",
+    postal_code: "",
+    city: "",
+    canton: "",
+    website: "",
+    notes: "",
+    status: "active",
+  });
+  const [landlordEditAddrBusy, setLandlordEditAddrBusy] = useState(false);
+  const [landlordEditCantonHint, setLandlordEditCantonHint] = useState("");
+  const [landlordEditCantonLockedByPlz, setLandlordEditCantonLockedByPlz] = useState(false);
+  const [landlordEditPlzNotFound, setLandlordEditPlzNotFound] = useState(false);
+
   const loadAuditLogs = useCallback(
     (opts = {}) => {
       const silent = opts.silent === true;
@@ -370,6 +395,10 @@ function AdminLandlordDetailPage() {
       .finally(() => setLandlordDocsLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    setLandlordEditCantonHint("");
+  }, [landlordEditForm.address_line1, landlordEditForm.postal_code, landlordEditForm.city]);
+
   if (loading) {
     return <p className="px-2 text-slate-500">Lade Verwaltung …</p>;
   }
@@ -499,6 +528,91 @@ function AdminLandlordDetailPage() {
     }
   }
 
+  const openLandlordEditModal = () => {
+    if (!row) return;
+    setLandlordEditErr(null);
+    setLandlordEditCantonLockedByPlz(false);
+    setLandlordEditPlzNotFound(false);
+    setLandlordEditForm({
+      company_name: row.company_name || "",
+      contact_name: row.contact_name || "",
+      email: row.email || "",
+      phone: row.phone || "",
+      address_line1: row.address_line1 || "",
+      postal_code: row.postal_code || "",
+      city: row.city || "",
+      canton: row.canton || "",
+      website: row.website || "",
+      notes: row.notes || "",
+      status: String(row.status || "active").toLowerCase() === "inactive" ? "inactive" : "active",
+    });
+    setLandlordEditOpen(true);
+  };
+
+  const handleLandlordEditPostalCodeChange = (e) => {
+    const next = e.target.value;
+    const plz = next.trim();
+    if (!/^\d{4}$/.test(plz)) {
+      setLandlordEditCantonLockedByPlz(false);
+      setLandlordEditPlzNotFound(false);
+      setLandlordEditForm((f) => ({ ...f, postal_code: next }));
+      return;
+    }
+    const hit = lookupSwissPlz(plz);
+    if (hit) {
+      setLandlordEditForm((f) => ({
+        ...f,
+        postal_code: next,
+        city: hit.city,
+        canton: hit.canton,
+      }));
+      setLandlordEditCantonLockedByPlz(true);
+      setLandlordEditPlzNotFound(false);
+    } else {
+      setLandlordEditForm((f) => ({ ...f, postal_code: next }));
+      setLandlordEditCantonLockedByPlz(false);
+      setLandlordEditPlzNotFound(true);
+    }
+  };
+
+  const submitLandlordEdit = () => {
+    if (!id || !row) return;
+    const addr1 = landlordEditForm.address_line1.trim();
+    const plz = landlordEditForm.postal_code.trim();
+    const ort = landlordEditForm.city.trim();
+    if (!addr1 || !plz || !ort) {
+      setLandlordEditErr("Bitte Adresse, PLZ und Ort ausfüllen.");
+      return;
+    }
+    if (!landlordEditForm.email.trim()) {
+      setLandlordEditErr("E-Mail ist erforderlich.");
+      return;
+    }
+    setLandlordEditSaving(true);
+    setLandlordEditErr(null);
+    updateAdminLandlord(id, {
+      company_name: landlordEditForm.company_name.trim() || null,
+      contact_name: landlordEditForm.contact_name.trim() || "—",
+      email: landlordEditForm.email.trim(),
+      phone: landlordEditForm.phone.trim() || null,
+      address_line1: addr1,
+      postal_code: plz,
+      city: ort,
+      canton: landlordEditForm.canton.trim() || null,
+      website: landlordEditForm.website.trim() || null,
+      notes: landlordEditForm.notes.trim() || null,
+      status: landlordEditForm.status === "inactive" ? "inactive" : "active",
+    })
+      .then(() => fetchAdminLandlord(id))
+      .then((data) => {
+        if (data) setRow(data);
+      })
+      .then(() => loadAuditLogs({ silent: true }))
+      .then(() => setLandlordEditOpen(false))
+      .catch((e) => setLandlordEditErr(e?.message || "Speichern fehlgeschlagen."))
+      .finally(() => setLandlordEditSaving(false));
+  };
+
   return (
     <div className="px-2 max-w-3xl">
       <p className="mb-4">
@@ -530,7 +644,7 @@ function AdminLandlordDetailPage() {
             {!isArchived ? (
               <button
                 type="button"
-                onClick={() => navigate(`/admin/landlords?edit=${encodeURIComponent(id)}`)}
+                onClick={openLandlordEditModal}
                 className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition-colors"
               >
                 Bearbeiten
@@ -1118,6 +1232,278 @@ function AdminLandlordDetailPage() {
           )}
         </section>
       </div>
+
+      {landlordEditOpen && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+          onClick={() => !landlordEditSaving && setLandlordEditOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="landlord-edit-title"
+          >
+            <h2 id="landlord-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
+              Verwaltung bearbeiten
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="ll-edit-company" className="block text-xs font-medium text-slate-500 mb-1">
+                  Firma (optional)
+                </label>
+                <input
+                  id="ll-edit-company"
+                  type="text"
+                  value={landlordEditForm.company_name}
+                  onChange={(e) =>
+                    setLandlordEditForm((f) => ({ ...f, company_name: e.target.value }))
+                  }
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="ll-edit-contact" className="block text-xs font-medium text-slate-500 mb-1">
+                  Kontaktperson (optional)
+                </label>
+                <input
+                  id="ll-edit-contact"
+                  type="text"
+                  value={landlordEditForm.contact_name}
+                  onChange={(e) =>
+                    setLandlordEditForm((f) => ({ ...f, contact_name: e.target.value }))
+                  }
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="ll-edit-email" className="block text-xs font-medium text-slate-500 mb-1">
+                  E-Mail *
+                </label>
+                <input
+                  id="ll-edit-email"
+                  type="email"
+                  value={landlordEditForm.email}
+                  onChange={(e) => setLandlordEditForm((f) => ({ ...f, email: e.target.value }))}
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="ll-edit-phone" className="block text-xs font-medium text-slate-500 mb-1">
+                  Telefon (optional)
+                </label>
+                <input
+                  id="ll-edit-phone"
+                  type="text"
+                  value={landlordEditForm.phone}
+                  onChange={(e) => setLandlordEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="ll-edit-addr" className="block text-xs font-medium text-slate-500 mb-1">
+                  Adresse *
+                </label>
+                <input
+                  id="ll-edit-addr"
+                  type="text"
+                  value={landlordEditForm.address_line1}
+                  onChange={(e) =>
+                    setLandlordEditForm((f) => ({ ...f, address_line1: e.target.value }))
+                  }
+                  disabled={landlordEditSaving}
+                  placeholder="Strasse Nr."
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="ll-edit-plz" className="block text-xs font-medium text-slate-500 mb-1">
+                  PLZ *
+                </label>
+                <input
+                  id="ll-edit-plz"
+                  type="text"
+                  value={landlordEditForm.postal_code}
+                  onChange={handleLandlordEditPostalCodeChange}
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+                {landlordEditPlzNotFound ? (
+                  <p className="mt-1 text-xs text-slate-400">PLZ nicht gefunden</p>
+                ) : null}
+              </div>
+              <div>
+                <label htmlFor="ll-edit-city" className="block text-xs font-medium text-slate-500 mb-1">
+                  Ort *
+                </label>
+                <input
+                  id="ll-edit-city"
+                  type="text"
+                  value={landlordEditForm.city}
+                  onChange={(e) => setLandlordEditForm((f) => ({ ...f, city: e.target.value }))}
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.open(
+                      buildGoogleMapsSearchUrl(
+                        landlordEditForm.address_line1,
+                        landlordEditForm.postal_code,
+                        landlordEditForm.city
+                      ),
+                      "_blank",
+                      "noopener,noreferrer"
+                    );
+                    setLandlordEditAddrBusy(true);
+                    setLandlordEditCantonHint("Kanton wird ermittelt …");
+                    verifyAdminAddress({
+                      address_line1: landlordEditForm.address_line1,
+                      postal_code: landlordEditForm.postal_code,
+                      city: landlordEditForm.city,
+                    })
+                      .then((res) => {
+                        const c = res?.normalized?.canton;
+                        if (res?.valid && c != null && String(c).trim() !== "") {
+                          const code = String(c).trim().toUpperCase();
+                          setLandlordEditForm((f) => ({ ...f, canton: code }));
+                          setLandlordEditCantonHint("Kanton automatisch erkannt.");
+                        } else {
+                          setLandlordEditCantonHint(
+                            "Kein Kanton automatisch ermittelbar. Bitte bei Bedarf manuell wählen."
+                          );
+                        }
+                      })
+                      .catch(() =>
+                        setLandlordEditCantonHint("Kanton konnte nicht automatisch ermittelt werden.")
+                      )
+                      .finally(() => setLandlordEditAddrBusy(false));
+                  }}
+                  disabled={
+                    landlordEditSaving ||
+                    landlordEditAddrBusy ||
+                    !(landlordEditForm.address_line1 || "").trim() ||
+                    !(landlordEditForm.postal_code || "").trim() ||
+                    !(landlordEditForm.city || "").trim()
+                  }
+                  className="self-start rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {landlordEditAddrBusy ? "…" : "Adresse prüfen"}
+                </button>
+                <p className="text-xs text-slate-500">
+                  Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
+                  Abfrage einen Wert liefert.
+                </p>
+                {landlordEditCantonHint ? (
+                  <p className="text-xs text-slate-500">{landlordEditCantonHint}</p>
+                ) : null}
+              </div>
+              <div>
+                <label htmlFor="ll-edit-canton" className="block text-xs font-medium text-slate-500 mb-1">
+                  Kanton
+                </label>
+                <p className="mb-1 text-xs text-slate-500">
+                  Optional — oft nach «Adresse prüfen» gesetzt; manuelle Auswahl möglich.
+                </p>
+                <select
+                  id="ll-edit-canton"
+                  value={landlordEditForm.canton || ""}
+                  onChange={(e) =>
+                    setLandlordEditForm((f) => ({ ...f, canton: e.target.value }))
+                  }
+                  disabled={landlordEditSaving || landlordEditCantonLockedByPlz}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white disabled:opacity-60"
+                >
+                  <option value="">—</option>
+                  {landlordEditForm.canton && !SWISS_CANTON_CODES.includes(landlordEditForm.canton) ? (
+                    <option value={landlordEditForm.canton}>{landlordEditForm.canton}</option>
+                  ) : null}
+                  {SWISS_CANTON_CODES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="ll-edit-website" className="block text-xs font-medium text-slate-500 mb-1">
+                  Website (optional)
+                </label>
+                <input
+                  id="ll-edit-website"
+                  type="text"
+                  value={landlordEditForm.website}
+                  onChange={(e) =>
+                    setLandlordEditForm((f) => ({ ...f, website: e.target.value }))
+                  }
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="ll-edit-notes" className="block text-xs font-medium text-slate-500 mb-1">
+                  Allgemeine Notizen (optional)
+                </label>
+                <textarea
+                  id="ll-edit-notes"
+                  value={landlordEditForm.notes}
+                  onChange={(e) =>
+                    setLandlordEditForm((f) => ({ ...f, notes: e.target.value }))
+                  }
+                  disabled={landlordEditSaving}
+                  rows={3}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="ll-edit-status" className="block text-xs font-medium text-slate-500 mb-1">
+                  Status
+                </label>
+                <select
+                  id="ll-edit-status"
+                  value={landlordEditForm.status}
+                  onChange={(e) =>
+                    setLandlordEditForm((f) => ({ ...f, status: e.target.value }))
+                  }
+                  disabled={landlordEditSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white disabled:opacity-60"
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                </select>
+              </div>
+              {landlordEditErr ? <p className="text-sm text-red-700">{landlordEditErr}</p> : null}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={submitLandlordEdit}
+                  disabled={landlordEditSaving}
+                  className="flex-1 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
+                >
+                  {landlordEditSaving ? "Speichern …" : "Speichern"}
+                </button>
+                <button
+                  type="button"
+                  disabled={landlordEditSaving}
+                  onClick={() => setLandlordEditOpen(false)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {restoreModalOpen && (
         <div

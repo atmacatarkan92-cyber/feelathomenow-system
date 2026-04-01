@@ -1768,7 +1768,7 @@ function AdminUnitDetailPage() {
                       "…"
                     ) : (
                       <Link
-                        to={`/admin/landlords?edit=${encodeURIComponent(unit.landlord_id)}`}
+                        to={`/admin/landlords/${encodeURIComponent(unit.landlord_id)}`}
                         className="text-orange-600 hover:underline"
                       >
                         {verwaltungLabel || "—"}
@@ -1788,7 +1788,7 @@ function AdminUnitDetailPage() {
                       "…"
                     ) : (
                       <Link
-                        to={`/admin/bewirtschafter?edit=${encodeURIComponent(unit.property_manager_id)}`}
+                        to={`/admin/bewirtschafter/${encodeURIComponent(unit.property_manager_id)}`}
                         className="text-orange-600 hover:underline"
                       >
                         {bewirtschafterLabel || "—"}
@@ -1803,9 +1803,16 @@ function AdminUnitDetailPage() {
               <div>
                 <p className="text-sm text-slate-500">Eigentümer</p>
                 <p className="font-medium">
-                  {unit.owner_id
-                    ? String(unit.ownerName ?? unit.owner_name ?? "").trim() || "—"
-                    : "Kein Eigentümer zugeordnet"}
+                  {unit.owner_id ? (
+                    <Link
+                      to={`/admin/owners/${encodeURIComponent(unit.owner_id)}`}
+                      className="text-orange-600 hover:underline"
+                    >
+                      {String(unit.ownerName ?? unit.owner_name ?? "").trim() || "—"}
+                    </Link>
+                  ) : (
+                    "Kein Eigentümer zugeordnet"
+                  )}
                 </p>
               </div>
 
