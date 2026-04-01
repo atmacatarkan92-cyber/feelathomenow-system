@@ -238,6 +238,66 @@ function revenueFrequencyLabel(freq) {
   return "Monatlich";
 }
 
+/** Stable API/storage values with German labels in UI */
+const REVENUE_TYPE_OPTIONS = [
+  { value: "rent", label: "Miete" },
+  { value: "service_fee", label: "Servicegebühr" },
+  { value: "utilities", label: "Nebenkosten" },
+  { value: "furniture", label: "Möbelbenutzung" },
+  { value: "cleaning", label: "Reinigung" },
+  { value: "setup_fee", label: "Setup Fee" },
+  { value: "other", label: "Sonstiges" },
+];
+const REVENUE_TYPE_VALUE_SET = new Set(REVENUE_TYPE_OPTIONS.map((o) => o.value));
+
+function revenueTypeLabelForDisplay(raw) {
+  const v = String(raw || "").trim();
+  if (!v) return "—";
+  const hit = REVENUE_TYPE_OPTIONS.find((o) => o.value === v);
+  return hit ? hit.label : v;
+}
+
+function applyRecurringRevenueDatesFromTenancy(form, freqRaw, moveInRaw, moveOutRaw) {
+  const nf = normalizeRevenueFrequency(freqRaw);
+  const mi = dateOnlyOrNull(moveInRaw) || "";
+  const mo = dateOnlyOrNull(moveOutRaw) || "";
+  if (nf === "one_time") {
+    return { ...form, frequency: freqRaw, start_date: "", end_date: "" };
+  }
+  return {
+    ...form,
+    frequency: freqRaw,
+    start_date: form.start_date || mi,
+    end_date: form.end_date || mo || "",
+  };
+}
+
+function RevenueTypeSelect({ value, onChange, disabled, id, selectStyle }) {
+  const v = String(value || "").trim();
+  const legacy = v && !REVENUE_TYPE_VALUE_SET.has(v);
+  const selectValue = legacy ? v : v || "rent";
+  return (
+    <select
+      id={id}
+      style={{ ...selectStyle, cursor: disabled ? "default" : "pointer" }}
+      value={selectValue}
+      onChange={onChange}
+      disabled={disabled}
+    >
+      {legacy ? (
+        <option value={v}>
+          {v}
+        </option>
+      ) : null}
+      {REVENUE_TYPE_OPTIONS.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function monthlyEquivalentFromRevenueRows(rows) {
   if (!Array.isArray(rows)) return 0;
   let sum = 0;
@@ -633,6 +693,8 @@ export default function AdminTenantDetailPage() {
   const [tenancyEditTenantDepositProvider, setTenancyEditTenantDepositProvider] = useState("");
   const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
   const [tenancyEditErr, setTenancyEditErr] = useState(null);
+  const tenancyEditBaselineMoveOutRef = useRef("");
+  const tenancyEditPrevMoveOutRef = useRef("");
 
   const [tenancyRevenueByTenancyId, setTenancyRevenueByTenancyId] = useState({});
   const [tenancyRevenueLoadingId, setTenancyRevenueLoadingId] = useState(null);
@@ -687,9 +749,11 @@ export default function AdminTenantDetailPage() {
       const list = Array.isArray(items) ? items : [];
       setTenancies(list);
       await prefetchTenancyRevenueForTenancyList(list);
+      return list;
     } catch {
       setTenancies([]);
       setTenancyRevenueByTenancyId({});
+      return [];
     }
   }, [tenantId, prefetchTenancyRevenueForTenancyList]);
 
@@ -700,6 +764,8 @@ export default function AdminTenantDetailPage() {
     setTenancyEditTenantDepositType("");
     setTenancyEditTenantDepositAmount("");
     setTenancyEditTenantDepositProvider("");
+    tenancyEditBaselineMoveOutRef.current = "";
+    tenancyEditPrevMoveOutRef.current = "";
     setTenancyRevenueErr(null);
     setRevenueEditingId(null);
     setRevenueForm({
@@ -717,7 +783,10 @@ export default function AdminTenantDetailPage() {
     setTenancyEditErr(null);
     const raw = tn.move_out_date;
     const s = raw != null && raw !== "" ? String(raw) : "";
-    setTenancyEditMoveOut(/^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : "");
+    const moNorm = /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : "";
+    setTenancyEditMoveOut(moNorm);
+    tenancyEditBaselineMoveOutRef.current = moNorm;
+    tenancyEditPrevMoveOutRef.current = moNorm;
     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
     setTenancyEditTenantDepositType(tdt || "");
     const tda = tn.tenant_deposit_amount;
@@ -731,12 +800,14 @@ export default function AdminTenantDetailPage() {
     const tid = tn?.id != null ? String(tn.id) : "";
     setTenancyRevenueErr(null);
     setRevenueEditingId(null);
+    const mi = dateOnlyOrNull(tn.move_in_date) || "";
+    const mo = dateOnlyOrNull(tn.move_out_date) || "";
     setRevenueForm({
       type: "rent",
       amount_chf: "",
       frequency: "monthly",
-      start_date: "",
-      end_date: "",
+      start_date: mi,
+      end_date: mo || "",
       notes: "",
     });
     if (tid && tenancyRevenueByTenancyId?.[tid] == null) {
@@ -798,20 +869,64 @@ export default function AdminTenantDetailPage() {
     setTenancyRevenueErr(null);
   };
 
-  const cancelRevenueEdit = () => {
+  const cancelRevenueEdit = (tn) => {
+    const parentTenancyId = tenancyEditingId;
     setRevenueEditingId(null);
+    if (!tn) {
+      setRevenueForm({
+        type: "rent",
+        amount_chf: "",
+        frequency: "monthly",
+        start_date: "",
+        end_date: "",
+        notes: "",
+      });
+      setTenancyRevenueErr(null);
+      return;
+    }
+    const mi = dateOnlyOrNull(tn.move_in_date) || "";
+    const moDb = dateOnlyOrNull(tn.move_out_date) || "";
+    const tid = String(tn.id);
+    const moForm =
+      parentTenancyId && String(parentTenancyId) === tid ? dateOnlyOrNull(tenancyEditMoveOut) || "" : "";
+    const moEff = moForm || moDb;
     setRevenueForm({
       type: "rent",
       amount_chf: "",
       frequency: "monthly",
-      start_date: "",
-      end_date: "",
+      start_date: mi,
+      end_date: moEff || "",
       notes: "",
     });
     setTenancyRevenueErr(null);
   };
 
-  const submitRevenueForm = async (tenancyId) => {
+  useEffect(() => {
+    if (!tenancyEditingId) return;
+    const tid = String(tenancyEditingId);
+    const prev = tenancyEditPrevMoveOutRef.current;
+    const next = dateOnlyOrNull(tenancyEditMoveOut) || "";
+    if (prev === next) return;
+
+    setTenancyRevenueByTenancyId((prevState) => {
+      const rows = prevState?.[tid];
+      if (!Array.isArray(rows)) return prevState;
+      const baseline = tenancyEditBaselineMoveOutRef.current;
+      const updated = rows.map((row) => {
+        const f = normalizeRevenueFrequency(row.frequency);
+        if (f === "one_time") return row;
+        const ed = row.end_date ? String(row.end_date).slice(0, 10) : "";
+        const shouldSync =
+          ed === "" || ed === prev || (baseline !== "" && ed === baseline);
+        if (!shouldSync) return row;
+        return { ...row, end_date: next || null };
+      });
+      return { ...prevState, [tid]: updated };
+    });
+    tenancyEditPrevMoveOutRef.current = next;
+  }, [tenancyEditMoveOut, tenancyEditingId]);
+
+  const submitRevenueForm = async (tenancyId, tnForDefaults) => {
     const tid = tenancyId != null ? String(tenancyId) : "";
     if (!tid) return;
     const type = String(revenueForm.type || "").trim();
@@ -847,8 +962,9 @@ export default function AdminTenantDetailPage() {
       } else {
         await createAdminTenancyRevenue(tid, body);
       }
-      await reloadTenanciesForTenant();
-      cancelRevenueEdit();
+      const list = await reloadTenanciesForTenant();
+      const fresh = Array.isArray(list) ? list.find((x) => String(x.id) === tid) : null;
+      cancelRevenueEdit(fresh || tnForDefaults || null);
     } catch (err) {
       setTenancyRevenueErr(err?.message || "Speichern fehlgeschlagen.");
     } finally {
@@ -856,7 +972,7 @@ export default function AdminTenantDetailPage() {
     }
   };
 
-  const deleteRevenueRow = async (tenancyId, row) => {
+  const deleteRevenueRow = async (tenancyId, row, tnForDefaults) => {
     const tid = tenancyId != null ? String(tenancyId) : "";
     const rid = row?.id != null ? String(row.id) : "";
     if (!tid || !rid) return;
@@ -865,8 +981,11 @@ export default function AdminTenantDetailPage() {
     setTenancyRevenueLoadingId(tid);
     try {
       await deleteAdminTenancyRevenue(rid);
-      await reloadTenanciesForTenant();
-      if (revenueEditingId === rid) cancelRevenueEdit();
+      const list = await reloadTenanciesForTenant();
+      if (revenueEditingId === rid) {
+        const fresh = Array.isArray(list) ? list.find((x) => String(x.id) === tid) : null;
+        cancelRevenueEdit(fresh || tnForDefaults || null);
+      }
     } catch (err) {
       setTenancyRevenueErr(err?.message || "Löschen fehlgeschlagen.");
     } finally {
@@ -1096,7 +1215,7 @@ export default function AdminTenantDetailPage() {
       type: "rent",
       amount_chf: "",
       frequency: "monthly",
-      start_date: "",
+      start_date: today,
       end_date: "",
       notes: "",
     });
@@ -1994,14 +2113,15 @@ export default function AdminTenantDetailPage() {
 
                                       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
                                         <div>
-                                          <label style={labelStyle}>Typ</label>
-                                          <input
-                                            type="text"
-                                            style={inputStyle}
+                                          <label htmlFor={`rev-type-${String(tn.id)}`} style={labelStyle}>
+                                            Typ
+                                          </label>
+                                          <RevenueTypeSelect
+                                            id={`rev-type-${String(tn.id)}`}
+                                            selectStyle={inputStyle}
                                             value={revenueForm.type}
                                             onChange={(e) => setRevenueForm((f) => ({ ...f, type: e.target.value }))}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                            placeholder="z. B. rent, service_fee"
                                           />
                                         </div>
                                         <div>
@@ -2021,7 +2141,16 @@ export default function AdminTenantDetailPage() {
                                           <select
                                             style={{ ...inputStyle, cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer" }}
                                             value={revenueForm.frequency}
-                                            onChange={(e) => setRevenueForm((f) => ({ ...f, frequency: e.target.value }))}
+                                            onChange={(e) =>
+                                              setRevenueForm((f) =>
+                                                applyRecurringRevenueDatesFromTenancy(
+                                                  f,
+                                                  e.target.value,
+                                                  tn.move_in_date,
+                                                  tenancyEditMoveOut || tn.move_out_date
+                                                )
+                                              )
+                                            }
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
                                           >
                                             <option value="monthly">Monatlich</option>
@@ -2063,7 +2192,7 @@ export default function AdminTenantDetailPage() {
                                         <div style={{ display: "inline-flex", gap: "8px" }}>
                                           <button
                                             type="button"
-                                            onClick={() => submitRevenueForm(tn.id)}
+                                            onClick={() => submitRevenueForm(tn.id, tn)}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
                                             style={{
                                               padding: "7px 12px",
@@ -2079,7 +2208,7 @@ export default function AdminTenantDetailPage() {
                                           </button>
                                           <button
                                             type="button"
-                                            onClick={cancelRevenueEdit}
+                                            onClick={() => cancelRevenueEdit(tn)}
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
                                             style={{
                                               padding: "7px 12px",
@@ -2117,7 +2246,7 @@ export default function AdminTenantDetailPage() {
                                                   : "—";
                                                 return (
                                                   <tr key={rid}>
-                                                    <td style={tdCell}>{rr.type || "—"}</td>
+                                                    <td style={tdCell}>{revenueTypeLabelForDisplay(rr.type)}</td>
                                                     <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#0F172A" }}>
                                                       {formatChfRent(rr.amount_chf)}
                                                     </td>
@@ -2144,7 +2273,7 @@ export default function AdminTenantDetailPage() {
                                                         </button>
                                                         <button
                                                           type="button"
-                                                          onClick={() => deleteRevenueRow(tn.id, rr)}
+                                                          onClick={() => deleteRevenueRow(tn.id, rr, tn)}
                                                           disabled={tenancyRevenueLoadingId === String(tn.id)}
                                                           style={{
                                                             padding: "4px 10px",
@@ -2334,10 +2463,12 @@ export default function AdminTenantDetailPage() {
                         </div>
                         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
                           <div>
-                            <label style={labelStyle}>Typ</label>
-                            <input
-                              type="text"
-                              style={inputStyle}
+                            <label htmlFor="assign-rev-type" style={labelStyle}>
+                              Typ
+                            </label>
+                            <RevenueTypeSelect
+                              id="assign-rev-type"
+                              selectStyle={inputStyle}
                               value={assignRevenueForm.type}
                               onChange={(e) => setAssignRevenueForm((f) => ({ ...f, type: e.target.value }))}
                               disabled={assignSaving}
@@ -2361,7 +2492,16 @@ export default function AdminTenantDetailPage() {
                             <select
                               style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
                               value={assignRevenueForm.frequency}
-                              onChange={(e) => setAssignRevenueForm((f) => ({ ...f, frequency: e.target.value }))}
+                              onChange={(e) =>
+                                setAssignRevenueForm((f) =>
+                                  applyRecurringRevenueDatesFromTenancy(
+                                    f,
+                                    e.target.value,
+                                    assignMoveIn,
+                                    assignMoveOut
+                                  )
+                                )
+                              }
                               disabled={assignSaving}
                             >
                               <option value="monthly">Monatlich</option>
@@ -2404,13 +2544,22 @@ export default function AdminTenantDetailPage() {
                             disabled={assignSaving}
                             onClick={() => {
                               const id = `ar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                              const freq = normalizeRevenueFrequency(assignRevenueForm.frequency);
+                              const mi = dateOnlyOrNull(assignMoveIn) || "";
+                              const mo = dateOnlyOrNull(assignMoveOut) || "";
+                              let sd = assignRevenueForm.start_date;
+                              let ed = assignRevenueForm.end_date;
+                              if (freq === "monthly" || freq === "yearly") {
+                                if (!dateOnlyOrNull(sd)) sd = mi;
+                                if (!dateOnlyOrNull(ed) && mo) ed = mo;
+                              }
                               const row = {
                                 id,
                                 type: String(assignRevenueForm.type || "").trim(),
                                 amount_chf: assignRevenueForm.amount_chf,
-                                frequency: normalizeRevenueFrequency(assignRevenueForm.frequency),
-                                start_date: assignRevenueForm.start_date,
-                                end_date: assignRevenueForm.end_date,
+                                frequency: freq,
+                                start_date: sd,
+                                end_date: ed,
                                 notes: assignRevenueForm.notes,
                               };
                               setAssignRevenueRows((prev) => [...(Array.isArray(prev) ? prev : []), row]);
@@ -2442,7 +2591,7 @@ export default function AdminTenantDetailPage() {
                             <tbody>
                               {(Array.isArray(assignRevenueRows) ? assignRevenueRows : []).map((rr) => (
                                 <tr key={rr.id}>
-                                  <td style={tdCell}>{rr.type || "—"}</td>
+                                  <td style={tdCell}>{revenueTypeLabelForDisplay(rr.type)}</td>
                                   <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#0F172A" }}>
                                     {formatChfRent(parseRevenueAmount(rr.amount_chf) ?? rr.amount_chf)}
                                   </td>
