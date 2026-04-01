@@ -11,12 +11,16 @@ function AdminLayout() {
   const { theme } = useTheme();
 
   const isDark = theme === "dark";
-  const shellClass = "bg-[var(--bg-page)] text-[var(--text-primary)]";
-  const mainClass = "bg-[var(--bg-page)]";
+  const shellClass = isDark
+    ? "bg-[#07090f] text-[#eef2ff]"
+    : "bg-[#f8fafc] text-[#0f172a]";
+  const mainClass = isDark
+    ? "bg-[#07090f]"
+    : "bg-[#f8fafc]";
   const scrollbarStyle = isDark
     ? { scrollbarColor: "rgba(255,255,255,0.12) #07090f" }
     : { scrollbarColor: "rgba(15,23,42,0.2) #f8fafc" };
-  const loadingTextClass = "text-[var(--text-muted)]";
+  const loadingTextClass = isDark ? "text-[#6b7a9a]" : "text-[#64748b]";
 
   if (isLoginPage) {
     return (
