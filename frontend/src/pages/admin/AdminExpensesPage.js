@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchAdminUnits, fetchAdminUnitCosts, normalizeUnit } from "../../api/adminData";
 import { isLandlordContractLeaseStarted, parseIsoDate } from "../../utils/unitOccupancyStatus";
 import {
@@ -82,6 +83,7 @@ function AdminExpensesPage() {
       return {
         id: unit.id,
         unitId: unit.unitId,
+        address: unit.address,
         place: unit.place,
         type: unit.type,
         rent,
@@ -231,7 +233,17 @@ function AdminExpensesPage() {
                   <td
                     className="p-3 text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
                   >
-                    {row.unitId}
+                    <Link
+                      to={`/admin/units/${encodeURIComponent(row.unitId || row.id)}`}
+                      className="block font-medium text-sky-700 hover:underline dark:text-sky-400"
+                    >
+                      {String(row.address || "").trim() || row.unitId}
+                    </Link>
+                    {row.unitId && String(row.address || "").trim() ? (
+                      <span className="mt-0.5 block break-all font-mono text-[10px] font-normal text-slate-600 dark:text-[#6b7a9a]">
+                        {row.unitId}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {row.place}
@@ -258,21 +270,11 @@ function AdminExpensesPage() {
                   </td>
                   <td style={{ padding: "12px" }}>
                     <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        padding: "6px 10px",
-                        borderRadius: "999px",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        background: row.leaseStarted
-                          ? "rgba(34, 197, 94, 0.1)"
-                          : "rgba(245, 158, 11, 0.1)",
-                        color: row.leaseStarted ? "#4ade80" : "#fbbf24",
-                        border: row.leaseStarted
-                          ? "1px solid rgba(34, 197, 94, 0.2)"
-                          : "1px solid rgba(245, 158, 11, 0.2)",
-                      }}
+                      className={`inline-flex items-center rounded-full border px-[10px] py-[6px] text-[10px] font-bold ${
+                        row.leaseStarted
+                          ? "bg-emerald-100 border-emerald-300 text-emerald-700 dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400"
+                          : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                      }`}
                     >
                       {row.leaseStarted ? "Aktiv" : "Start in Zukunft"}
                     </span>
