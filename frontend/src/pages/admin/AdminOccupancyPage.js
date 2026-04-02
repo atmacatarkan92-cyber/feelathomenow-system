@@ -28,18 +28,25 @@ function StatCard({ label, value, hint, color = "slate" }) {
   };
   const val = {
     slate: "text-[#0f172a] dark:text-[#eef2ff]",
-    green: "text-[#4ade80]",
-    amber: "text-[#fbbf24]",
-    rose: "text-[#f87171]",
+    green: "text-emerald-700 dark:text-[#4ade80]",
+    amber: "text-amber-700 dark:text-[#fbbf24]",
+    rose: "text-rose-700 dark:text-[#f87171]",
     blue: "text-[#7aaeff]",
+  };
+  const shell = {
+    slate: "",
+    green: "bg-emerald-100 border-emerald-300",
+    amber: "bg-amber-100 border-amber-300",
+    rose: "bg-rose-100 border-rose-300",
+    blue: "",
   };
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[14px] border border-black/10 bg-white border-t-4 dark:border-white/[0.07] dark:bg-[#141824] p-5 ${top[color]}`}
+      className={`relative overflow-hidden rounded-[14px] border border-black/10 bg-white border-t-4 dark:border-white/[0.07] dark:bg-[#141824] p-5 ${top[color]} ${shell[color] || ""}`}
     >
       <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
-      <p className={`mt-2 text-[24px] font-bold ${val[color]}`}>{value}</p>
+      <p className={`mt-2 text-[24px] font-semibold ${val[color]}`}>{value}</p>
       {hint ? <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
@@ -362,13 +369,13 @@ function AdminOccupancyPage() {
                   <td className="py-4 pr-4 font-medium">{row.place}</td>
                   <td className="py-4 pr-4 font-medium text-[#7aaeff]">{row.address}</td>
                   <td className="py-4 pr-4">{row.totalRooms}</td>
-                  <td className="py-4 pr-4 font-medium text-[#4ade80]">{row.occupiedCount}</td>
-                  <td className="py-4 pr-4 font-medium text-[#fbbf24]">{row.reservedCount}</td>
-                  <td className="py-4 pr-4 font-medium text-[#f87171]">{row.freeCount}</td>
-                  <td className="py-4 pr-4 font-medium">
+                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">{row.occupiedCount}</td>
+                  <td className="py-4 pr-4 font-semibold text-amber-600 dark:text-amber-400">{row.reservedCount}</td>
+                  <td className="py-4 pr-4 font-semibold text-rose-600 dark:text-rose-400">{row.freeCount}</td>
+                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
                     {formatPercent(row.occupancyRate)}
                   </td>
-                  <td className="py-4 pr-4 font-medium">
+                  <td className="py-4 pr-4 font-semibold text-amber-600 dark:text-amber-400">
                     {formatPercent(row.reservedRate)}
                   </td>
                   <td className="py-4 pr-4">
@@ -418,7 +425,7 @@ function AdminOccupancyPage() {
           {weakestUnits.map((row) => (
             <div
               key={row.unitId}
-              className="rounded-[10px] border border-black/10 bg-slate-100 dark:border-white/[0.08] dark:bg-[#111520] p-4"
+              className="rounded-[10px] border border-rose-300 bg-rose-100 dark:border-white/[0.08] dark:bg-[#111520] p-4"
             >
               <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">{row.place}</p>
               <p className="mt-1 text-[15px] font-bold text-[#7aaeff]">
@@ -431,7 +438,7 @@ function AdminOccupancyPage() {
                   {row.unitId}
                 </p>
               ) : null}
-              <p className="mt-3 text-[24px] font-bold text-[#f87171]">
+              <p className="mt-3 text-[24px] font-semibold text-rose-700 dark:text-[#f87171]">
                 {formatPercent(row.occupancyRate)}
               </p>
               <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
