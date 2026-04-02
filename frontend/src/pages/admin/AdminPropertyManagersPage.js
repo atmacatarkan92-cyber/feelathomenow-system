@@ -27,6 +27,23 @@ function landlordLabel(l) {
   return c || n || String(l.email || "").trim() || l.id;
 }
 
+/** Omits placeholder "—" parts so the UI does not show trailing "— —". */
+function landlordDisplayLabel(l) {
+  if (!l) return "";
+  const norm = (v) => {
+    const t = String(v ?? "").trim();
+    if (!t || t === "—") return "";
+    return t;
+  };
+  const c = norm(l.company_name);
+  const n = norm(l.contact_name);
+  if (c && n) return `${c} — ${n}`;
+  if (c || n) return c || n;
+  const em = norm(l.email);
+  if (em) return em;
+  return l.id != null ? String(l.id) : "";
+}
+
 function AdminPropertyManagersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkHandled = useRef(false);
@@ -154,7 +171,7 @@ function AdminPropertyManagersPage() {
     if (!term) return result;
     return result.filter((item) => {
       const ll = item.landlord_id ? landlordById.get(item.landlord_id) : null;
-      const landlordStr = ll ? landlordLabel(ll) : "";
+      const landlordStr = ll ? landlordDisplayLabel(ll) : "";
       const blob = `${item.name || ""} ${item.email || ""} ${item.phone || ""} ${landlordStr}`.toLowerCase();
       return blob.includes(term);
     });
@@ -294,9 +311,9 @@ function AdminPropertyManagersPage() {
         {filteredRows.length === 0 ? (
           <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Bewirtschafter gefunden.</p>
         ) : (
-          <table className="w-full border-collapse text-[14px]">
+          <table className="w-full border-collapse text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
             <thead>
-              <tr className="border-b border-black/10 dark:border-white/[0.05] bg-slate-100 dark:bg-[#111520] text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+              <tr className="border-b border-black/10 bg-slate-100 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:border-white/[0.05] dark:bg-[#111520] dark:text-[#6b7a9a]">
                 <th className="px-3 py-3">Name</th>
                 <th className="px-3 py-3">E-Mail</th>
                 <th className="px-3 py-3">Telefon</th>
@@ -311,18 +328,35 @@ function AdminPropertyManagersPage() {
                 const ll = item.landlord_id ? landlordById.get(item.landlord_id) : null;
                 return (
                   <tr key={item.id} className="border-b border-black/10 dark:border-white/[0.05]">
-                    <td className="px-3 py-3 font-semibold text-[#0f172a] dark:text-[#eef2ff]">{item.name || "—"}</td>
-                    <td className="px-3 py-3 text-[#0f172a] dark:text-[#eef2ff]">{item.email || "—"}</td>
-                    <td className="px-3 py-3 text-[#0f172a] dark:text-[#eef2ff]">{item.phone || "—"}</td>
-                    <td className="px-3 py-3 font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                      {ll ? landlordLabel(ll) : "—"}
+                    <td className="px-3 py-3 align-top font-semibold text-[#0f172a] dark:text-[#eef2ff]">
+                      {item.name || "—"}
                     </td>
-                    <td className="px-3 py-3 text-[#0f172a] dark:text-[#eef2ff]">{formatDate(item.created_at)}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                      {item.email || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                      {item.phone || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                      {ll && landlordDisplayLabel(ll) ? (
+                        <Link
+                          to={`/admin/landlords/${encodeURIComponent(ll.id)}`}
+                          className="text-[13px] font-medium text-blue-700 no-underline hover:underline dark:text-blue-400"
+                        >
+                          {landlordDisplayLabel(ll)}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                      {formatDate(item.created_at)}
+                    </td>
+                    <td className="px-3 py-3 align-top">
                       <div className="flex flex-wrap items-center gap-2">
                         <Link
                           to={`/admin/bewirtschafter/${encodeURIComponent(item.id)}`}
-                          className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] dark:text-[#8090b0] no-underline hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                          className="inline-block rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#64748b] no-underline hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                         >
                           Öffnen
                         </Link>

@@ -23,6 +23,22 @@ function landlordLabel(l) {
   return c || n || String(l.email || "").trim() || l.id;
 }
 
+function landlordDisplayLabel(l) {
+  if (!l) return "";
+  const norm = (v) => {
+    const t = String(v ?? "").trim();
+    if (!t || t === "—") return "";
+    return t;
+  };
+  const c = norm(l.company_name);
+  const n = norm(l.contact_name);
+  if (c && n) return `${c} — ${n}`;
+  if (c || n) return c || n;
+  const em = norm(l.email);
+  if (em) return em;
+  return l.id != null ? String(l.id) : "";
+}
+
 function formatChfMonthly(value) {
   const n = Number(value);
   if (Number.isNaN(n)) return "—";
@@ -33,19 +49,22 @@ function unitTypeBadgeClasses(type) {
   const raw = String(type ?? "").trim();
   const normalized = normalizeUnitTypeLabel(raw);
   if (normalized === "Co-Living") {
-    return "border-sky-500/20 bg-sky-500/10 text-sky-300";
+    return "border-sky-300 bg-sky-100 text-sky-800 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300";
   }
   if (raw === "Business Apartment") {
-    return "border-purple-500/20 bg-purple-500/10 text-purple-300";
+    return "border-purple-300 bg-purple-100 text-purple-800 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-300";
   }
   return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
 function unitStatusBadgeClasses(status) {
   const s = String(status ?? "").trim().toLowerCase();
-  if (s === "frei" || s === "") return "border-green-500/20 bg-green-500/10 text-green-400";
-  if (s === "belegt" || s === "occupied") return "border-blue-500/20 bg-blue-500/10 text-blue-300";
-  if (s === "reserviert" || s === "reserved") return "border-amber-500/20 bg-amber-500/10 text-amber-400";
+  if (s === "frei" || s === "")
+    return "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400";
+  if (s === "belegt" || s === "occupied")
+    return "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300";
+  if (s === "reserviert" || s === "reserved")
+    return "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400";
   return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
@@ -379,7 +398,7 @@ function AdminPropertyManagerDetailPage() {
       <p className="mb-4">
         <Link
           to="/admin/bewirtschafter"
-          className="text-sm font-semibold text-[#7aaeff] hover:underline"
+          className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
         >
           ← Bewirtschafter
         </Link>
@@ -392,8 +411,8 @@ function AdminPropertyManagerDetailPage() {
             <span
               className={
                 isPmActive
-                  ? "inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400"
-                  : "inline-flex items-center rounded-full border border-black/10 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]"
+                  ? "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  : "inline-flex items-center rounded-full border border-black/10 bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]"
               }
             >
               {isPmActive ? "Aktiv" : "Inaktiv"}
@@ -405,7 +424,7 @@ function AdminPropertyManagerDetailPage() {
           <button
             type="button"
             onClick={openEditModal}
-            className="inline-flex items-center rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-sm font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+            className="inline-flex items-center rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
           >
             Bearbeiten
           </button>
@@ -446,32 +465,32 @@ function AdminPropertyManagerDetailPage() {
         </div>
       </section>
 
-      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+      <section className="mb-4 rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
           Zugeordnete Verwaltung
         </h2>
         {!pm.landlord_id ? (
-          <p className="text-sm text-[#6b7a9a]">Keine Verwaltung zugeordnet</p>
+          <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Keine Verwaltung zugeordnet</p>
         ) : landlordRow === undefined ? (
-          <p className="text-sm text-[#6b7a9a]">Lade Verwaltung …</p>
+          <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Verwaltung …</p>
         ) : landlordRow ? (
           <div>
             <Link
               to={`/admin/landlords/${encodeURIComponent(pm.landlord_id)}`}
-              className="text-sm font-semibold text-[#7aaeff] underline-offset-2 hover:underline"
+              className="text-sm font-medium text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
             >
-              {landlordLabel(landlordRow)}
+              {landlordDisplayLabel(landlordRow) || landlordLabel(landlordRow)}
             </Link>
           </div>
         ) : (
-          <p className="text-sm text-[#6b7a9a]">
+          <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">
             Die zugeordnete Verwaltung konnte nicht geladen werden.
           </p>
         )}
       </section>
 
-      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Notizen</h2>
+      <section className="mb-4 rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Notizen</h2>
         <form
           className="mb-6"
           onSubmit={(e) => {
@@ -479,7 +498,7 @@ function AdminPropertyManagerDetailPage() {
             saveNewNote();
           }}
         >
-          <label htmlFor="pm-new-note" className="mb-1.5 block text-[10px] text-[#6b7a9a]">
+          <label htmlFor="pm-new-note" className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
             Neue Notiz
           </label>
           <textarea
@@ -492,7 +511,7 @@ function AdminPropertyManagerDetailPage() {
             disabled={newNoteSaving}
             placeholder="Interne Notiz …"
             rows={3}
-            className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] placeholder:text-[#6b7a9a]/70 focus:outline-none focus:ring-2 focus:ring-[#7aaeff]/30 disabled:opacity-60"
+            className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b]/70 focus:outline-none focus:ring-2 focus:ring-[#7aaeff]/30 disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]/70"
           />
           {newNoteErr ? <p className="mt-2 text-sm text-[#f87171]">{newNoteErr}</p> : null}
           {newNoteSubmitErr ? <p className="mt-2 text-sm text-[#f87171]">{newNoteSubmitErr}</p> : null}
@@ -506,22 +525,22 @@ function AdminPropertyManagerDetailPage() {
             </button>
           </div>
         </form>
-        <div className="border-t border-white/[0.05] pt-5">
-          <p className="mb-3 text-[10px] text-[#6b7a9a]">Alle Notizen</p>
+        <div className="border-t border-black/10 pt-5 dark:border-white/[0.05]">
+          <p className="mb-3 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Alle Notizen</p>
           {notesLoading ? (
-            <p className="text-sm text-[#6b7a9a]">Lade Notizen …</p>
+            <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Notizen …</p>
           ) : !notes.length ? (
-            <p className="text-sm text-[#6b7a9a]">Noch keine Notizen vorhanden.</p>
+            <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch keine Notizen vorhanden.</p>
           ) : (
             <ul className="space-y-4">
               {notes.map((n) => (
                 <li
                   key={n.id}
-                  className="border-b border-white/[0.05] pb-4 last:border-0 last:pb-0"
+                  className="border-b border-black/10 pb-4 last:border-0 last:pb-0 dark:border-white/[0.05]"
                 >
-                  <div className="rounded-[10px] bg-[#111520] p-3">
-                    <p className="whitespace-pre-wrap text-sm text-[#eef2ff]">{n.content}</p>
-                    <p className="mt-2 text-xs text-[#6b7a9a]">
+                  <div className="rounded-[10px] bg-slate-100 p-3 dark:bg-[#111520]">
+                    <p className="whitespace-pre-wrap text-sm text-[#0f172a] dark:text-[#eef2ff]">{n.content}</p>
+                    <p className="mt-2 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                       {formatDateTime(n.created_at)} · {n.author_name || "—"}
                     </p>
                   </div>
@@ -532,19 +551,19 @@ function AdminPropertyManagerDetailPage() {
         </div>
       </section>
 
-      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Historie</h2>
-        <p className="mb-3 text-[10px] text-[#6b7a9a]">
+      <section className="mb-4 rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Historie</h2>
+        <p className="mb-3 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
           Änderungen an Stammdaten (wer, wann, welches Feld).
         </p>
         {auditLoading ? (
-          <p className="text-sm text-[#6b7a9a]">Lade Verlauf …</p>
+          <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Verlauf …</p>
         ) : auditError ? (
           <p className="text-sm text-[#f87171]">{auditError}</p>
         ) : auditLogs.length === 0 ? (
-          <p className="text-sm text-[#6b7a9a]">Noch keine Einträge im Audit-Protokoll.</p>
+          <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch keine Einträge im Audit-Protokoll.</p>
         ) : (
-          <ul className="ml-1 space-y-4 border-l-2 border-white/[0.08] pl-4">
+          <ul className="ml-1 space-y-4 border-l-2 border-black/10 pl-4 dark:border-white/[0.08]">
             {auditLogs.map((log) => {
               const actor =
                 (log.actor_name && String(log.actor_name).trim()) ||
@@ -555,8 +574,8 @@ function AdminPropertyManagerDetailPage() {
               if (log.action === "create") {
                 return (
                   <li key={log.id}>
-                    <p className="text-sm font-medium text-[#eef2ff]">Bewirtschafter angelegt</p>
-                    <p className="mt-0.5 text-xs text-[#6b7a9a]">
+                    <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">Bewirtschafter angelegt</p>
+                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                       {formatDateTime(log.created_at)}
                       {actorSuffix}
                     </p>
@@ -571,8 +590,8 @@ function AdminPropertyManagerDetailPage() {
               if (!field) {
                 return (
                   <li key={log.id}>
-                    <p className="text-sm text-[#eef2ff]">Eintrag</p>
-                    <p className="mt-0.5 text-xs text-[#6b7a9a]">
+                    <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">Eintrag</p>
+                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                       {formatDateTime(log.created_at)}
                       {actorSuffix}
                     </p>
@@ -584,13 +603,13 @@ function AdminPropertyManagerDetailPage() {
               const newD = formatPmAuditDisplayValue(field, nv[field], landlordNameById);
               return (
                 <li key={log.id}>
-                  <p className="text-sm text-[#eef2ff]">
+                  <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">
                     <span className="font-semibold">{label} geändert:</span>{" "}
                     <span className="font-medium tabular-nums">{oldD}</span>
-                    <span className="mx-1 text-[#6b7a9a]">→</span>
+                    <span className="mx-1 text-[#64748b] dark:text-[#6b7a9a]">→</span>
                     <span className="font-medium tabular-nums">{newD}</span>
                   </p>
-                  <p className="mt-0.5 text-xs text-[#6b7a9a]">
+                  <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                     {formatDateTime(log.created_at)}
                     {actorSuffix}
                   </p>
@@ -601,22 +620,22 @@ function AdminPropertyManagerDetailPage() {
         )}
       </section>
 
-      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+      <section className="mb-4 rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
           Zugeordnete Units
         </h2>
         {unitsLoading ? (
           <div className="space-y-2" aria-busy="true">
-            <p className="text-sm text-[#6b7a9a]">Lade Units …</p>
-            <div className="h-2 w-full max-w-xs animate-pulse rounded bg-[#111520]" />
-            <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-[#111520]" />
+            <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Units …</p>
+            <div className="h-2 w-full max-w-xs animate-pulse rounded bg-slate-200 dark:bg-[#111520]" />
+            <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-slate-200 dark:bg-[#111520]" />
           </div>
         ) : unitsError ? (
           <p className="text-sm text-[#f87171]">{unitsError}</p>
         ) : units.length === 0 ? (
-          <div className="rounded-[10px] border border-dashed border-white/[0.07] bg-[#111520] px-5 py-8 text-center">
-            <p className="text-sm font-semibold text-[#eef2ff]">Keine Units zugeordnet</p>
-            <p className="mx-auto mt-2 max-w-md text-sm text-[#6b7a9a]">
+          <div className="rounded-[10px] border border-dashed border-black/10 bg-slate-100 px-5 py-8 text-center dark:border-white/[0.07] dark:bg-[#111520]">
+            <p className="text-sm font-semibold text-[#0f172a] dark:text-[#eef2ff]">Keine Units zugeordnet</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-[#64748b] dark:text-[#6b7a9a]">
               Diesem Bewirtschafter sind aktuell keine Units als Ansprechpartner zugewiesen.
             </p>
           </div>
@@ -634,38 +653,38 @@ function AdminPropertyManagerDetailPage() {
               return (
                 <li
                   key={String(uid)}
-                  className="rounded-[14px] border border-white/[0.07] bg-[#111520] p-4 transition-shadow hover:shadow-lg md:p-5"
+                  className="rounded-[14px] border border-black/10 bg-slate-100 p-4 transition-shadow hover:shadow-lg md:p-5 dark:border-white/[0.07] dark:bg-[#111520]"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <Link
                         to={`/admin/units/${encodeURIComponent(uid)}`}
-                        className="rounded-sm text-base font-semibold text-[#7aaeff] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7aaeff]/40"
+                        className="rounded-sm text-base font-semibold text-blue-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:text-blue-400 dark:focus-visible:ring-[#7aaeff]/40"
                       >
                         {title}
                       </Link>
                       {propTitle ? (
-                        <p className="mt-1 text-xs text-[#6b7a9a]">Liegenschaft: {propTitle}</p>
+                        <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft: {propTitle}</p>
                       ) : null}
-                      {addr ? <p className="mt-2 text-sm text-[#eef2ff]">{addr}</p> : null}
-                      {zipCity ? <p className="text-sm text-[#eef2ff]">{zipCity}</p> : null}
+                      {addr ? <p className="mt-2 text-sm text-[#0f172a] dark:text-[#eef2ff]">{addr}</p> : null}
+                      {zipCity ? <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">{zipCity}</p> : null}
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
                       <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${unitTypeBadgeClasses(u.type)}`}
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${unitTypeBadgeClasses(u.type)}`}
                       >
                         {typeLabel}
                       </span>
                       <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${unitStatusBadgeClasses(u.status)}`}
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${unitStatusBadgeClasses(u.status)}`}
                       >
                         {u.status || "—"}
                       </span>
                     </div>
                   </div>
-                  <p className="mt-3 border-t border-white/[0.05] pt-3 text-sm text-[#eef2ff]">
-                    <span className="text-[#6b7a9a]">Miete (Mieter): </span>
-                    <span className="font-semibold tabular-nums text-[#4ade80]">
+                  <p className="mt-3 border-t border-black/10 pt-3 text-sm text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]">
+                    <span className="text-[#64748b] dark:text-[#6b7a9a]">Miete (Mieter): </span>
+                    <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
                       {formatChfMonthly(u.tenantPriceMonthly)}
                     </span>
                   </p>
@@ -678,26 +697,26 @@ function AdminPropertyManagerDetailPage() {
 
       {editOpen && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
           onClick={() => !editSaving && setEditOpen(false)}
           role="presentation"
         >
           <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-6 shadow-lg"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-black/10 bg-white p-6 shadow-lg dark:border-white/[0.07] dark:bg-[#141824]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="pm-edit-title"
           >
-            <h2 id="pm-edit-title" className="mb-4 text-lg font-semibold text-[#eef2ff]">
+            <h2 id="pm-edit-title" className="mb-4 text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">
               Bewirtschafter bearbeiten
             </h2>
             {landlordsEditLoading ? (
-              <p className="mb-4 text-sm text-[#6b7a9a]">Lade Verwaltungen …</p>
+              <p className="mb-4 text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Verwaltungen …</p>
             ) : null}
             <div className="space-y-4">
               <div>
-                <label htmlFor="pm-edit-name" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="pm-edit-name" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Name *
                 </label>
                 <input
@@ -706,11 +725,11 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
-                <label htmlFor="pm-edit-email" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="pm-edit-email" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   E-Mail
                 </label>
                 <input
@@ -719,11 +738,11 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.email}
                   onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
-                <label htmlFor="pm-edit-phone" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="pm-edit-phone" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Telefon
                 </label>
                 <input
@@ -732,11 +751,11 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.phone}
                   onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
-                <label htmlFor="pm-edit-landlord" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="pm-edit-landlord" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Verwaltung
                 </label>
                 <select
@@ -744,7 +763,7 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.landlord_id}
                   onChange={(e) => setEditForm((f) => ({ ...f, landlord_id: e.target.value }))}
                   disabled={editSaving || landlordsEditLoading}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="">—</option>
                   {landlordsForEdit.map((l) => (
@@ -755,7 +774,7 @@ function AdminPropertyManagerDetailPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="pm-edit-status" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="pm-edit-status" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Status
                 </label>
                 <select
@@ -763,7 +782,7 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.status}
                   onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="active">Aktiv</option>
                   <option value="inactive">Inaktiv</option>
@@ -783,7 +802,7 @@ function AdminPropertyManagerDetailPage() {
                   type="button"
                   disabled={editSaving}
                   onClick={() => setEditOpen(false)}
-                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>
