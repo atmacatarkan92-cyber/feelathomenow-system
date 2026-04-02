@@ -104,6 +104,70 @@ def get_unit_occupancy(session, unit_id: str, on_date: Optional[date] = None) ->
     }
 
 
+def get_unit_occupancy_batch(
+    session,
+    unit_ids: List[str],
+    on_date: Optional[date] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Same semantics as get_unit_occupancy per unit, batched for list endpoints.
+
+    Returns: { unit_id: { total_rooms, occupied_rooms, reserved_rooms, free_rooms } }
+    Uses active Room rows + Tenancy active/reserved + _status_from_tenancies (same as get_unit_occupancy).
+    """
+    if not unit_ids:
+        return {}
+    today = on_date or date.today()
+    uid_set = [str(u) for u in unit_ids]
+
+    rooms = list(
+        session.exec(
+            select(Room)
+            .where(Room.unit_id.in_(uid_set))
+            .where(Room.is_active == True)  # noqa: E712
+        ).all()
+    )
+    rooms_by_unit: Dict[str, List[Room]] = {}
+    for r in rooms:
+        rooms_by_unit.setdefault(str(r.unit_id), []).append(r)
+
+    tenancies = list(
+        session.exec(
+            select(Tenancy)
+            .where(Tenancy.unit_id.in_(uid_set))
+            .where(Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved]))
+            .order_by(Tenancy.move_in_date.desc())
+        ).all()
+    )
+    tenancies_by_room_id: Dict[str, List[Tenancy]] = {}
+    for t in tenancies:
+        tenancies_by_room_id.setdefault(str(t.room_id), []).append(t)
+    for lst in tenancies_by_room_id.values():
+        lst.sort(key=lambda x: x.move_in_date, reverse=True)
+
+    out: Dict[str, Dict[str, Any]] = {}
+    for uid in uid_set:
+        unit_rooms = rooms_by_unit.get(uid, [])
+        total_rooms = len(unit_rooms)
+        occupied_rooms = 0
+        reserved_rooms = 0
+        for r in unit_rooms:
+            room_id = str(r.id)
+            status = _status_from_tenancies(tenancies_by_room_id.get(room_id, []), today)
+            if status == "occupied":
+                occupied_rooms += 1
+            elif status == "reserved":
+                reserved_rooms += 1
+        free_rooms = total_rooms - occupied_rooms - reserved_rooms
+        out[uid] = {
+            "total_rooms": total_rooms,
+            "occupied_rooms": occupied_rooms,
+            "reserved_rooms": reserved_rooms,
+            "free_rooms": free_rooms,
+        }
+    return out
+
+
 def _get_tenant_name_and_rent(session, room_id: str, on_date: date) -> tuple:
     """Return (tenant_name, monthly_rent) for the tenancy covering this room on on_date, or (None, None)."""
     today = on_date

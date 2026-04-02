@@ -29,6 +29,7 @@ from db.models import (
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
 from app.services.revenue_forecast import calculate_monthly_revenue_for_units
+from app.services.occupancy_service import get_unit_occupancy_batch
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
@@ -582,19 +583,35 @@ def admin_list_units(
             for u, p in paged_rows
         ]
 
-        # Add computed revenue snapshot for current month (tenancy/KPI-based; NOT Unit.tenant_price_monthly_chf).
-        # If computation fails, return null rather than a fake 0.
+        # KPI-aligned snapshots (computed; not Unit master fields): current-month revenue + today occupancy.
+        today = date.today()
+        unit_ids = [str(u.id) for u, _p in paged_rows]
+
         try:
-            today = date.today()
-            unit_ids = [str(u.id) for u, _p in paged_rows]
             rev_map = calculate_monthly_revenue_for_units(session, unit_ids, today.year, today.month)
         except Exception:
             rev_map = {}
+
+        try:
+            occ_map = get_unit_occupancy_batch(session, unit_ids, today)
+        except Exception:
+            occ_map = {}
 
         for it in items:
             uid = str(it.get("id") or it.get("unitId") or "")
             rec = rev_map.get(uid)
             it["current_revenue_chf"] = rec.get("expected_revenue") if isinstance(rec, dict) else None
+            occ = occ_map.get(uid)
+            if isinstance(occ, dict):
+                it["occupied_rooms_snapshot"] = int(occ.get("occupied_rooms", 0) or 0)
+                it["total_rooms_snapshot"] = int(occ.get("total_rooms", 0) or 0)
+                it["reserved_rooms_snapshot"] = int(occ.get("reserved_rooms", 0) or 0)
+                it["free_rooms_snapshot"] = int(occ.get("free_rooms", 0) or 0)
+            else:
+                it["occupied_rooms_snapshot"] = None
+                it["total_rooms_snapshot"] = None
+                it["reserved_rooms_snapshot"] = None
+                it["free_rooms_snapshot"] = None
 
         return UnitListResponse(
             items=items,
