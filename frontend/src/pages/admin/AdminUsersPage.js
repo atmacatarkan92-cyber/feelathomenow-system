@@ -35,13 +35,13 @@ export default function AdminUsersPage() {
     name: "",
   });
 
-  const [errors, setErrors] = useState({ email: "", password: "", role: "" });
+  const [errors, setErrors] = useState({ email: "", password: "", role: "", name: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const validateFields = () => {
-    const next = { email: "", password: "", role: "" };
+    const next = { email: "", password: "", role: "", name: "" };
     const emailTrim = form.email.trim();
     if (!emailTrim || !isValidEmail(emailTrim)) {
       next.email = "Bitte gültige E-Mail eingeben";
@@ -52,8 +52,11 @@ export default function AdminUsersPage() {
     if (!form.role) {
       next.role = "Bitte Rolle auswählen";
     }
+    if (!form.name.trim()) {
+      next.name = "Bitte Namen eingeben";
+    }
     setErrors(next);
-    return !next.email && !next.password && !next.role;
+    return !next.email && !next.password && !next.role && !next.name;
   };
 
   const handleSubmit = async (e) => {
@@ -76,8 +79,8 @@ export default function AdminUsersPage() {
       email,
       password,
       role,
+      name,
     };
-    if (name) payload.name = name;
 
     setSubmitting(true);
     try {
@@ -96,19 +99,19 @@ export default function AdminUsersPage() {
       }
 
       if (!res.ok) {
-        if (res.status === 401) setError("Session expired");
-        else if (res.status === 403) setError("Not authorized");
-        else if (res.status === 409) setError("User already exists");
-        else if (res.status === 422) setError("Validation error");
-        else setError("Something went wrong");
+        if (res.status === 401) setError("Sitzung abgelaufen");
+        else if (res.status === 403) setError("Keine Berechtigung");
+        else if (res.status === 409) setError("User existiert bereits");
+        else if (res.status === 422) setError("Validierungsfehler");
+        else setError("Etwas ist schiefgelaufen");
         return;
       }
 
-      setSuccess("User created successfully");
+      setSuccess("User wurde erfolgreich erstellt");
       setForm({ email: "", password: "", role: "", name: "" });
-      setErrors({ email: "", password: "", role: "" });
+      setErrors({ email: "", password: "", role: "", name: "" });
     } catch (e2) {
-      setError("Something went wrong");
+      setError("Etwas ist schiefgelaufen");
     } finally {
       // Do not keep passwords in component state longer than needed.
       setForm((f) => ({ ...f, password: "" }));
@@ -118,7 +121,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] px-2 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
-      <h2 className="mb-4 text-[22px] font-bold">Users / User Management</h2>
+      <h2 className="mb-4 text-[22px] font-bold">Benutzer / Benutzerverwaltung</h2>
 
       {error && (
         <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
@@ -130,7 +133,7 @@ export default function AdminUsersPage() {
       <div className={cardClass}>
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
           <div>
-            <label className={labelClass}>Email *</label>
+            <label className={labelClass}>E-Mail *</label>
             <input
               type="email"
               value={form.email}
@@ -143,14 +146,14 @@ export default function AdminUsersPage() {
                 }
               }}
               className={inputClassWithError(!!errors.email)}
-              placeholder="name@example.com"
+              placeholder="name@beispiel.de"
               autoComplete="email"
             />
             {errors.email ? <p style={fieldErrorStyle}>{errors.email}</p> : null}
           </div>
 
           <div>
-            <label className={labelClass}>Password *</label>
+            <label className={labelClass}>Passwort *</label>
             <input
               type="password"
               value={form.password}
@@ -168,7 +171,7 @@ export default function AdminUsersPage() {
           </div>
 
           <div>
-            <label className={labelClass}>Role *</label>
+            <label className={labelClass}>Rolle *</label>
             <select
               value={form.role}
               onChange={(e) => {
@@ -181,7 +184,7 @@ export default function AdminUsersPage() {
               className={inputClassWithError(!!errors.role)}
             >
               <option value="" disabled>
-                Select role
+                Rolle auswählen
               </option>
               <option value="admin">admin</option>
               <option value="landlord">landlord</option>
@@ -191,15 +194,23 @@ export default function AdminUsersPage() {
           </div>
 
           <div>
-            <label className={labelClass}>Name (optional)</label>
+            <label className={labelClass}>Name *</label>
             <input
               type="text"
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className={`${inputBaseClass} ${inputBorderOk}`}
-              placeholder="Optional display name"
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, name: v }));
+                if (v.trim()) {
+                  setErrors((prev) => ({ ...prev, name: "" }));
+                }
+              }}
+              className={inputClassWithError(!!errors.name)}
+              placeholder="Anzeigename"
               autoComplete="name"
+              required
             />
+            {errors.name ? <p style={fieldErrorStyle}>{errors.name}</p> : null}
           </div>
 
           <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
@@ -208,7 +219,7 @@ export default function AdminUsersPage() {
               disabled={submitting}
               className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {submitting ? "Creating …" : "Create User"}
+              {submitting ? "Wird erstellt …" : "User erstellen"}
             </button>
             <button
               type="button"
@@ -216,18 +227,18 @@ export default function AdminUsersPage() {
               onClick={() => {
                 setError("");
                 setSuccess("");
-                setErrors({ email: "", password: "", role: "" });
+                setErrors({ email: "", password: "", role: "", name: "" });
                 setForm({ email: "", password: "", role: "", name: "" });
               }}
               className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Clear
+              Zurücksetzen
             </button>
           </div>
         </form>
 
         <div className="mt-[18px] rounded-[10px] border border-blue-500/[0.12] bg-blue-500/[0.06] px-4 py-3.5 text-[13px] leading-relaxed text-[#7aaeff]">
-          Admin-created users are bound to the organization of the logged-in admin.
+          Vom Admin erstellte User sind an die Organisation des aktuell angemeldeten Admins gebunden.
         </div>
       </div>
     </div>
