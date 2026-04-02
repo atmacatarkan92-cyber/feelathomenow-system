@@ -141,28 +141,23 @@ function AdminPerformancePage() {
     };
   }, [units, rooms, tenancies, profitMonth]);
 
-  const kpiCard = (accent) => ({
-    background: "#141824",
-    border: "1px solid rgba(255, 255, 255, 0.07)",
-    borderTop: `4px solid ${accent}`,
-    borderRadius: "14px",
-    padding: "20px",
-  });
+  const kpiCardClassName =
+    "relative overflow-hidden rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]";
 
   if (loading) {
     return (
       <div
-        className="bg-[#07090f] text-[#eef2ff] min-h-full"
+        className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
         style={{ display: "grid", gap: "24px" }}
       >
-        <p style={{ color: "#6b7a9a" }}>Lade Performance…</p>
+        <p className="text-[#64748b] dark:text-[#6b7a9a]">Lade Performance…</p>
       </div>
     );
   }
 
   return (
     <div
-      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
       style={{ display: "grid", gap: "24px" }}
     >
       <div>
@@ -187,13 +182,7 @@ function AdminPerformancePage() {
           Performance
         </h2>
 
-        <p
-          style={{
-            color: "#6b7a9a",
-            marginTop: "10px",
-            fontSize: "12px",
-          }}
-        >
+        <p className="mt-[10px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Analyse der profitabelsten und schwächsten Units (aktive Mietverhältnisse).
         </p>
       </div>
@@ -205,17 +194,8 @@ function AdminPerformancePage() {
           gap: "16px",
         }}
       >
-        <div style={kpiCard("#4ade80")}>
-          <h4
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              color: "#6b7a9a",
-              margin: "0 0 8px 0",
-            }}
-          >
+        <div className={kpiCardClassName} style={{ borderTop: "4px solid #4ade80" }}>
+          <h4 className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Gesamt Umsatz
           </h4>
           <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#4ade80", margin: 0 }}>
@@ -223,84 +203,45 @@ function AdminPerformancePage() {
           </h2>
         </div>
 
-        <div style={kpiCard("#7aaeff")}>
-          <h4
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              color: "#6b7a9a",
-              margin: "0 0 8px 0",
-            }}
-          >
+        <div className={kpiCardClassName} style={{ borderTop: "4px solid #7aaeff" }}>
+          <h4 className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Gesamt Gewinn
           </h4>
-          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#eef2ff", margin: 0 }}>
+          <h2 className="m-0 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
             {formatCurrency(stats.totalProfit)}
           </h2>
         </div>
 
-        <div style={kpiCard("#a78bfa")}>
-          <h4
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              color: "#6b7a9a",
-              margin: "0 0 8px 0",
-            }}
-          >
+        <div className={kpiCardClassName} style={{ borderTop: "4px solid #a78bfa" }}>
+          <h4 className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Beste Unit
           </h4>
-          <h3 style={{ fontSize: "15px", fontWeight: 600, color: "#eef2ff", margin: "0 0 8px 0" }}>
+          <h3 className="mb-2 mt-0 text-[15px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">
             {getUnitLabel(stats.best?.unit, stats.best?.listIndex)}
           </h3>
-          <p style={{ margin: 0, fontSize: "11px", color: "#6b7a9a" }}>
+          <p className="m-0 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
             {formatCurrency(stats.best?.profit)}
           </p>
         </div>
 
-        <div style={kpiCard("#f87171")}>
-          <h4
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              color: "#6b7a9a",
-              margin: "0 0 8px 0",
-            }}
-          >
+        <div className={kpiCardClassName} style={{ borderTop: "4px solid #f87171" }}>
+          <h4 className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Schwächste Unit
           </h4>
-          <h3 style={{ fontSize: "15px", fontWeight: 600, color: "#eef2ff", margin: "0 0 8px 0" }}>
+          <h3 className="mb-2 mt-0 text-[15px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">
             {getUnitLabel(stats.worst?.unit, stats.worst?.listIndex)}
           </h3>
-          <p style={{ margin: 0, fontSize: "11px", color: "#6b7a9a" }}>
+          <p className="m-0 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
             {formatCurrency(stats.worst?.profit)}
           </p>
         </div>
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          borderRadius: "14px",
-          padding: "20px",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-        }}
+        className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <h3
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            color: "#6b7a9a",
-            margin: 0,
-          }}
+          className="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Performance pro Unit
         </h3>
@@ -311,17 +252,11 @@ function AdminPerformancePage() {
             marginTop: "16px",
             borderCollapse: "collapse",
           }}
+          className="text-[#0f172a] dark:text-[#eef2ff]"
         >
           <thead>
             <tr
-              style={{
-                background: "#111520",
-                color: "#6b7a9a",
-                fontSize: "9px",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.8px",
-              }}
+              className="bg-slate-100 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:bg-[#111520] dark:text-[#6b7a9a]"
             >
               <th style={{ textAlign: "left", padding: "10px" }}>Unit</th>
               <th style={{ textAlign: "left", padding: "10px" }}>Ort</th>
@@ -338,22 +273,17 @@ function AdminPerformancePage() {
             {stats.results.map((row) => (
               <tr
                 key={row.unit?.id ?? row.id}
-                style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+                className="border-b border-black/10 dark:border-white/[0.05]"
               >
                 <td
-                  style={{
-                    padding: "10px",
-                    fontWeight: 700,
-                    color: "#eef2ff",
-                    fontSize: "13px",
-                  }}
+                  className="p-[10px] text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
                 >
                   {getUnitLabel(row.unit, row.listIndex)}
                 </td>
 
-                <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>{row.city}</td>
+                <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">{row.city}</td>
 
-                <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>
+                <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                   {row.occupancyLabel}
                 </td>
 
@@ -368,7 +298,7 @@ function AdminPerformancePage() {
                   {formatCurrency(row.revenue)}
                 </td>
 
-                <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>
+                <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                   {formatCurrency(row.costs)}
                 </td>
 

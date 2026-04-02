@@ -739,12 +739,12 @@ function formatUnitDocumentCategoryLabel(category) {
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
-    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+    <div className="rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]">
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
-          <h3 className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{title}</h3>
+          <h3 className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">{title}</h3>
           {subtitle ? (
-            <p className="text-[12px] text-[#6b7a9a] mt-1">{subtitle}</p>
+            <p className="text-[12px] text-[#64748b] dark:text-[#6b7a9a] mt-1">{subtitle}</p>
           ) : null}
         </div>
         {rightSlot}
@@ -763,7 +763,7 @@ function SmallStatCard({
   progressPercent,
 }) {
   const accentStyles = {
-    slate: "bg-[#111520] border-white/[0.08] text-[#eef2ff]",
+    slate: "bg-slate-100 border-black/10 text-[#0f172a] dark:bg-[#111520] dark:border-white/[0.08] dark:text-[#eef2ff]",
     green: "bg-green-500/10 border-green-500/20 text-green-400",
     orange: "bg-amber-500/10 border-amber-500/20 text-amber-400",
     rose: "bg-red-500/10 border-red-500/20 text-red-400",
@@ -814,7 +814,7 @@ function SmallStatCard({
 
 function Badge({ children, tone = "slate" }) {
   const tones = {
-    slate: "bg-white/[0.05] border border-white/[0.08] text-[#6b7a9a]",
+    slate: "bg-slate-100 border border-black/10 text-[#64748b] dark:bg-white/[0.05] dark:border-white/[0.08] dark:text-[#6b7a9a]",
     green: "bg-green-500/10 border border-green-500/20 text-green-400",
     orange: "bg-amber-500/10 border border-amber-500/20 text-amber-400",
     rose: "bg-red-500/10 border border-red-500/20 text-red-400",
@@ -1829,19 +1829,19 @@ function AdminUnitDetailPage() {
 
   if (loading) {
     return (
-      <div className="bg-[#07090f] text-[#eef2ff] min-h-full -m-6 p-6 md:p-8">
-        <p className="text-[#6b7a9a]">Lade Unit…</p>
+      <div className="min-h-full -m-6 p-6 md:p-8 bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
+        <p className="text-[#64748b] dark:text-[#6b7a9a]">Lade Unit…</p>
       </div>
     );
   }
 
   if (!unit) {
     return (
-      <div className="bg-[#07090f] text-[#eef2ff] min-h-full -m-6 p-6 md:p-8">
-        <h2 className="text-[22px] font-bold text-[#eef2ff] mb-2">
+      <div className="min-h-full -m-6 p-6 md:p-8 bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
+        <h2 className="text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff] mb-2">
           Unit nicht gefunden
         </h2>
-        <p className="text-[#6b7a9a] text-[12px] mb-6">
+        <p className="text-[#64748b] dark:text-[#6b7a9a] text-[12px] mb-6">
           Für diese Unit ID konnten keine Daten gefunden werden.
         </p>
 
@@ -2154,17 +2154,17 @@ function AdminUnitDetailPage() {
     String(unit.leaseStatus ?? unit.lease_status ?? "").trim() === "ended";
 
   return (
-    <div className="min-h-screen bg-[#07090f] text-[#eef2ff] -m-6 p-6 md:p-8">
+    <div className="min-h-screen -m-6 p-6 md:p-8 bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <div className="max-w-[1800px] mx-auto space-y-8">
         <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
           <div className={leaseContractEnded ? "opacity-75" : undefined}>
             <p className="text-[12px] font-semibold text-[#fb923c]">
               Unit Intelligence
             </p>
-            <h2 className="text-[22px] md:text-[26px] font-bold tracking-tight text-[#eef2ff] mt-2">
+            <h2 className="text-[22px] md:text-[26px] font-bold tracking-tight text-[#0f172a] dark:text-[#eef2ff] mt-2">
               {getUnitPageMainTitle(unit)}
             </h2>
-            <p className="text-xs text-[#6b7a9a] mt-2 font-mono break-all">
+            <p className="text-xs text-[#64748b] dark:text-[#6b7a9a] mt-2 font-mono break-all">
               {unit.id || unit.unitId}
             </p>
           </div>
@@ -2179,12 +2179,12 @@ function AdminUnitDetailPage() {
                 Vertrag abgelaufen
               </span>
             ) : unitContractState === "unknown" ? (
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-[#6b7a9a]">
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 border border-black/10 text-[#64748b] dark:bg-white/[0.05] dark:border-white/[0.08] dark:text-[#6b7a9a]">
                 Mietbeginn offen
               </span>
             ) : null}
             {derivedUnitOccupancy == null ? (
-              <span className="text-[#6b7a9a] text-sm">—</span>
+              <span className="text-[#64748b] dark:text-[#6b7a9a] text-sm">—</span>
             ) : (
               <Badge tone={occupancyStatusBadgeTone(derivedUnitOccupancy)}>
                 {formatOccupancyStatusDe(derivedUnitOccupancy)}
@@ -2192,7 +2192,7 @@ function AdminUnitDetailPage() {
             )}
             <Link
               to="/admin/apartments"
-              className="inline-block border border-white/[0.1] bg-transparent text-[#8090b0] px-5 py-3 rounded-[8px] font-medium transition hover:bg-white/[0.04]"
+              className="inline-block border border-black/10 bg-transparent text-[#64748b] dark:border-white/[0.1] dark:text-[#8090b0] px-5 py-3 rounded-[8px] font-medium transition hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
             >
               Zurück
             </Link>
@@ -2202,7 +2202,7 @@ function AdminUnitDetailPage() {
                 if (!unitId) return;
                 navigate("/admin/apartments", { state: { editUnitId: String(unitId) } });
               }}
-              className="inline-block border border-white/[0.1] bg-transparent text-[#8090b0] px-5 py-3 rounded-[8px] font-medium transition hover:bg-white/[0.04]"
+              className="inline-block border border-black/10 bg-transparent text-[#64748b] dark:border-white/[0.1] dark:text-[#8090b0] px-5 py-3 rounded-[8px] font-medium transition hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
             >
               Bearbeiten
             </button>
@@ -2226,24 +2226,24 @@ function AdminUnitDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <SectionCard
             title="Stammdaten"
             subtitle="Grunddaten und aktuelle Struktur dieser Unit"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[#eef2ff]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[#0f172a] dark:text-[#eef2ff]">
               <div className="md:col-span-2 flex justify-end">
                 <button
                   type="button"
                   onClick={openAssignModal}
-                  className="inline-flex items-center rounded-lg border border-white/[0.07] bg-[#141824] px-3 py-2 text-sm font-semibold text-[#eef2ff] hover:bg-[#111520]"
+                  className="inline-flex items-center rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-[#0f172a] hover:bg-slate-100 dark:border-white/[0.07] dark:bg-[#141824] dark:text-[#eef2ff] dark:hover:bg-[#111520]"
                 >
                   Zuordnungen bearbeiten
                 </button>
               </div>
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Unit ID</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.unitId}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Unit ID</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.unitId}</p>
               </div>
 
               <div>
@@ -2337,8 +2337,8 @@ function AdminUnitDetailPage() {
                 <p className="text-[13px] font-medium text-[#eef2ff]">{unit.availableFrom || "-"}</p>
               </div>
 
-              <div className="md:col-span-2 border-t border-white/[0.07] pt-4 mt-2">
-                <p className="text-sm font-semibold text-[#eef2ff] mb-3">
+              <div className="md:col-span-2 border-t border-black/10 pt-4 mt-2 dark:border-white/[0.07]">
+                <p className="text-sm font-semibold text-[#0f172a] dark:text-[#eef2ff] mb-3">
                   Vertrag Vermieter
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2514,8 +2514,8 @@ function AdminUnitDetailPage() {
               {!unitTenancyRevenueLoading &&
               activeUnitTenancies.length > 0 &&
               unitAggregatedOneTimeTotal > 0 ? (
-                <div className="mt-3 pt-3 border-t border-white/[0.05]">
-                  <p className="text-xs font-semibold text-[#6b7a9a] mb-2">
+                <div className="mt-3 pt-3 border-t border-black/10 dark:border-white/[0.05]">
+                  <p className="text-xs font-semibold text-[#64748b] dark:text-[#6b7a9a] mb-2">
                     Einmalige Einnahmen
                   </p>
                   <p className="text-sm text-[#eef2ff] mb-2">
@@ -2542,8 +2542,8 @@ function AdminUnitDetailPage() {
                 </div>
               ) : null}
             </div>
-            <div className="mt-4 rounded-xl border border-white/[0.07] bg-[#111520] p-4 text-sm text-[#6b7a9a]">
-              <p className="font-semibold text-[#6b7a9a] mb-2">
+            <div className="mt-4 rounded-xl border border-black/10 bg-slate-100 p-4 text-sm text-[#64748b] dark:border-white/[0.07] dark:bg-[#111520] dark:text-[#6b7a9a]">
+              <p className="font-semibold text-[#64748b] dark:text-[#6b7a9a] mb-2">
                 Monatliche Kosten (Details)
               </p>
               <p className="text-xs text-[#6b7a9a] mb-3">
@@ -2551,9 +2551,9 @@ function AdminUnitDetailPage() {
                 Kosten» oben ist der Backend-KPI-Monat und kann bei Abweichungen in den
                 Stammdaten davon abweichen.
               </p>
-              <div className="mb-3 pb-3 border-b border-white/[0.05]">
-                <p className="text-sm text-[#6b7a9a]">
-                  <span className="text-[13px] font-medium text-[#eef2ff]">Gesamtausgaben (dieser Monat):</span>{" "}
+              <div className="mb-3 pb-3 border-b border-black/10 dark:border-white/[0.05]">
+                <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">
+                  <span className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">Gesamtausgaben (dieser Monat):</span>{" "}
                   <span className="font-semibold tabular-nums text-[#eef2ff]">
                     {formatCurrency(totalExpendituresInfoMonth)}
                   </span>
@@ -2591,9 +2591,9 @@ function AdminUnitDetailPage() {
                   </ul>
                 )}
               </div>
-              <div className="mt-3 pt-3 border-t border-white/[0.07]">
-                <p className="text-sm text-[#6b7a9a] mb-2">
-                  <span className="text-[#6b7a9a] font-medium">
+              <div className="mt-3 pt-3 border-t border-black/10 dark:border-white/[0.07]">
+                <p className="text-sm text-[#64748b] dark:text-[#6b7a9a] mb-2">
+                  <span className="text-[#64748b] dark:text-[#6b7a9a] font-medium">
                     Einmalige Kosten gesamt:
                   </span>{" "}
                   <span className="font-semibold tabular-nums text-[#eef2ff]">
@@ -2654,7 +2654,7 @@ function AdminUnitDetailPage() {
                       recurringUnitCosts.map((row) => (
                         <tr
                           key={String(row.id)}
-                          className="border-b border-white/[0.05]"
+                          className="border-b border-black/10 dark:border-white/[0.05]"
                         >
                           <td className="py-2 pr-4 font-medium">
                             {row.cost_type || "—"}
@@ -2708,7 +2708,7 @@ function AdminUnitDetailPage() {
               </p>
               <form
                 onSubmit={handleUnitCostSubmit}
-                className="mt-6 pt-4 border-t border-white/[0.07] space-y-3"
+                className="mt-6 pt-4 border-t border-black/10 dark:border-white/[0.07] space-y-3"
               >
                 <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
                   <label className="flex flex-col gap-1 text-sm text-[#6b7a9a]">
@@ -2724,7 +2724,7 @@ function AdminUnitDetailPage() {
                         }))
                       }
                       disabled={costLoading}
-                      className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 min-w-[200px]"
+                      className="text-sm border border-black/10 dark:border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] disabled:opacity-50 min-w-[200px]"
                     >
                       <option value="">— wählen —</option>
                       {UNIT_COST_TYPE_OPTIONS.map((opt) => (
@@ -2747,7 +2747,7 @@ function AdminUnitDetailPage() {
                           }))
                         }
                         disabled={costLoading}
-                        className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 min-w-[200px]"
+                        className="text-sm border border-black/10 dark:border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] disabled:opacity-50 min-w-[200px]"
                         placeholder="z. B. Haftpflicht"
                       />
                     </label>
@@ -2765,7 +2765,7 @@ function AdminUnitDetailPage() {
                         }))
                       }
                       disabled={costLoading}
-                      className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 w-40"
+                      className="text-sm border border-black/10 dark:border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] disabled:opacity-50 w-40"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-sm text-[#6b7a9a]">
@@ -2776,7 +2776,7 @@ function AdminUnitDetailPage() {
                         setCostForm((f) => ({ ...f, frequency: e.target.value }))
                       }
                       disabled={costLoading}
-                      className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 min-w-[160px]"
+                      className="text-sm border border-black/10 dark:border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] disabled:opacity-50 min-w-[160px]"
                     >
                       <option value="monthly">Monatlich</option>
                       <option value="yearly">Jährlich</option>
@@ -2795,7 +2795,7 @@ function AdminUnitDetailPage() {
                       type="button"
                       disabled={costLoading}
                       onClick={handleUnitCostCancel}
-                      className="text-sm border border-white/[0.1] hover:bg-[#111520] text-[#eef2ff] px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                      className="text-sm border border-black/10 dark:border-white/[0.1] hover:bg-slate-100 dark:hover:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] px-4 py-2 rounded-lg font-medium disabled:opacity-50"
                     >
                       Abbrechen
                     </button>
@@ -2831,7 +2831,7 @@ function AdminUnitDetailPage() {
                       {oneTimeUnitCosts.map((row) => (
                         <tr
                           key={String(row.id)}
-                          className="border-b border-white/[0.05]"
+                          className="border-b border-black/10 dark:border-white/[0.05]"
                         >
                           <td className="py-2 pr-4 font-medium">
                             {row.cost_type || "—"}
@@ -2905,7 +2905,7 @@ function AdminUnitDetailPage() {
                   value={unitDocCategory}
                   onChange={(e) => setUnitDocCategory(e.target.value)}
                   disabled={unitDocUploading || !unitId}
-                  className="text-sm border border-white/[0.1] rounded-[8px] px-2 py-1.5 bg-[#111520] border border-white/[0.08] text-[#eef2ff] disabled:opacity-50"
+                  className="text-sm border border-black/10 dark:border-white/[0.1] rounded-[8px] px-2 py-1.5 bg-slate-100 dark:bg-[#111520] dark:border-white/[0.08] text-[#0f172a] dark:text-[#eef2ff] disabled:opacity-50"
                 >
                   <option value="">—</option>
                   <option value="rent_contract">Mietvertrag</option>
@@ -2925,7 +2925,7 @@ function AdminUnitDetailPage() {
                 type="button"
                 onClick={handleUnitDocumentPick}
                 disabled={unitDocUploading || !unitId}
-                className="text-sm border border-white/[0.1] hover:bg-[#111520] text-[#eef2ff] px-3 py-2 rounded-lg font-medium disabled:opacity-50"
+                className="text-sm border border-black/10 dark:border-white/[0.1] hover:bg-slate-100 dark:hover:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] px-3 py-2 rounded-lg font-medium disabled:opacity-50"
               >
                 {unitDocUploading ? "Wird hochgeladen …" : "Hochladen"}
               </button>
@@ -2956,7 +2956,7 @@ function AdminUnitDetailPage() {
                 </thead>
                 <tbody>
                   {unitDocuments.map((doc) => (
-                    <tr key={String(doc.id)} className="border-b border-white/[0.05]">
+                    <tr key={String(doc.id)} className="border-b border-black/10 dark:border-white/[0.05]">
                       <td className="py-2 pr-4 font-medium">{doc.file_name || "—"}</td>
                       <td className="py-2 pr-4 text-[#6b7a9a]">{formatUnitDocumentType(doc)}</td>
                       <td className="py-2 pr-4 text-[#6b7a9a]">
@@ -3028,7 +3028,7 @@ function AdminUnitDetailPage() {
                     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
                     const statusMeta = tenancyMieterTableStatusMeta(tn);
                     return (
-                      <tr key={String(tn.id)} className="border-b border-white/[0.05]">
+                    <tr key={String(tn.id)} className="border-b border-black/10 dark:border-white/[0.05]">
                         <td className="py-2 pr-4 font-medium">
                           <Link
                             to={`/admin/tenants/${String(tn.tenant_id)}`}
@@ -3137,7 +3137,7 @@ function AdminUnitDetailPage() {
                   warning.tone === "rose"
                     ? "border-red-500/20 bg-red-500/10"
                     : warning.tone === "slate"
-                      ? "border-white/[0.07] bg-[#111520]"
+                      ? "border-black/10 bg-slate-100 dark:border-white/[0.07] dark:bg-[#111520]"
                       : warning.tone === "emerald"
                         ? "border-green-500/20 bg-green-500/10"
                         : "border-amber-500/20 bg-amber-500/10"
@@ -3270,7 +3270,7 @@ function AdminUnitDetailPage() {
                 return (
                 <div
                   key={room.id}
-                  className="rounded-2xl border border-white/[0.07] bg-[#111520] p-4 flex items-center justify-between gap-4"
+                  className="rounded-2xl border border-black/10 bg-slate-100 dark:border-white/[0.07] dark:bg-[#111520] p-4 flex items-center justify-between gap-4"
                 >
                   <div>
                     <p className="font-semibold text-[#eef2ff]">
@@ -3392,7 +3392,7 @@ function AdminUnitDetailPage() {
                     return (
                     <tr
                       key={room.id}
-                      className="border-b border-white/[0.05] text-[#eef2ff]"
+                      className="border-b border-black/10 dark:border-white/[0.05] text-[#0f172a] dark:text-[#eef2ff]"
                     >
                       <td className="py-4 pr-4 font-medium text-[#4ade80]">
                         {room.roomId}
@@ -3428,7 +3428,7 @@ function AdminUnitDetailPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleOpenEditRoomModal(room)}
-                            className="px-3 py-2 rounded-lg border border-white/[0.1] text-sm hover:bg-[#111520]"
+                            className="px-3 py-2 rounded-lg border border-black/10 dark:border-white/[0.1] text-sm hover:bg-slate-100 dark:hover:bg-[#111520]"
                           >
                             Bearbeiten
                           </button>
@@ -3502,7 +3502,7 @@ function AdminUnitDetailPage() {
           ) : auditLogs.length === 0 ? (
             <p className="text-[10px] text-[#6b7a9a]">Keine Aktivitäten vorhanden</p>
           ) : (
-            <ul className="space-y-0 border-l border-white/[0.07] pl-4 ml-1">
+            <ul className="space-y-0 border-l border-black/10 dark:border-white/[0.07] pl-4 ml-1">
               {auditLogs.map((entry) => (
                 <li
                   key={entry.id}
@@ -3536,7 +3536,7 @@ function AdminUnitDetailPage() {
 
         {isRoomModalOpen && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-            <div className="bg-[#141824] w-full max-w-3xl rounded-2xl shadow-xl border border-white/[0.07] p-6 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-[#141824] w-full max-w-3xl rounded-2xl shadow-xl border border-black/10 dark:border-white/[0.07] p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-2xl font-bold text-[#eef2ff]">
@@ -3559,8 +3559,8 @@ function AdminUnitDetailPage() {
                 </button>
               </div>
 
-              <div className="mb-6 bg-[#111520] border border-white/[0.07] rounded-xl p-4">
-                <p className="text-[10px] text-[#6b7a9a]">
+              <div className="mb-6 bg-slate-100 dark:bg-[#111520] border border-black/10 dark:border-white/[0.07] rounded-xl p-4">
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   {editingRoomId ? "Room ID" : "Automatische Room ID"}
                 </p>
                 <p className="text-xl font-bold text-[#eef2ff] mt-1">
@@ -3584,7 +3584,7 @@ function AdminUnitDetailPage() {
                       value={roomForm.roomName}
                       onChange={handleRoomChange}
                       required
-                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
+                      className="w-full border border-black/10 dark:border-white/[0.08] rounded-[8px] px-4 py-3 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
                   </div>
 
@@ -3616,7 +3616,7 @@ function AdminUnitDetailPage() {
                       value={roomForm.priceMonthly}
                       onChange={handleRoomChange}
                       placeholder="z. B. 950"
-                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
+                      className="w-full border border-black/10 dark:border-white/[0.08] rounded-[8px] px-4 py-3 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
                     <p className="text-xs text-[#6b7a9a] mt-1">
                       Soll-Preis für Planung / Vollbelegung; keine Ist-Miete.
@@ -3633,7 +3633,7 @@ function AdminUnitDetailPage() {
                       value={roomForm.minimumStayMonths}
                       onChange={handleRoomChange}
                       min="1"
-                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
+                      className="w-full border border-black/10 dark:border-white/[0.08] rounded-[8px] px-4 py-3 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
                   </div>
 
@@ -3647,7 +3647,7 @@ function AdminUnitDetailPage() {
                       value={roomForm.noticePeriodMonths}
                       onChange={handleRoomChange}
                       min="1"
-                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
+                      className="w-full border border-black/10 dark:border-white/[0.08] rounded-[8px] px-4 py-3 bg-slate-100 dark:bg-[#111520] text-[#0f172a] dark:text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
                   </div>
                 </div>
@@ -3656,7 +3656,7 @@ function AdminUnitDetailPage() {
                   <button
                     type="button"
                     onClick={handleCloseRoomModal}
-                    className="px-5 py-3 rounded-[8px] border border-white/[0.1] bg-transparent text-[#8090b0] hover:bg-white/[0.04]"
+                    className="px-5 py-3 rounded-[8px] border border-black/10 bg-transparent text-[#64748b] hover:bg-black/[0.03] dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                   >
                     Abbrechen
                   </button>
@@ -3681,7 +3681,7 @@ function AdminUnitDetailPage() {
             role="presentation"
           >
             <div
-              className="w-full max-w-lg rounded-xl border border-white/[0.07] bg-[#141824] p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-lg rounded-xl border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824] p-6 shadow-lg max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -3708,7 +3708,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, property_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] bg-slate-100 dark:bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.properties.map((p) => (
@@ -3729,7 +3729,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, landlord_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] bg-slate-100 dark:bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.landlords.map((ll) => (
@@ -3750,7 +3750,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, property_manager_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] bg-slate-100 dark:bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.pms.map((pm) => (
@@ -3771,7 +3771,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, owner_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
+                      className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] bg-slate-100 dark:bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.owners.map((o) => (
@@ -3791,7 +3791,7 @@ function AdminUnitDetailPage() {
                   type="button"
                   disabled={assignSaving}
                   onClick={() => setAssignOpen(false)}
-                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:opacity-50"
+                  className="rounded-[8px] border border-black/10 bg-transparent px-4 py-2 text-sm font-semibold text-[#64748b] hover:bg-black/[0.03] dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:opacity-50"
                 >
                   Abbrechen
                 </button>
