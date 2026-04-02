@@ -38,7 +38,7 @@ function unitTypeBadgeClasses(type) {
   if (raw === "Business Apartment") {
     return "border-purple-500/20 bg-purple-500/10 text-purple-300";
   }
-  return "border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]";
+  return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
 function unitStatusBadgeClasses(status) {
@@ -46,7 +46,7 @@ function unitStatusBadgeClasses(status) {
   if (s === "frei" || s === "") return "border-green-500/20 bg-green-500/10 text-green-400";
   if (s === "belegt" || s === "occupied") return "border-blue-500/20 bg-blue-500/10 text-blue-300";
   if (s === "reserviert" || s === "reserved") return "border-amber-500/20 bg-amber-500/10 text-amber-400";
-  return "border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]";
+  return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
 function formatDateTime(iso) {
@@ -255,18 +255,18 @@ function AdminPropertyManagerDetailPage() {
 
   if (loading) {
     return (
-      <p className="min-h-[40vh] bg-[#07090f] px-2 py-8 text-[#6b7a9a]">Lade Bewirtschafter …</p>
+      <p className="min-h-[40vh] bg-[#f8fafc] px-2 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">Lade Bewirtschafter …</p>
     );
   }
 
   if (error || !pm) {
     return (
-      <div className="max-w-3xl bg-[#07090f] px-2 py-6 text-[#eef2ff]">
+      <div className="max-w-3xl bg-[#f8fafc] px-2 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
         <p className="mb-3 text-[#f87171]">{error || "Nicht gefunden."}</p>
         <button
           type="button"
           onClick={() => navigate("/admin/bewirtschafter")}
-          className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+          className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
         >
           Zurück zur Liste
         </button>
@@ -375,7 +375,7 @@ function AdminPropertyManagerDetailPage() {
   };
 
   return (
-    <div className="min-h-screen max-w-3xl bg-[#07090f] px-2 py-6 text-[#eef2ff]">
+    <div className="min-h-screen max-w-3xl bg-[#f8fafc] px-2 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <p className="mb-4">
         <Link
           to="/admin/bewirtschafter"
@@ -388,24 +388,24 @@ function AdminPropertyManagerDetailPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 gap-y-2">
-            <h1 className="text-[22px] font-bold tracking-tight text-[#eef2ff]">{displayName}</h1>
+            <h1 className="text-[22px] font-bold tracking-tight text-[#0f172a] dark:text-[#eef2ff]">{displayName}</h1>
             <span
               className={
                 isPmActive
                   ? "inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400"
-                  : "inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.05] px-2.5 py-0.5 text-[10px] font-bold text-[#6b7a9a]"
+                  : "inline-flex items-center rounded-full border border-black/10 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]"
               }
             >
               {isPmActive ? "Aktiv" : "Inaktiv"}
             </span>
           </div>
-          <p className="mt-1 text-[12px] text-[#6b7a9a]">Bewirtschafter / Property Manager</p>
+          <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">Bewirtschafter / Property Manager</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={openEditModal}
-            className="inline-flex items-center rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+            className="inline-flex items-center rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-sm font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
           >
             Bearbeiten
           </button>
@@ -428,20 +428,20 @@ function AdminPropertyManagerDetailPage() {
         </div>
       </div>
 
-      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Stammdaten</h2>
+      <section className="mb-4 rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Stammdaten</h2>
         <div className="space-y-4">
           <div>
-            <p className="text-[10px] text-[#6b7a9a]">Name</p>
-            <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{displayName}</p>
+            <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Name</p>
+            <p className="mt-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{displayName}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[#6b7a9a]">E-Mail</p>
-            <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{pm.email?.trim() || "—"}</p>
+            <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">E-Mail</p>
+            <p className="mt-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{pm.email?.trim() || "—"}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[#6b7a9a]">Telefonnummer</p>
-            <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{pm.phone?.trim() || "—"}</p>
+            <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Telefonnummer</p>
+            <p className="mt-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{pm.phone?.trim() || "—"}</p>
           </div>
         </div>
       </section>

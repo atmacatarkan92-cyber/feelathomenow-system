@@ -344,39 +344,39 @@ function AdminLandlordsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[40vh] bg-[#07090f] px-4 py-8 text-[#6b7a9a]">
+      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
         Lade Verwaltungen …
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#07090f] px-4 py-6 text-[#eef2ff]">
+    <div className="min-h-screen bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <h2 className="mb-6 text-[22px] font-bold">Verwaltungen / Vermieter (Landlords)</h2>
 
       <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Verwaltungen gesamt</p>
-          <p className="mt-2 text-[24px] font-bold text-[#eef2ff]">{kpiSummary.total}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Alle erfassten Verwaltungen</p>
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#7aaeff] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Verwaltungen gesamt</p>
+          <p className="mt-2 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{kpiSummary.total}</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Alle erfassten Verwaltungen</p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#4ade80] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Aktiv</p>
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#4ade80] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Aktiv</p>
           <p className="mt-2 text-[24px] font-bold text-[#4ade80]">{kpiSummary.active}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Status aktiv, nicht archiviert</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Status aktiv, nicht archiviert</p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#fb923c] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Archiviert</p>
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#fb923c] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Archiviert</p>
           <p className="mt-2 text-[24px] font-bold text-[#fb923c]">{kpiSummary.archived}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Soft-deleted / archiviert</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Soft-deleted / archiviert</p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#a78bfa] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Mit Objekten</p>
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#a78bfa] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Mit Objekten</p>
           <p className="mt-2 text-[24px] font-bold text-[#7aaeff]">{kpiSummary.withProperties}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Mit Liegenschaft verknüpft</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Mit Liegenschaft verknüpft</p>
         </div>
       </div>
 
@@ -441,7 +441,7 @@ function AdminLandlordsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#141824]">
+      <div className="overflow-hidden rounded-[14px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824]">
         <table style={tableStyle}>
         <thead>
           <tr>
@@ -543,7 +543,7 @@ function AdminLandlordsPage() {
                   <td style={tdStyle}>
                     <Link
                       to={`/admin/landlords/${row.id}`}
-                      className="inline-block rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] no-underline hover:bg-white/[0.04]"
+                      className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] dark:text-[#8090b0] no-underline hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                     >
                       Öffnen
                     </Link>
@@ -562,10 +562,10 @@ function AdminLandlordsPage() {
           onClick={() => !saving && setFormOpen(false)}
         >
           <div
-            className="w-full max-w-[480px] rounded-[14px] border border-white/[0.07] bg-[#141824] p-6"
+            className="w-full max-w-[480px] rounded-[14px] border border-black/10 bg-white p-6 [color-scheme:light] dark:border-white/[0.07] dark:bg-[#141824] dark:[color-scheme:dark]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-1 text-[18px] font-bold text-[#eef2ff]">
+            <h3 className="mb-1 text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
               {editingId ? "Verwaltung bearbeiten" : "Neue Verwaltung"}
             </h3>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
@@ -628,7 +628,7 @@ function AdminLandlordsPage() {
                   required
                 />
                 {plzNotFound ? (
-                  <p className="mt-1.5 text-xs text-[#6b7a9a]">PLZ nicht gefunden</p>
+                  <p className="mt-1.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">PLZ nicht gefunden</p>
                 ) : null}
               </div>
               <div>
@@ -682,7 +682,7 @@ function AdminLandlordsPage() {
                       !(form.postal_code || "").trim() ||
                       !(form.city || "").trim()
                     }
-                    className="self-start rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="self-start rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
                     style={{
                       cursor: saving || addressCheckBusy ? "not-allowed" : "pointer",
                     }}
@@ -764,7 +764,7 @@ function AdminLandlordsPage() {
                 <button
                   type="button"
                   onClick={() => !saving && setFormOpen(false)}
-                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>

@@ -47,7 +47,7 @@ function unitTypeBadgeClasses(type) {
   if (raw === "Business Apartment") {
     return "border-purple-500/20 bg-purple-500/10 text-purple-300";
   }
-  return "border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]";
+  return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
 function unitStatusBadgeClasses(status) {
@@ -55,7 +55,7 @@ function unitStatusBadgeClasses(status) {
   if (s === "frei" || s === "") return "border-green-500/20 bg-green-500/10 text-green-400";
   if (s === "belegt" || s === "occupied") return "border-blue-500/20 bg-blue-500/10 text-blue-300";
   if (s === "reserviert" || s === "reserved") return "border-amber-500/20 bg-amber-500/10 text-amber-400";
-  return "border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]";
+  return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
 function formatDateTime(iso) {
@@ -406,18 +406,18 @@ function AdminLandlordDetailPage() {
 
   if (loading) {
     return (
-      <p className="min-h-[40vh] bg-[#07090f] px-2 py-8 text-[#6b7a9a]">Lade Verwaltung …</p>
+      <p className="min-h-[40vh] bg-[#f8fafc] px-2 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">Lade Verwaltung …</p>
     );
   }
 
   if (error || !row) {
     return (
-      <div className="bg-[#07090f] px-2 py-6 text-[#eef2ff]">
+      <div className="bg-[#f8fafc] px-2 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
         <p className="mb-3 text-[#f87171]">{error || "Nicht gefunden."}</p>
         <button
           type="button"
           onClick={() => navigate("/admin/landlords")}
-          className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+          className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
         >
           Zurück zur Liste
         </button>
@@ -621,7 +621,7 @@ function AdminLandlordDetailPage() {
   };
 
   return (
-    <div className="min-h-screen max-w-3xl bg-[#07090f] px-2 py-6 text-[#eef2ff]">
+    <div className="min-h-screen max-w-3xl bg-[#f8fafc] px-2 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <p className="mb-4">
         <Link
           to="/admin/landlords"
@@ -631,23 +631,23 @@ function AdminLandlordDetailPage() {
         </Link>
       </p>
 
-      <header className="mb-8 border-b border-white/[0.05] pb-2">
+      <header className="mb-8 border-b border-black/10 pb-2 dark:border-white/[0.05]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 pr-4">
-            <h1 className="text-[22px] font-bold leading-tight tracking-tight text-[#eef2ff] md:text-2xl">
+            <h1 className="text-[22px] font-bold leading-tight tracking-tight text-[#0f172a] dark:text-[#eef2ff] md:text-2xl">
               {title}
             </h1>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
             {isArchived ? (
-              <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.05] px-3 py-1 text-xs font-bold text-[#6b7a9a]">
+              <span className="inline-flex items-center rounded-full border border-black/10 bg-slate-100 px-3 py-1 text-xs font-bold text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]">
                 Archiviert
               </span>
             ) : null}
             <span
               className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${
                 isInactive
-                  ? "border border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]"
+                  ? "border border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]"
                   : "border border-green-500/20 bg-green-500/10 text-green-400"
               }`}
             >
@@ -657,7 +657,7 @@ function AdminLandlordDetailPage() {
               <button
                 type="button"
                 onClick={openLandlordEditModal}
-                className="inline-flex items-center rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-sm font-semibold text-[#8090b0] transition-colors hover:bg-white/[0.04]"
+                className="inline-flex items-center rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-1.5 text-sm font-semibold text-[#64748b] dark:text-[#8090b0] transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
               >
                 Bearbeiten
               </button>
@@ -684,28 +684,28 @@ function AdminLandlordDetailPage() {
       </header>
 
       <div className="space-y-6">
-        <section className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Kontakt</h2>
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Kontakt</h2>
           <div className="space-y-4">
             <div>
-              <p className="text-[10px] text-[#6b7a9a]">Kontaktperson</p>
-              <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{dash(row.contact_name)}</p>
+              <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Kontaktperson</p>
+              <p className="mt-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{dash(row.contact_name)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[#6b7a9a]">E-Mail</p>
-              <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{dash(row.email)}</p>
+              <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">E-Mail</p>
+              <p className="mt-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{dash(row.email)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[#6b7a9a]">Telefon</p>
-              <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{dash(row.phone)}</p>
+              <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Telefon</p>
+              <p className="mt-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{dash(row.phone)}</p>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Adresse</h2>
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</h2>
           <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1 space-y-1 text-[13px] font-medium text-[#eef2ff]">
+            <div className="min-w-0 flex-1 space-y-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
               <p>{addrLine1 ? addrLine1 : "—"}</p>
               <p>{addrLine2 ? addrLine2 : "—"}</p>
               <p>{addrLine3 ? addrLine3 : "—"}</p>
@@ -722,7 +722,7 @@ function AdminLandlordDetailPage() {
                     "noopener,noreferrer"
                   )
                 }
-                className="inline-flex shrink-0 items-center justify-center rounded-[8px] border border-white/[0.1] bg-transparent p-1 text-[#8090b0] hover:bg-white/[0.04] hover:text-[#eef2ff]"
+                className="inline-flex shrink-0 items-center justify-center rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent p-1 text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] hover:text-[#0f172a] dark:hover:text-[#eef2ff]"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -744,7 +744,7 @@ function AdminLandlordDetailPage() {
           </div>
         </section>
 
-        <section className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
           <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
             Weitere Angaben
           </h2>
@@ -779,7 +779,7 @@ function AdminLandlordDetailPage() {
           </div>
         </section>
 
-        <section className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
           <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Notizen</h2>
           {!isArchived ? (
             <form
@@ -805,7 +805,7 @@ function AdminLandlordDetailPage() {
                 disabled={newNoteSaving}
                 placeholder="Interne Notiz …"
                 rows={3}
-                className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] placeholder:text-[#6b7a9a]/70 focus:outline-none focus:ring-2 focus:ring-[#7aaeff]/30 disabled:opacity-60"
+                className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b]/70 focus:outline-none focus:ring-2 focus:ring-[#7aaeff]/30 disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]/70"
               />
               {newNoteErr ? (
                 <p className="mt-2 text-sm text-[#f87171]">{newNoteErr}</p>
@@ -824,7 +824,7 @@ function AdminLandlordDetailPage() {
               </div>
             </form>
           ) : null}
-          <div className={!isArchived ? "border-t border-white/[0.05] pt-5" : ""}>
+          <div className={!isArchived ? "border-t border-black/10 pt-5 dark:border-white/[0.05]" : ""}>
             <p className="mb-3 text-[10px] text-[#6b7a9a]">Alle Notizen</p>
             {!notes.length ? (
               <p className="text-sm text-[#6b7a9a]">Noch keine Notizen</p>
@@ -833,7 +833,7 @@ function AdminLandlordDetailPage() {
                 {notes.map((n) => (
                   <li
                     key={n.id}
-                    className="border-b border-white/[0.05] pb-4 last:border-0 last:pb-0"
+                    className="border-b border-black/10 pb-4 last:border-0 last:pb-0 dark:border-white/[0.05]"
                   >
                     {editingNoteId === n.id ? (
                       <div>
@@ -845,7 +845,7 @@ function AdminLandlordDetailPage() {
                           }}
                           disabled={editSaving}
                           rows={4}
-                          className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] focus:outline-none focus:ring-2 focus:ring-[#7aaeff]/30 disabled:opacity-60"
+                          className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#7aaeff]/30 disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                         />
                         {editErr ? <p className="mt-2 text-sm text-[#f87171]">{editErr}</p> : null}
                         <div className="mt-2 flex flex-wrap gap-2">
@@ -861,15 +861,15 @@ function AdminLandlordDetailPage() {
                             type="button"
                             disabled={editSaving}
                             onClick={cancelEditNote}
-                            className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:opacity-60"
+                            className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-1.5 text-sm font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] disabled:opacity-60"
                           >
                             Abbrechen
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-[10px] bg-[#111520] p-3">
-                        <p className="whitespace-pre-wrap text-sm text-[#eef2ff]">{n.content}</p>
+                      <div className="rounded-[10px] bg-slate-100 p-3 dark:bg-[#111520]">
+                        <p className="whitespace-pre-wrap text-sm text-[#0f172a] dark:text-[#eef2ff]">{n.content}</p>
                         <p className="mt-2 text-xs text-[#6b7a9a]">
                           {formatDateTime(n.created_at)} · {n.author_name || "—"}
                         </p>
@@ -1070,7 +1070,7 @@ function AdminLandlordDetailPage() {
           )}
         </div>
 
-        <section className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
           <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
             Zugeordnete Units
           </h2>
@@ -1083,8 +1083,8 @@ function AdminLandlordDetailPage() {
           ) : assignedUnitsError ? (
             <p className="text-sm text-[#f87171]">{assignedUnitsError}</p>
           ) : assignedUnits.length === 0 ? (
-            <div className="rounded-[10px] border border-dashed border-white/[0.07] bg-[#111520] px-5 py-8 text-center">
-              <p className="text-sm font-semibold text-[#eef2ff]">Keine Units zugeordnet</p>
+            <div className="rounded-[10px] border border-dashed border-black/10 bg-slate-100 px-5 py-8 text-center dark:border-white/[0.07] dark:bg-[#111520]">
+              <p className="text-sm font-semibold text-[#0f172a] dark:text-[#eef2ff]">Keine Units zugeordnet</p>
               <p className="mx-auto mt-2 max-w-md text-sm text-[#6b7a9a]">
                 Dieser Verwaltung sind aktuell noch keine Units zugewiesen.
               </p>
@@ -1103,7 +1103,7 @@ function AdminLandlordDetailPage() {
                 return (
                   <li
                     key={String(uid)}
-                    className="rounded-[14px] border border-white/[0.07] bg-[#111520] p-4 transition-shadow hover:shadow-lg md:p-5"
+                    className="rounded-[14px] border border-black/10 bg-slate-100 p-4 transition-shadow hover:shadow-lg md:p-5 dark:border-white/[0.07] dark:bg-[#111520]"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
@@ -1134,8 +1134,8 @@ function AdminLandlordDetailPage() {
                         </span>
                       </div>
                     </div>
-                    <p className="mt-3 border-t border-white/[0.05] pt-3 text-sm text-[#eef2ff]">
-                      <span className="text-[#6b7a9a]">Miete (Mieter): </span>
+                    <p className="mt-3 border-t border-black/10 pt-3 text-sm text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]">
+                      <span className="text-[#64748b] dark:text-[#6b7a9a]">Miete (Mieter): </span>
                       <span className="font-semibold tabular-nums text-[#4ade80]">
                         {formatChfMonthly(u.tenantPriceMonthly)}
                       </span>
@@ -1205,7 +1205,7 @@ function AdminLandlordDetailPage() {
           ) : auditLogs.length === 0 ? (
             <p className="text-sm text-[#6b7a9a]">Noch keine Einträge im Audit-Protokoll.</p>
           ) : (
-            <ul className="ml-1 space-y-4 border-l-2 border-white/[0.08] pl-4">
+            <ul className="ml-1 space-y-4 border-l-2 border-black/10 pl-4 dark:border-white/[0.08]">
               {auditLogs.map((log) => {
                 const actor =
                   (log.actor_name && String(log.actor_name).trim()) ||

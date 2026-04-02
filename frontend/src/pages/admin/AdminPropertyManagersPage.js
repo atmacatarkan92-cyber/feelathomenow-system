@@ -170,20 +170,20 @@ function AdminPropertyManagersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[40vh] bg-[#07090f] px-4 py-8 text-[#6b7a9a]">
+      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
         Lade Bewirtschafter …
       </div>
     );
   }
 
   return (
-    <div className="grid min-h-screen gap-6 bg-[#07090f] px-4 py-6 text-[#eef2ff]">
+    <div className="grid min-h-screen gap-6 bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <div>
         <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">Vantio</div>
 
         <h2 className="text-[22px] font-bold">Bewirtschafter</h2>
 
-        <p className="mt-2 text-[12px] text-[#6b7a9a]">
+        <p className="mt-2 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Verwaltung von Bewirtschafter-Kontakten (PostgreSQL).
         </p>
       </div>
@@ -195,36 +195,36 @@ function AdminPropertyManagersPage() {
       )}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#7aaeff] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Bewirtschafter gesamt
           </p>
-          <p className="mt-2 text-[24px] font-bold text-[#eef2ff]">{summary.totalCount}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Alle erfassten Kontakte</p>
+          <p className="mt-2 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.totalCount}</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Alle erfassten Kontakte</p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#7aaeff] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Mit Verwaltung
           </p>
           <p className="mt-2 text-[24px] font-bold text-[#7aaeff]">{summary.withLandlord}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Verwaltung verknüpft</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Verwaltung verknüpft</p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#4ade80] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Aktiv</p>
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#4ade80] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Aktiv</p>
           <p className="mt-2 text-[24px] font-bold text-[#4ade80]">{summary.activeCount}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Status aktiv</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Status aktiv</p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#6b7a9a] bg-[#141824] p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Inaktiv</p>
+        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#6b7a9a] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Inaktiv</p>
           <p className="mt-2 text-[24px] font-bold text-[#8090b0]">{summary.inactiveCount}</p>
-          <p className="mt-2 text-[11px] text-[#6b7a9a]">Status inaktiv</p>
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Status inaktiv</p>
         </div>
       </div>
 
-      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+      <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
         <div
           style={{
             display: "flex",
@@ -245,19 +245,19 @@ function AdminPropertyManagersPage() {
             }}
           >
             <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-              <label className="mb-2 block text-[10px] font-medium text-[#6b7a9a]">Suche</label>
+              <label className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]">Suche</label>
               <input
                 type="text"
                 placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="box-border h-[44px] w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3.5 text-[14px] text-[#eef2ff] placeholder:text-[#6b7a9a]/70"
+                className="box-border h-[44px] w-full rounded-[8px] border border-black/10 bg-slate-100 px-3.5 text-[14px] text-[#0f172a] placeholder:text-[#64748b]/70 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]/70"
               />
             </div>
             <div style={{ flex: "0 1 180px", minWidth: "min(100%, 160px)" }}>
               <label
                 htmlFor="pm-list-filter"
-                className="mb-2 block text-[10px] font-medium text-[#6b7a9a]"
+                className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]"
               >
                 Anzeige
               </label>
@@ -266,7 +266,7 @@ function AdminPropertyManagersPage() {
                 value={listFilter}
                 onChange={(e) => setListFilter(e.target.value)}
                 aria-label="Anzeige"
-                className="box-border h-[44px] w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 text-[14px] text-[#eef2ff]"
+                className="box-border h-[44px] w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
               >
                 <option value="active">Aktiv</option>
                 <option value="inactive">Inaktiv</option>
@@ -284,19 +284,19 @@ function AdminPropertyManagersPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+      <div className="overflow-x-auto rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[16px] font-bold text-[#eef2ff]">Bewirtschafterübersicht</h3>
+          <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Bewirtschafterübersicht</h3>
 
-          <div className="text-[13px] text-[#6b7a9a]">{filteredRows.length} Einträge</div>
+          <div className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">{filteredRows.length} Einträge</div>
         </div>
 
         {filteredRows.length === 0 ? (
-          <p className="text-[#6b7a9a]">Keine Bewirtschafter gefunden.</p>
+          <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Bewirtschafter gefunden.</p>
         ) : (
           <table className="w-full border-collapse text-[14px]">
             <thead>
-              <tr className="border-b border-white/[0.05] bg-[#111520] text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+              <tr className="border-b border-black/10 dark:border-white/[0.05] bg-slate-100 dark:bg-[#111520] text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                 <th className="px-3 py-3">Name</th>
                 <th className="px-3 py-3">E-Mail</th>
                 <th className="px-3 py-3">Telefon</th>
@@ -310,19 +310,19 @@ function AdminPropertyManagersPage() {
               {filteredRows.map((item) => {
                 const ll = item.landlord_id ? landlordById.get(item.landlord_id) : null;
                 return (
-                  <tr key={item.id} className="border-b border-white/[0.05]">
-                    <td className="px-3 py-3 font-semibold text-[#eef2ff]">{item.name || "—"}</td>
-                    <td className="px-3 py-3 text-[#eef2ff]">{item.email || "—"}</td>
-                    <td className="px-3 py-3 text-[#eef2ff]">{item.phone || "—"}</td>
-                    <td className="px-3 py-3 font-medium text-[#eef2ff]">
+                  <tr key={item.id} className="border-b border-black/10 dark:border-white/[0.05]">
+                    <td className="px-3 py-3 font-semibold text-[#0f172a] dark:text-[#eef2ff]">{item.name || "—"}</td>
+                    <td className="px-3 py-3 text-[#0f172a] dark:text-[#eef2ff]">{item.email || "—"}</td>
+                    <td className="px-3 py-3 text-[#0f172a] dark:text-[#eef2ff]">{item.phone || "—"}</td>
+                    <td className="px-3 py-3 font-medium text-[#0f172a] dark:text-[#eef2ff]">
                       {ll ? landlordLabel(ll) : "—"}
                     </td>
-                    <td className="px-3 py-3 text-[#eef2ff]">{formatDate(item.created_at)}</td>
+                    <td className="px-3 py-3 text-[#0f172a] dark:text-[#eef2ff]">{formatDate(item.created_at)}</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Link
                           to={`/admin/bewirtschafter/${encodeURIComponent(item.id)}`}
-                          className="inline-block rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] no-underline hover:bg-white/[0.04]"
+                          className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] dark:text-[#8090b0] no-underline hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                         >
                           Öffnen
                         </Link>
@@ -342,47 +342,47 @@ function AdminPropertyManagersPage() {
           onClick={() => !saving && setFormOpen(false)}
         >
           <div
-            className="w-full max-w-[440px] rounded-[14px] border border-white/[0.07] bg-[#141824] p-6"
+            className="w-full max-w-[440px] rounded-[14px] border border-black/10 bg-white p-6 [color-scheme:light] dark:border-white/[0.07] dark:bg-[#141824] dark:[color-scheme:dark]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-4 text-[18px] font-bold text-[#eef2ff]">
+            <h3 className="mb-4 text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
               {editingId ? "Bewirtschafter bearbeiten" : "Neuer Bewirtschafter"}
             </h3>
             <form onSubmit={handleSubmit} className="grid gap-3.5">
               <div>
-                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">Name *</label>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Name *</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   required
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[14px] text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2.5 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">E-Mail (optional)</label>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">E-Mail (optional)</label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[14px] text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2.5 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">Telefon (optional)</label>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Telefon (optional)</label>
                 <input
                   type="text"
                   value={form.phone}
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[14px] text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2.5 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">Verwaltung (optional)</label>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Verwaltung (optional)</label>
                 <select
                   value={form.landlord_id}
                   onChange={(e) => setForm((f) => ({ ...f, landlord_id: e.target.value }))}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[14px] text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2.5 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="">— Keine Auswahl</option>
                   {landlords.map((l) => (
@@ -393,11 +393,11 @@ function AdminPropertyManagersPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">Status</label>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Status</label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[14px] text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2.5 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="active">Aktiv</option>
                   <option value="inactive">Inaktiv</option>
@@ -415,7 +415,7 @@ function AdminPropertyManagersPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => setFormOpen(false)}
-                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-3 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-3 font-semibold text-[#64748b] dark:text-[#8090b0] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>
