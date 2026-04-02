@@ -41,6 +41,27 @@ function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
 
+/** Clamped 0–100 for occupancy bar width (matches portfolio.occupancyRate). */
+function clampOccupancyBarPercent(rate) {
+  if (rate == null || Number.isNaN(Number(rate))) return 0;
+  return Math.min(100, Math.max(0, Number(rate) * 100));
+}
+
+/** Fill / value / akzent for occupancy KPI (rate 0–1). */
+function getOccupancyVisualColors(rate) {
+  if (rate == null || Number.isNaN(Number(rate))) {
+    return { fill: "#94a3b8", value: "#64748b", akzent: "#64748b" };
+  }
+  const r = Number(rate);
+  if (r >= 0.85) {
+    return { fill: "#22c55e", value: "#16a34a", akzent: "#15803d" };
+  }
+  if (r >= 0.6) {
+    return { fill: "#3b82f6", value: "#2563eb", akzent: "#1d4ed8" };
+  }
+  return { fill: "#fb923c", value: "#ea580c", akzent: "#c2410c" };
+}
+
 function formatDate(dateString) {
   if (!dateString) return "-";
   const date = new Date(dateString);
@@ -88,7 +109,13 @@ function KpiKarte({
   farbe,
   akzent = "#64748b",
   badge = "Live",
+  children,
+  wertClassName = "",
+  hinweisClassName,
 }) {
+  const hinweisWrap =
+    hinweisClassName ??
+    "mt-3 text-sm leading-relaxed text-[#64748b] dark:text-[#6b7a9a]";
   return (
     <div className="relative overflow-hidden rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
       <div className="absolute left-0 right-0 top-0 h-1" style={{ background: akzent }} />
@@ -99,13 +126,14 @@ function KpiKarte({
         </span>
       </div>
       <div
-        className="text-2xl font-bold leading-tight tracking-tight text-[#0f172a] dark:text-[#eef2ff]"
+        className={`text-2xl font-bold leading-tight tracking-tight text-[#0f172a] dark:text-[#eef2ff] ${wertClassName}`.trim()}
         style={farbe ? { color: farbe } : undefined}
       >
         {wert}
       </div>
+      {children}
       {hinweis ? (
-        <div className="mt-3 text-sm leading-relaxed text-[#64748b] dark:text-[#6b7a9a]">{hinweis}</div>
+        <div className={hinweisWrap}>{hinweis}</div>
       ) : null}
     </div>
   );
@@ -413,6 +441,19 @@ export default function AdminUebersichtPage() {
     [units, rooms, tenancies, unitCostsByUnitId]
   );
 
+  const occupancyKpiUi = useMemo(() => {
+    if (!portfolio) return null;
+    const rate = portfolio.occupancyRate;
+    return {
+      colors: getOccupancyVisualColors(rate),
+      barPct: clampOccupancyBarPercent(rate),
+      showSlots:
+        typeof portfolio.occupiedSlots === "number" &&
+        typeof portfolio.capacitySlots === "number" &&
+        portfolio.capacitySlots > 0,
+    };
+  }, [portfolio]);
+
   const weakestUnitDisplayLabel = useMemo(() => {
     const wu = operationsStats.weakestUnit;
     if (!wu) return "";
@@ -558,11 +599,43 @@ export default function AdminUebersichtPage() {
                 ? formatPercent(portfolio.occupancyRate * 100)
                 : "—"
             }
-            hinweis="Belegte Slots / Kapazität (Co-Living: Zimmer, Apartment: 1)"
-            farbe="#7aaeff"
-            akzent="#2563eb"
+            wertClassName="!text-3xl !font-bold"
+            hinweis={
+              occupancyKpiUi?.showSlots ? (
+                <>
+                  <span
+                    className="font-semibold tabular-nums text-slate-900 dark:text-slate-100"
+                    style={{ color: occupancyKpiUi.colors.value }}
+                  >
+                    {portfolio.occupiedSlots} von {portfolio.capacitySlots}
+                  </span>{" "}
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    Slots belegt
+                  </span>
+                </>
+              ) : (
+                ""
+              )
+            }
+            hinweisClassName="mt-2 text-sm leading-snug"
+            farbe={occupancyKpiUi?.colors.value}
+            akzent={occupancyKpiUi?.colors.akzent}
             badge="Tenancy"
-          />
+          >
+            {portfolio.occupancyRate != null ? (
+              <div className="mt-2">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/[0.08] shadow-inner ring-1 ring-black/[0.04] dark:ring-white/[0.06]">
+                  <div
+                    className="h-full rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.18)] transition-[width] duration-300 ease-out dark:shadow-[0_1px_4px_rgba(0,0,0,0.45)]"
+                    style={{
+                      width: `${occupancyKpiUi.barPct}%`,
+                      backgroundColor: occupancyKpiUi.colors.fill,
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </KpiKarte>
           <KpiKarte
             titel="Beste Unit"
             wert={

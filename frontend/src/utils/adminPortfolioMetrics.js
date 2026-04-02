@@ -126,6 +126,8 @@ export function getPortfolioMetrics(units, rooms, tenancies, unitCostsByUnitId =
     totalFullPotential,
     totalVacancy,
     occupancyRate: totalRooms > 0 ? totalOccupiedRooms / totalRooms : null,
+    occupiedSlots: totalOccupiedRooms,
+    capacitySlots: totalRooms,
     bestUnit,
     worstUnit,
   };
