@@ -223,41 +223,39 @@ function AdminBreakEvenPage() {
                   ? formatPercentRounded(row.deckungsgrad01, { decimals: 0 })
                   : null;
 
-              const roomsNeededStr =
-                isCoLiving && row.breakEvenRooms != null && Number.isFinite(row.breakEvenRooms) && row.totalRooms != null
-                  ? `${row.breakEvenRooms.toFixed(1)} / ${row.totalRooms} Rooms needed`
-                  : null;
-              const occupancyNeededStr = isCoLiving
-                ? formatPercentRounded(row.occupancyNeeded01, { decimals: 0 })
-                : null;
-
               const coLivingInvalid =
                 isCoLiving &&
-                (row.revenue == null ||
-                  row.costs == null ||
-                  row.costs <= 0 ||
-                  row.totalRooms == null ||
-                  row.totalRooms <= 0 ||
-                  row.breakEvenRooms == null ||
-                  !Number.isFinite(row.breakEvenRooms) ||
-                  row.occupancyNeeded01 == null ||
-                  !Number.isFinite(row.occupancyNeeded01));
+                (row.revenue === null ||
+                  row.costs === null ||
+                  row.costs === 0 ||
+                  row.occupiedRooms === 0 ||
+                  row.totalRooms === 0);
 
-              const coLivingHasStatus =
+              const roomsNeededStr =
                 isCoLiving &&
                 !coLivingInvalid &&
-                row.occupiedRooms != null &&
-                row.totalRooms != null &&
-                row.totalRooms > 0 &&
                 row.breakEvenRooms != null &&
-                Number.isFinite(row.breakEvenRooms);
+                Number.isFinite(row.breakEvenRooms) &&
+                row.totalRooms != null &&
+                row.totalRooms > 0
+                  ? `${row.breakEvenRooms.toFixed(1)} / ${row.totalRooms} Rooms`
+                  : null;
+              const occupancyNeededStr =
+                isCoLiving &&
+                !coLivingInvalid &&
+                row.occupancyNeeded01 != null &&
+                Number.isFinite(row.occupancyNeeded01)
+                  ? formatPercentRounded(row.occupancyNeeded01, { decimals: 0 })
+                  : null;
+
+              const coLivingHasStatus = isCoLiving && !coLivingInvalid;
 
               const coLivingIsProfitable =
                 coLivingHasStatus ? row.occupiedRooms >= row.breakEvenRooms : null;
 
               const missingRooms =
                 coLivingHasStatus && coLivingIsProfitable === false
-                  ? Math.max(0, Math.ceil(row.breakEvenRooms - row.occupiedRooms))
+                  ? Math.ceil(row.breakEvenRooms - row.occupiedRooms)
                   : 0;
 
               const metricUnavailable =
@@ -360,7 +358,7 @@ function AdminBreakEvenPage() {
                           >
                             {coLivingIsProfitable
                               ? "✅ Profitabel"
-                              : `⚠️ ${missingRooms} Room(s) fehlen`}
+                              : `⚠️ ${missingRooms} Zimmer fehlen`}
                           </div>
                         ) : null}
                       </div>
