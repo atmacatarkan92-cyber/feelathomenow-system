@@ -23,6 +23,7 @@ import {
   formatOccupancyStatusDe,
   getUnitOccupancyStatus,
   occupancyStatusBadgeClassName,
+  sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
 
 function landlordLabel(l) {
@@ -799,7 +800,12 @@ function AdminPropertyManagerDetailPage() {
                   <p className={`${pmTh.unitFooter} text-sm ${pmTh.body}`}>
                     <span className={pmTh.mutedInline}>Miete (Mieter): </span>
                     <span className={pmTh.rentStrong}>
-                      {formatChfMonthly(u.tenantPriceMonthly)}
+                      {formatChfMonthly(
+                        sumActiveTenancyMonthlyRentForUnit(
+                          u,
+                          occupancyTenancies ?? []
+                        )
+                      )}
                     </span>
                   </p>
                 </li>
