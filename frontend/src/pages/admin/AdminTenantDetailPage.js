@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   fetchAdminTenant,
   updateAdminTenant,
@@ -741,10 +741,15 @@ function tenantToForm(t) {
 export default function AdminTenantDetailPage() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const editing = Boolean(
+    location.state &&
+      typeof location.state === "object" &&
+      location.state.tenantStammdatenEdit === true
+  );
   const [tenant, setTenant] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
-  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -997,6 +1002,20 @@ export default function AdminTenantDetailPage() {
       shouldRefreshTenantList ? { state: { refreshTenants: true } } : undefined
     );
 
+  useEffect(() => {
+    if (
+      !(
+        location.state &&
+        typeof location.state === "object" &&
+        location.state.tenantStammdatenEdit === true
+      ) &&
+      tenant
+    ) {
+      setForm(tenantToForm(tenant));
+      setSaveError(null);
+    }
+  }, [location.state, tenant]);
+
   const startRevenueEdit = (row) => {
     if (!row?.id) return;
     setRevenueEditingId(String(row.id));
@@ -1169,7 +1188,6 @@ export default function AdminTenantDetailPage() {
     if (!tenantId) {
       setTenant(null);
       setLoadError("Kein Mieter angegeben.");
-      setEditing(false);
       setSaveError(null);
       setNotes([]);
       setEvents([]);
@@ -1497,7 +1515,7 @@ export default function AdminTenantDetailPage() {
     })
       .then((updated) => {
         applyUpdate(updated);
-        setEditing(false);
+        navigate(-1);
         setShouldRefreshTenantList(true);
         return Promise.all([
           fetchAdminTenantEvents(tenantId).catch(() => null),
@@ -1541,9 +1559,7 @@ export default function AdminTenantDetailPage() {
               type="button"
               onClick={() => {
                 if (editing) {
-                  setEditing(false);
-                  setSaveError(null);
-                  if (tenant) setForm(tenantToForm(tenant));
+                  navigate(-1);
                   return;
                 }
                 goToTenantList();
@@ -1570,8 +1586,22 @@ export default function AdminTenantDetailPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setEditing(true);
                   setSaveError(null);
+                  navigate(
+                    {
+                      pathname: location.pathname,
+                      search: location.search,
+                      hash: location.hash,
+                    },
+                    {
+                      state: {
+                        ...(typeof location.state === "object" && location.state !== null
+                          ? location.state
+                          : {}),
+                        tenantStammdatenEdit: true,
+                      },
+                    }
+                  );
                 }}
                 className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                 style={{ cursor: "pointer" }}
@@ -1908,9 +1938,7 @@ export default function AdminTenantDetailPage() {
                         type="button"
                         disabled={saving}
                         onClick={() => {
-                          setEditing(false);
-                          setSaveError(null);
-                          setForm(tenantToForm(tenant));
+                          navigate(-1);
                         }}
                         className="rounded-[8px] border border-black/10 bg-transparent px-3.5 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-default"
                         style={{ cursor: saving ? "default" : "pointer" }}
