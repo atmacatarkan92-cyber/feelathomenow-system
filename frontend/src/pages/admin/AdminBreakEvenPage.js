@@ -7,6 +7,23 @@ function formatCurrency(value) {
   return `CHF ${amount.toLocaleString("de-CH")}`;
 }
 
+function toFiniteNumberOrNull(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function clampNonNegativeInt(value) {
+  const n = Math.floor(Number(value || 0));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function formatPercentRounded(value01, { decimals = 0 } = {}) {
+  if (value01 == null || !Number.isFinite(value01)) return null;
+  const pct = value01 * 100;
+  if (!Number.isFinite(pct)) return null;
+  return `${pct.toFixed(Math.max(0, Math.min(1, decimals)))} %`;
+}
+
 function AdminBreakEvenPage() {
   const [units, setUnits] = useState([]);
   const [unitCostsByUnitId, setUnitCostsByUnitId] = useState({});
@@ -45,14 +62,44 @@ function AdminBreakEvenPage() {
         unitCostsByUnitId[String(unit.id)] ?? unitCostsByUnitId[unit.id] ?? [];
       const costs = getUnitCostsTotal(rowsCosts);
 
-      const breakEvenOccupancy = revenue === 0 ? null : costs / revenue;
+      const unitType =
+        unit?.type === "Apartment" || unit?.type === "Co-Living" ? unit.type : null;
+
+      // Apartment: "Deckungsgrad" = costs / tenantPriceMonthly (lower is better; < 1 means profitable).
+      const deckungsgrad01 =
+        unitType === "Apartment" && revenue > 0 ? costs / revenue : null;
+
+      // Co-Living: derive rooms + per-room price, then compute rooms needed + occupancy needed.
+      const totalRooms =
+        unitType === "Co-Living"
+          ? clampNonNegativeInt(
+              Array.isArray(unit?.rooms) ? unit.rooms.length : unit?.rooms
+            )
+          : null;
+      const occupiedRooms =
+        unitType === "Co-Living" ? clampNonNegativeInt(unit?.occupiedRooms) : null;
+      const roomPrice = unitType === "Co-Living" ? toFiniteNumberOrNull(unit?.tenantPriceMonthly) : null;
+
+      const breakEvenRooms =
+        unitType === "Co-Living" && roomPrice != null && roomPrice > 0
+          ? costs / roomPrice
+          : null;
+      const occupancyNeeded01 =
+        unitType === "Co-Living" && breakEvenRooms != null && totalRooms != null && totalRooms > 0
+          ? breakEvenRooms / totalRooms
+          : null;
 
       return {
         id: unit.unitId,
         city: unit.place,
         revenue,
         costs,
-        breakEvenOccupancy,
+        unitType,
+        deckungsgrad01,
+        totalRooms,
+        occupiedRooms,
+        breakEvenRooms,
+        occupancyNeeded01,
       };
     });
   }, [units, unitCostsByUnitId]);
@@ -119,19 +166,50 @@ function AdminBreakEvenPage() {
               <th style={{ textAlign: "left", padding: "10px" }}>Ort</th>
               <th style={{ textAlign: "left", padding: "10px" }}>Umsatz</th>
               <th style={{ textAlign: "left", padding: "10px" }}>Kosten</th>
-              <th style={{ textAlign: "left", padding: "10px" }}>Break-Even</th>
+              <th style={{ textAlign: "left", padding: "10px" }}>
+                Deckungsgrad / Auslastung
+              </th>
             </tr>
           </thead>
 
           <tbody>
 
             {rows.map((row) => {
+              const isApartment = row.unitType === "Apartment";
+              const isCoLiving = row.unitType === "Co-Living";
 
-              const occ = row.breakEvenOccupancy;
-              const pctNum =
-                occ != null && Number.isFinite(occ) ? occ * 100 : null;
-              const percentStr =
-                pctNum != null ? `${pctNum.toFixed(1)} %` : "—";
+              const deckungsgradStr = isApartment
+                ? formatPercentRounded(row.deckungsgrad01, { decimals: 0 })
+                : null;
+
+              const roomsNeededStr =
+                isCoLiving && row.breakEvenRooms != null && Number.isFinite(row.breakEvenRooms) && row.totalRooms != null
+                  ? `${row.breakEvenRooms.toFixed(1)} / ${row.totalRooms} Rooms needed`
+                  : null;
+              const occupancyNeededStr = isCoLiving
+                ? formatPercentRounded(row.occupancyNeeded01, { decimals: 0 })
+                : null;
+
+              const coLivingHasStatus =
+                isCoLiving &&
+                row.occupiedRooms != null &&
+                row.totalRooms != null &&
+                row.totalRooms > 0 &&
+                row.breakEvenRooms != null &&
+                Number.isFinite(row.breakEvenRooms);
+
+              const coLivingIsProfitable =
+                coLivingHasStatus ? row.occupiedRooms >= row.breakEvenRooms : null;
+
+              const missingRooms =
+                coLivingHasStatus && coLivingIsProfitable === false
+                  ? Math.max(0, Math.ceil(row.breakEvenRooms - row.occupiedRooms))
+                  : 0;
+
+              const metricUnavailable =
+                (isApartment && deckungsgradStr == null) ||
+                (isCoLiving && (roomsNeededStr == null || occupancyNeededStr == null)) ||
+                (!isApartment && !isCoLiving);
 
               return (
                 <tr
@@ -169,16 +247,47 @@ function AdminBreakEvenPage() {
                       padding: "10px",
                       fontWeight: 700,
                       fontSize: "13px",
-                      color:
-                        pctNum == null
-                          ? "#64748b"
-                          : pctNum > 90
-                            ? "#f87171"
-                            : "#4ade80",
                     }}
-                    className={pctNum == null ? "text-[#64748b] dark:text-[#6b7a9a]" : undefined}
+                    className={
+                      metricUnavailable
+                        ? "text-[#64748b] dark:text-[#6b7a9a]"
+                        : isApartment
+                          ? row.deckungsgrad01 < 1
+                            ? "text-emerald-700 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                          : "text-slate-900 dark:text-[#eef2ff]"
+                    }
                   >
-                    {percentStr}
+                    {metricUnavailable ? (
+                      <span className="font-medium">Nicht berechenbar</span>
+                    ) : isApartment ? (
+                      <div className="leading-tight">
+                        <div>{deckungsgradStr}</div>
+                        <div className="mt-0.5 text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
+                          Deckungsgrad (Kosten / Umsatz)
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="leading-tight">
+                        <div>{roomsNeededStr}</div>
+                        <div className="mt-0.5 text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
+                          {occupancyNeededStr} Auslastung nötig
+                        </div>
+                        {coLivingHasStatus ? (
+                          <div
+                            className={
+                              coLivingIsProfitable
+                                ? "mt-1 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400"
+                                : "mt-1 text-[12px] font-semibold text-amber-700 dark:text-amber-400"
+                            }
+                          >
+                            {coLivingIsProfitable
+                              ? "✅ Profitabel"
+                              : `⚠️ ${missingRooms} Room(s) fehlen`}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
 
                 </tr>
