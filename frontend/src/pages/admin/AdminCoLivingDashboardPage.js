@@ -1088,21 +1088,23 @@ function AdminCoLivingDashboardPage() {
                 className={`rounded-[10px] border p-4 ${
                   warning.type === "danger"
                     ? "border-red-500/20 bg-red-500/10"
-                    : "border-amber-500/[0.15] bg-amber-500/[0.06]"
+                    : "border-amber-200 bg-amber-50 dark:border-amber-400/20 dark:bg-amber-500/10"
                 }`}
               >
                 <p
                   className={`text-[13px] font-semibold ${
                     warning.type === "danger"
                       ? "text-red-400"
-                      : "text-[#fbbf24]"
+                      : "text-amber-700 dark:text-amber-300"
                   }`}
                 >
                   {warning.title}
                 </p>
                 <p
-                  className={`mt-2 text-sm font-medium text-[#64748b] dark:text-[#6b7a9a] ${
-                    warning.type === "danger" ? "" : ""
+                  className={`mt-2 text-sm font-medium ${
+                    warning.type === "danger"
+                      ? "text-[#64748b] dark:text-[#6b7a9a]"
+                      : "text-amber-800/90 dark:text-amber-200/90"
                   }`}
                 >
                   {warning.text}
@@ -1299,16 +1301,16 @@ function AdminCoLivingDashboardPage() {
                     <td className="py-4 pr-4 font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                       {row.month}
                     </td>
-                    <td className="py-4 pr-4 font-medium text-[#4ade80]">
+                    <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
                       {formatChfOrDash(row.secureRevenue)}
                     </td>
-                    <td className="py-4 pr-4 font-medium text-[#7aaeff]">
+                    <td className="py-4 pr-4 font-semibold text-sky-600 dark:text-sky-400">
                       {formatChfOrDash(row.reservedRevenue)}
                     </td>
-                    <td className="py-4 pr-4 font-medium text-[#fbbf24]">
+                    <td className="py-4 pr-4 font-semibold text-amber-600 dark:text-amber-400">
                       {formatChfOrDash(row.riskRevenue)}
                     </td>
-                    <td className="py-4 pr-4 font-medium text-[#f87171]">
+                    <td className="py-4 pr-4 font-semibold text-rose-600 dark:text-rose-400">
                       {formatChfOrDash(row.freeRevenue)}
                     </td>
                     <td className="py-4 pr-4 font-bold text-[#0f172a] dark:text-[#eef2ff]">
