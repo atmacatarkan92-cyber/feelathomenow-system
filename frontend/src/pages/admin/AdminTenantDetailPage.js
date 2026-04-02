@@ -1539,7 +1539,15 @@ export default function AdminTenantDetailPage() {
           <div className="flex min-w-0 flex-wrap items-start gap-3">
             <button
               type="button"
-              onClick={goToTenantList}
+              onClick={() => {
+                if (editing) {
+                  setEditing(false);
+                  setSaveError(null);
+                  if (tenant) setForm(tenantToForm(tenant));
+                  return;
+                }
+                goToTenantList();
+              }}
               className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
               style={{ cursor: "pointer" }}
             >
