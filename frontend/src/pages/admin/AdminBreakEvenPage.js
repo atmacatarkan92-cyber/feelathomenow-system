@@ -87,15 +87,11 @@ function AdminBreakEvenPage() {
           ? revenue / costs
           : null;
 
-      // Co-Living: derive rooms + per-room price, then compute rooms needed + occupancy needed.
+      // Co-Living: aligned snapshots from GET /api/admin/units (same source as KPI occupancy).
       const totalRooms =
-        isCoLivingType
-          ? clampNonNegativeInt(
-              Array.isArray(unit?.rooms) ? unit.rooms.length : unit?.rooms
-            )
-          : null;
+        isCoLivingType ? clampNonNegativeInt(unit?.total_rooms_snapshot) : null;
       const occupiedRooms =
-        isCoLivingType ? clampNonNegativeInt(unit?.occupiedRooms) : null;
+        isCoLivingType ? clampNonNegativeInt(unit?.occupied_rooms_snapshot) : null;
       const roomPrice =
         isCoLivingType && revenue != null && occupiedRooms != null && occupiedRooms > 0
           ? toFiniteNumberOrNull(revenue / occupiedRooms)
