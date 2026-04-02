@@ -1,6 +1,6 @@
 """Tenancies: replace unit_id exclusion with room_id — no overlapping date ranges per room.
 
-Revision ID: 060_tenancies_room_daterange_excl
+Revision ID: 060_room_excl
 Revises: 059_tenancy_participants
 
 Drops tenancies_unit_daterange_excl (026) and adds tenancies_room_daterange_excl with the same
@@ -15,7 +15,7 @@ from typing import Sequence, Union
 from alembic import op
 from sqlalchemy import text
 
-revision: str = "060_tenancies_room_daterange_excl"
+revision: str = "060_room_excl"
 down_revision: Union[str, None] = "059_tenancy_participants"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
