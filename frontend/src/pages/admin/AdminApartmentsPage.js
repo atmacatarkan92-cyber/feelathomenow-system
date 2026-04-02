@@ -338,7 +338,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                 <td className="py-4 pr-4 font-medium">
                   <Link
                     to={`/admin/units/${unit.unitId}`}
-                    className="block text-[#7aaeff] hover:underline"
+                    className="block font-medium text-sky-700 dark:text-sky-400 hover:underline"
                   >
                     {getDisplayUnitId(unit, index)}
                   </Link>
@@ -350,7 +350,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                 <td className="py-4 pr-4">{unit.zip}</td>
                 <td className="py-4 pr-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-[#7aaeff]">{unit.address}</span>
+                    <span className="font-medium text-blue-700 dark:text-blue-400">{unit.address}</span>
                     {unit.address ? (
                       <button
                         type="button"
@@ -385,7 +385,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                   )}
                 </td>
                 <td className="py-4 pr-4">{unit.rooms}</td>
-                <td className="py-4 pr-4 font-semibold text-[#4ade80]">
+                <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(unit.tenantPriceMonthly)}
                 </td>
                 <td className="py-4 pr-4">
@@ -477,7 +477,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                   <td className="py-4 pr-4 font-medium">
                     <Link
                       to={`/admin/units/${unit.unitId}`}
-                      className="block text-[#7aaeff] hover:underline"
+                      className="block font-medium text-sky-700 dark:text-sky-400 hover:underline"
                     >
                       {getDisplayUnitId(unit, index)}
                     </Link>
@@ -489,7 +489,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                 <td className="py-4 pr-4">{unit.zip}</td>
                 <td className="py-4 pr-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-[#7aaeff]">{unit.address}</span>
+                    <span className="font-medium text-blue-700 dark:text-blue-400">{unit.address}</span>
                     {unit.address ? (
                       <button
                         type="button"
@@ -522,13 +522,13 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                     </span>
                   )}
                 </td>
-                  <td className="py-4 pr-4 font-medium text-[#4ade80]">{metrics.occupiedCount}</td>
-                  <td className="py-4 pr-4 font-medium text-[#fbbf24]">{metrics.reservedCount}</td>
+                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">{metrics.occupiedCount}</td>
+                  <td className="py-4 pr-4 font-semibold text-amber-600 dark:text-amber-400">{metrics.reservedCount}</td>
                   <td className="py-4 pr-4 font-medium text-[#f87171]">{metrics.freeCount}</td>
-                  <td className="py-4 pr-4 font-semibold text-[#4ade80]">
+                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(metrics.fullRevenue)}
                   </td>
-                  <td className="py-4 pr-4 font-semibold text-[#4ade80]">
+                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(metrics.currentRevenue)}
                   </td>
                   <td className="py-4 pr-4">

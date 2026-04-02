@@ -764,23 +764,25 @@ function SmallStatCard({
 }) {
   const accentStyles = {
     slate: "bg-slate-100 border-black/10 text-[#0f172a] dark:bg-[#111520] dark:border-white/[0.08] dark:text-[#eef2ff]",
-    green: "bg-green-500/10 border-green-500/20 text-green-400",
-    orange: "bg-amber-500/10 border-amber-500/20 text-amber-400",
-    rose: "bg-red-500/10 border-red-500/20 text-red-400",
-    amber: "bg-amber-500/10 border-amber-500/20 text-amber-400",
-    blue: "bg-blue-500/10 border-blue-500/20 text-[#7aaeff]",
+    green: "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400",
+    orange: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400",
+    rose: "bg-rose-50 border-rose-200 text-rose-800 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400",
+    amber: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400",
+    blue: "bg-sky-50 border-sky-200 text-sky-800 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-[#7aaeff]",
   };
 
   const labelClass =
-    valueTone === "muted" ? "text-[10px] text-[#6b7a9a]" : "text-[10px] text-[#6b7a9a]";
+    valueTone === "muted"
+      ? "text-[10px] text-[#64748b] dark:text-[#6b7a9a]"
+      : "text-[10px] text-[#64748b] dark:text-[#6b7a9a]";
   const valueClass =
     valueTone === "muted"
-      ? "text-xl font-semibold text-[#6b7a9a] mt-2"
-      : "text-2xl font-bold mt-2 text-[#eef2ff]";
+      ? "text-xl font-semibold text-[#334155] dark:text-[#6b7a9a] mt-2"
+      : "text-2xl font-bold mt-2 text-[#0f172a] dark:text-[#eef2ff]";
   const hintClass =
     valueTone === "muted"
-      ? "text-[11px] text-[#6b7a9a] mt-2 leading-relaxed"
-      : "text-xs text-[#6b7a9a] mt-2";
+      ? "text-[11px] text-[#64748b] dark:text-[#6b7a9a] mt-2 leading-relaxed"
+      : "text-xs text-[#64748b] dark:text-[#6b7a9a] mt-2";
 
   const pctRaw = progressPercent != null ? Number(progressPercent) : NaN;
   const showProgress = Number.isFinite(pctRaw);
@@ -815,11 +817,11 @@ function SmallStatCard({
 function Badge({ children, tone = "slate" }) {
   const tones = {
     slate: "bg-slate-100 border border-black/10 text-[#64748b] dark:bg-white/[0.05] dark:border-white/[0.08] dark:text-[#6b7a9a]",
-    green: "bg-green-500/10 border border-green-500/20 text-green-400",
-    orange: "bg-amber-500/10 border border-amber-500/20 text-amber-400",
-    rose: "bg-red-500/10 border border-red-500/20 text-red-400",
-    amber: "bg-amber-500/10 border border-amber-500/20 text-amber-400",
-    blue: "bg-blue-500/10 border border-blue-500/20 text-[#7aaeff]",
+    green: "bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400",
+    orange: "bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400",
+    rose: "bg-rose-50 border border-rose-200 text-rose-800 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400",
+    amber: "bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400",
+    blue: "bg-sky-50 border border-sky-200 text-sky-800 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-[#7aaeff]",
   };
 
   return (
@@ -2247,45 +2249,45 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Typ</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.type}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Typ</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.type}</p>
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Ort</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.place}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Ort</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.place}</p>
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">PLZ</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.zip}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">PLZ</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.zip}</p>
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Adresse</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.address}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.address}</p>
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Zimmer gesamt</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.rooms}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Zimmer gesamt</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.rooms}</p>
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Liegenschaft</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.property_title || "—"}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.property_title || "—"}</p>
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Verwaltung</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Verwaltung</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                   {unit.landlord_id ? (
                     linksResolving ? (
                       "…"
                     ) : (
                       <Link
                         to={`/admin/landlords/${encodeURIComponent(unit.landlord_id)}`}
-                        className="text-[#7aaeff] hover:underline"
+                        className="text-sky-700 hover:underline dark:text-sky-400"
                       >
                         {verwaltungLabel || "—"}
                       </Link>
@@ -2297,15 +2299,15 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Bewirtschafter</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Bewirtschafter</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                   {unit.property_manager_id ? (
                     linksResolving ? (
                       "…"
                     ) : (
                       <Link
                         to={`/admin/bewirtschafter/${encodeURIComponent(unit.property_manager_id)}`}
-                        className="text-[#7aaeff] hover:underline"
+                        className="text-sky-700 hover:underline dark:text-sky-400"
                       >
                         {bewirtschafterLabel || "—"}
                       </Link>
@@ -2317,12 +2319,12 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Eigentümer</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Eigentümer</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                   {unit.owner_id ? (
                     <Link
                       to={`/admin/owners/${encodeURIComponent(unit.owner_id)}`}
-                      className="text-[#7aaeff] hover:underline"
+                      className="text-sky-700 hover:underline dark:text-sky-400"
                     >
                       {String(unit.ownerName ?? unit.owner_name ?? "").trim() || "—"}
                     </Link>
@@ -2333,8 +2335,8 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
-                <p className="text-[10px] text-[#6b7a9a]">Verfügbar ab</p>
-                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.availableFrom || "-"}</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Verfügbar ab</p>
+                <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{unit.availableFrom || "-"}</p>
               </div>
 
               <div className="md:col-span-2 border-t border-black/10 pt-4 mt-2 dark:border-white/[0.07]">
@@ -2343,24 +2345,24 @@ function AdminUnitDetailPage() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] text-[#6b7a9a]">Vertragsart</p>
-                    <p className="text-[13px] font-medium text-[#eef2ff]">{landlordLeaseTypeLabel(unit)}</p>
+                    <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Vertragsart</p>
+                    <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{landlordLeaseTypeLabel(unit)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-[#6b7a9a]">Mietbeginn</p>
-                    <p className="text-[13px] font-medium text-[#eef2ff]">
+                    <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Mietbeginn</p>
+                    <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                       {dashEmpties(unit.leaseStartDate ?? unit.lease_start_date)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-[#6b7a9a]">Vertragsende</p>
-                    <p className="text-[13px] font-medium text-[#eef2ff]">
+                    <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Vertragsende</p>
+                    <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                       {dashEmpties(unit.leaseEndDate ?? unit.lease_end_date)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-[#6b7a9a]">Kündigung eingereicht</p>
-                    <p className="text-[13px] font-medium text-[#eef2ff]">
+                    <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Kündigung eingereicht</p>
+                    <p className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                       {dashEmpties(unit.noticeGivenDate ?? unit.notice_given_date)}
                     </p>
                   </div>
@@ -2481,30 +2483,30 @@ function AdminUnitDetailPage() {
                 accent="green"
               />
             </div>
-            <div className="mt-4 rounded-[10px] border border-green-500/20 bg-green-500/5 p-4 text-sm text-[#eef2ff]">
-              <p className="font-semibold text-[#4ade80] mb-2">
+            <div className="mt-4 rounded-[10px] border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-green-500/20 dark:bg-green-500/5 dark:text-[#eef2ff]">
+              <p className="font-semibold text-emerald-700 dark:text-[#4ade80] mb-2">
                 Monatliche Einnahmen (Details)
               </p>
-              <p className="text-xs text-[#6b7a9a] mb-3">
+              <p className="text-xs text-emerald-800/90 dark:text-[#6b7a9a] mb-3">
                 Wiederkehrende Einnahmen nach Typ (Monatsäquivalent), summiert über
                 aktive Mietverhältnisse. «Aktueller Umsatz» oben ist der
                 Backend-KPI-Monat und kann davon abweichen.
               </p>
               {unitTenancyRevenueLoading ? (
-                <p className="text-[#6b7a9a]">…</p>
+                <p className="text-emerald-800/90 dark:text-[#6b7a9a]">…</p>
               ) : activeUnitTenancies.length === 0 ? (
-                <p className="text-[#6b7a9a]">Keine aktiven Mietverhältnisse.</p>
+                <p className="text-emerald-800/90 dark:text-[#6b7a9a]">Keine aktiven Mietverhältnisse.</p>
               ) : unitAggregatedRecurringBreakdown.length === 0 ? (
-                <p className="text-[#6b7a9a]">Keine Einnahmen definiert</p>
+                <p className="text-emerald-800/90 dark:text-[#6b7a9a]">Keine Einnahmen definiert</p>
               ) : (
                 <ul className="space-y-1">
                   {unitAggregatedRecurringBreakdown.map((b) => (
                     <li
                       key={b.typeKey}
-                      className="flex justify-between gap-4 text-[#eef2ff]"
+                      className="flex justify-between gap-4 text-emerald-900 dark:text-[#eef2ff]"
                     >
                       <span>{b.label}</span>
-                      <span className="font-medium tabular-nums text-[#4ade80]">
+                      <span className="font-semibold tabular-nums text-emerald-600 dark:text-[#4ade80]">
                         {formatCurrency(b.total)}
                       </span>
                     </li>
@@ -2518,9 +2520,9 @@ function AdminUnitDetailPage() {
                   <p className="text-xs font-semibold text-[#64748b] dark:text-[#6b7a9a] mb-2">
                     Einmalige Einnahmen
                   </p>
-                  <p className="text-sm text-[#eef2ff] mb-2">
+                  <p className="text-sm text-emerald-900 dark:text-[#eef2ff] mb-2">
                     Gesamt:{" "}
-                    <span className="font-semibold tabular-nums text-[#4ade80]">
+                    <span className="font-semibold tabular-nums text-emerald-600 dark:text-[#4ade80]">
                       {formatCurrency(unitAggregatedOneTimeTotal)}
                     </span>
                   </p>
@@ -2529,10 +2531,10 @@ function AdminUnitDetailPage() {
                       {unitAggregatedOneTimeBreakdown.map((b) => (
                         <li
                           key={`ot-${b.typeKey}`}
-                          className="flex justify-between gap-4 text-[#eef2ff]"
+                          className="flex justify-between gap-4 text-emerald-900 dark:text-[#eef2ff]"
                         >
                           <span>{b.label}</span>
-                          <span className="font-medium tabular-nums text-[#4ade80]">
+                          <span className="font-semibold tabular-nums text-emerald-600 dark:text-[#4ade80]">
                             {formatCurrency(b.total)}
                           </span>
                         </li>
@@ -2630,9 +2632,9 @@ function AdminUnitDetailPage() {
                 <p className="text-sm text-[#f87171] mb-3">{costError}</p>
               ) : null}
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-[#eef2ff]">
+                <table className="w-full text-left text-sm text-[#0f172a] dark:text-[#eef2ff]">
                   <thead>
-                    <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
+                    <tr className="bg-slate-100 dark:bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#64748b] dark:text-[#6b7a9a]">
                       <th className="py-2 pr-4 font-medium">Kostenart</th>
                       <th className="py-2 pr-4 font-medium">Betrag (CHF)</th>
                       <th className="py-2 pr-4 font-medium">Aktionen</th>
@@ -2643,7 +2645,7 @@ function AdminUnitDetailPage() {
                       <tr>
                         <td
                           colSpan={3}
-                          className="py-3 text-[#6b7a9a] text-sm"
+                          className="py-3 text-[#64748b] dark:text-[#6b7a9a] text-sm"
                         >
                           {costLoading && !costError
                             ? "Lade …"
@@ -2666,7 +2668,7 @@ function AdminUnitDetailPage() {
                                   maximumFractionDigits: 2,
                                 })}`
                               : "—"}
-                            <span className="ml-2 text-xs text-[#6b7a9a]">
+                            <span className="ml-2 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                               {String(row.frequency || "monthly").trim().toLowerCase() === "yearly"
                                 ? "(jährlich)"
                                 : "(monatlich)"}
@@ -2678,7 +2680,7 @@ function AdminUnitDetailPage() {
                                 type="button"
                                 disabled={costLoading}
                                 onClick={() => handleUnitCostEdit(row)}
-                                className="text-[#7aaeff] hover:underline text-sm font-medium disabled:opacity-50"
+                                className="text-sky-700 hover:underline text-sm font-medium dark:text-sky-400 disabled:opacity-50"
                               >
                                 Bearbeiten
                               </button>
@@ -2698,7 +2700,7 @@ function AdminUnitDetailPage() {
                   </tbody>
                 </table>
               </div>
-              <p className="text-sm text-[#eef2ff] mt-3 font-medium">
+              <p className="text-sm text-[#0f172a] dark:text-[#eef2ff] mt-3 font-medium">
                 Total: CHF{" "}
                 {unitCostsTotalMonthly.toLocaleString("de-CH", {
                   minimumFractionDigits: 2,
@@ -2816,12 +2818,12 @@ function AdminUnitDetailPage() {
               subtitle="Einmalige Buchungen; nicht in den laufenden Kosten oder den KPI oben enthalten"
             >
               {oneTimeUnitCosts.length === 0 ? (
-                <p className="text-[10px] text-[#6b7a9a]">Keine einmaligen Kosten erfasst.</p>
+                <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Keine einmaligen Kosten erfasst.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-[#eef2ff]">
+                  <table className="w-full text-left text-sm text-[#0f172a] dark:text-[#eef2ff]">
                     <thead>
-                      <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
+                      <tr className="bg-slate-100 dark:bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#64748b] dark:text-[#6b7a9a]">
                         <th className="py-2 pr-4 font-medium">Kostenart</th>
                         <th className="py-2 pr-4 font-medium">Betrag CHF</th>
                         <th className="py-2 pr-4 font-medium">Aktionen</th>
@@ -2936,16 +2938,16 @@ function AdminUnitDetailPage() {
             <p className="text-sm text-[#f87171] mb-2">{unitDocUploadError}</p>
           ) : null}
           {unitDocumentsLoading ? (
-            <p className="text-[10px] text-[#6b7a9a]">Lade Dokumente …</p>
+            <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Lade Dokumente …</p>
           ) : unitDocumentsError ? (
             <p className="text-sm text-[#f87171]">{unitDocumentsError}</p>
           ) : unitDocuments.length === 0 ? (
-            <p className="text-[10px] text-[#6b7a9a]">Keine Dokumente vorhanden</p>
+            <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Keine Dokumente vorhanden</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-[#eef2ff]">
+              <table className="w-full text-left text-sm text-[#0f172a] dark:text-[#eef2ff]">
                 <thead>
-                  <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
+                  <tr className="bg-slate-100 dark:bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     <th className="py-2 pr-4 font-medium">Datei</th>
                     <th className="py-2 pr-4 font-medium">Typ</th>
                     <th className="py-2 pr-4 font-medium">Kategorie</th>
@@ -2958,14 +2960,14 @@ function AdminUnitDetailPage() {
                   {unitDocuments.map((doc) => (
                     <tr key={String(doc.id)} className="border-b border-black/10 dark:border-white/[0.05]">
                       <td className="py-2 pr-4 font-medium">{doc.file_name || "—"}</td>
-                      <td className="py-2 pr-4 text-[#6b7a9a]">{formatUnitDocumentType(doc)}</td>
-                      <td className="py-2 pr-4 text-[#6b7a9a]">
+                      <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a]">{formatUnitDocumentType(doc)}</td>
+                      <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a]">
                         {formatUnitDocumentCategoryLabel(doc.category)}
                       </td>
-                      <td className="py-2 pr-4 text-[#6b7a9a]">
+                      <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a]">
                         {formatUnitDocumentDate(doc.created_at)}
                       </td>
-                      <td className="py-2 pr-4 text-[#6b7a9a]">
+                      <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a]">
                         {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
                           ? doc.uploaded_by_name
                           : "—"}
@@ -2975,14 +2977,14 @@ function AdminUnitDetailPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenUnitDocument(doc.id)}
-                            className="text-[#7aaeff] hover:underline font-medium"
+                            className="text-sky-700 hover:underline font-medium dark:text-sky-400"
                           >
                             Öffnen
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteUnitDocument(doc.id)}
-                            className="text-[#6b7a9a] hover:text-[#f87171] hover:underline text-sm"
+                            className="text-[#64748b] hover:text-[#f87171] hover:underline text-sm dark:text-[#6b7a9a]"
                           >
                             Löschen
                           </button>
@@ -3001,16 +3003,16 @@ function AdminUnitDetailPage() {
           subtitle="Alle Mietverhältnisse dieser Unit (aktiv, geplant/reserviert, beendet). Sortierung: zuerst Aktive, dann Geplant/Reserviert, dann Historie. Einnahmen / Monat aus TenancyRevenue (Backend, Monatsäquivalent)."
         >
           {unitTenancies === null ? (
-            <p className="text-[10px] text-[#6b7a9a]">Lade Mietverhältnisse …</p>
+            <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Lade Mietverhältnisse …</p>
           ) : unitTenanciesForMieterTable.length === 0 ? (
-            <p className="text-[10px] text-[#6b7a9a]">
+            <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
               Keine Mietverhältnisse für diese Unit erfasst.
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-[#eef2ff]">
+              <table className="w-full text-left text-sm text-[#0f172a] dark:text-[#eef2ff]">
                 <thead>
-                  <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
+                  <tr className="bg-slate-100 dark:bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#64748b] dark:text-[#6b7a9a]">
                     <th className="py-2 pr-4 font-medium">Name</th>
                     <th className="py-2 pr-4 font-medium">Status</th>
                     <th className="py-2 pr-4 font-medium text-right">
@@ -3032,7 +3034,7 @@ function AdminUnitDetailPage() {
                         <td className="py-2 pr-4 font-medium">
                           <Link
                             to={`/admin/tenants/${String(tn.tenant_id)}`}
-                            className="text-[#7aaeff] hover:text-[#a8c8ff] hover:underline"
+                            className="text-sky-700 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
                           >
                             {tenantNameMap[String(tn.tenant_id)] || "…"}
                           </Link>
@@ -3043,21 +3045,21 @@ function AdminUnitDetailPage() {
                         <td className="py-2 pr-4 text-right">
                           {formatChfOrDash(tn.monthly_revenue_equivalent)}
                         </td>
-                        <td className="py-2 pr-4 text-[#6b7a9a]">
+                        <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a]">
                           {tenantDepositTypeLabel(tn.tenant_deposit_type)}
                         </td>
-                        <td className="py-2 pr-4 text-right text-[#6b7a9a]">
+                        <td className="py-2 pr-4 text-right text-[#64748b] dark:text-[#6b7a9a]">
                           {formatChfOrDash(tn.tenant_deposit_amount)}
                         </td>
-                        <td className="py-2 pr-4 text-[#6b7a9a]">
+                        <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a]">
                           {tdt === "insurance"
                             ? tenantDepositProviderLabel(tn.tenant_deposit_provider)
                             : "—"}
                         </td>
-                        <td className="py-2 pr-4 text-[#6b7a9a]">
+                        <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a]">
                           {formatTenancyMoveIn(tn.move_in_date)}
                         </td>
-                        <td className="py-2 pr-4 text-[#6b7a9a] font-medium">
+                        <td className="py-2 pr-4 text-[#64748b] dark:text-[#6b7a9a] font-medium">
                           {formatTenancyMoveOut(
                             tn.display_end_date != null && String(tn.display_end_date).trim() !== ""
                               ? tn.display_end_date
@@ -3358,7 +3360,7 @@ function AdminUnitDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a] text-sm">
+                  <tr className="bg-slate-100 dark:bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#64748b] dark:text-[#6b7a9a] text-sm">
                     <th className="py-3 pr-4">Room ID</th>
                     <th className="py-3 pr-4">Zimmer</th>
                     <th className="py-3 pr-4">Status</th>
@@ -3394,7 +3396,7 @@ function AdminUnitDetailPage() {
                       key={room.id}
                       className="border-b border-black/10 dark:border-white/[0.05] text-[#0f172a] dark:text-[#eef2ff]"
                     >
-                      <td className="py-4 pr-4 font-medium text-[#4ade80]">
+                      <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
                         {room.roomId}
                       </td>
                       <td className="py-4 pr-4">
