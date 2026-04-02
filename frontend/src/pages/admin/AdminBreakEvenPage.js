@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchAdminUnits, fetchAdminUnitCosts, normalizeUnit } from "../../api/adminData";
 import { getUnitCostsTotal } from "../../utils/adminUnitRunningCosts";
 
@@ -89,8 +90,17 @@ function AdminBreakEvenPage() {
           ? breakEvenRooms / totalRooms
           : null;
 
+      const unitDetailId = unit?.id ?? unit?.unitId ?? null;
+      const addressPrimary =
+        String(unit?.address ?? "").trim() ||
+        String(unit?.street ?? "").trim() ||
+        String(unit?.place ?? "").trim() ||
+        "";
+
       return {
         id: unit.unitId,
+        unitDetailId,
+        addressPrimary,
         city: unit.place,
         revenue,
         costs,
@@ -220,7 +230,23 @@ function AdminBreakEvenPage() {
                   <td
                     className="p-[10px] text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
                   >
-                    {row.id}
+                    {row.unitDetailId ? (
+                      <Link
+                        to={`/admin/units/${encodeURIComponent(row.unitDetailId)}`}
+                        className="block font-medium text-sky-700 hover:text-sky-800 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
+                      >
+                        {row.addressPrimary || row.id}
+                      </Link>
+                    ) : (
+                      <span className="block font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                        {row.addressPrimary || row.id}
+                      </span>
+                    )}
+                    {row.addressPrimary && row.id ? (
+                      <span className="mt-0.5 block break-all font-mono text-[10px] font-normal text-slate-600 dark:text-[#6b7a9a]">
+                        {row.id}
+                      </span>
+                    ) : null}
                   </td>
 
                   <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
@@ -228,12 +254,7 @@ function AdminBreakEvenPage() {
                   </td>
 
                   <td
-                    style={{
-                      padding: "10px",
-                      color: "#4ade80",
-                      fontSize: "13px",
-                      fontWeight: 500,
-                    }}
+                    className="p-[10px] text-[13px] font-medium text-slate-900 dark:text-[#eef2ff]"
                   >
                     {formatCurrency(row.revenue)}
                   </td>
@@ -259,18 +280,20 @@ function AdminBreakEvenPage() {
                     }
                   >
                     {metricUnavailable ? (
-                      <span className="font-medium">Nicht berechenbar</span>
+                      <span className="font-medium text-slate-500 dark:text-[#6b7a9a]">
+                        Nicht berechenbar
+                      </span>
                     ) : isApartment ? (
                       <div className="leading-tight">
                         <div>{deckungsgradStr}</div>
-                        <div className="mt-0.5 text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
+                        <div className="mt-0.5 text-[11px] font-medium text-slate-600 dark:text-[#6b7a9a]">
                           Deckungsgrad (Kosten / Umsatz)
                         </div>
                       </div>
                     ) : (
                       <div className="leading-tight">
                         <div>{roomsNeededStr}</div>
-                        <div className="mt-0.5 text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
+                        <div className="mt-0.5 text-[11px] font-medium text-slate-600 dark:text-[#6b7a9a]">
                           {occupancyNeededStr} Auslastung nötig
                         </div>
                         {coLivingHasStatus ? (
