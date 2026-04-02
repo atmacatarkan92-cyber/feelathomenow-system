@@ -3498,13 +3498,13 @@ function AdminUnitDetailPage() {
           subtitle="Änderungen an dieser Unit (Audit-Log, neueste zuerst)"
         >
           {auditLogLoading ? (
-            <p className="text-[10px] text-[#6b7a9a]">Lade Verlauf …</p>
+            <p className="text-[10px] text-slate-600 dark:text-[#6b7a9a]">Lade Verlauf …</p>
           ) : auditLogError ? (
             <p className="text-sm text-[#f87171]">{auditLogError}</p>
           ) : auditLogs.length === 0 ? (
-            <p className="text-[10px] text-[#6b7a9a]">Keine Aktivitäten vorhanden</p>
+            <p className="text-[10px] text-slate-600 dark:text-[#6b7a9a]">Keine Aktivitäten vorhanden</p>
           ) : (
-            <ul className="space-y-0 border-l border-black/10 dark:border-white/[0.07] pl-4 ml-1">
+            <ul className="space-y-0 border-l border-slate-200 dark:border-white/[0.07] pl-4 ml-1">
               {auditLogs.map((entry) => (
                 <li
                   key={entry.id}
@@ -3514,15 +3514,15 @@ function AdminUnitDetailPage() {
                     className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#fb923c]"
                     aria-hidden
                   />
-                  <p className="text-xs text-[#6b7a9a]">
+                  <p className="text-xs text-slate-600 dark:text-[#6b7a9a]">
                     {formatAuditTimestamp(entry.created_at)}
                   </p>
-                  <div className="font-medium text-[#eef2ff] mt-0.5 space-y-1">
+                  <div className="mt-0.5 space-y-1 font-medium text-slate-800 dark:text-[#eef2ff]">
                     {getAuditEntryDisplayLines(entry, auditResolvers).map((line, idx) => (
                       <p key={idx}>{line}</p>
                     ))}
                   </div>
-                  <p className="text-sm text-[#6b7a9a] mt-1">
+                  <p className="text-sm text-slate-600 dark:text-[#6b7a9a] mt-1">
                     {auditActionLabel(entry.action)}
                     {" · "}
                     {entry.actor_name ||
