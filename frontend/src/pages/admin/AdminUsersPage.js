@@ -1,24 +1,12 @@
 import React, { useState } from "react";
 import { API_BASE_URL, getApiHeaders } from "../../config";
 
-const inputStyle = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: "8px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "#111520",
-  color: "#eef2ff",
-  fontSize: "14px",
-  boxSizing: "border-box",
-};
+const inputBaseClass =
+  "w-full rounded-[8px] border px-3 py-2.5 text-sm text-[#0f172a] box-border bg-slate-100 dark:bg-[#111520] dark:text-[#eef2ff]";
+const inputBorderOk = "border-black/10 dark:border-white/[0.08]";
+const inputBorderErr = "border-red-500/60";
 
-const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "10px",
-  fontWeight: 500,
-  color: "#6b7a9a",
-};
+const labelClass = "mb-1.5 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]";
 
 const fieldErrorStyle = {
   color: "#f87171",
@@ -28,22 +16,15 @@ const fieldErrorStyle = {
   lineHeight: 1.35,
 };
 
-const cardStyle = {
-  background: "#141824",
-  border: "1px solid rgba(255,255,255,0.07)",
-  borderRadius: "14px",
-  padding: "24px",
-};
+const cardClass =
+  "rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6";
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
-function inputStyleWithError(hasError) {
-  return {
-    ...inputStyle,
-    borderColor: hasError ? "rgba(248,113,113,0.6)" : "rgba(255,255,255,0.08)",
-  };
+function inputClassWithError(hasError) {
+  return `${inputBaseClass} ${hasError ? inputBorderErr : inputBorderOk}`;
 }
 
 export default function AdminUsersPage() {
@@ -136,7 +117,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07090f] px-2 text-[#eef2ff]">
+    <div className="min-h-screen bg-[#f8fafc] px-2 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <h2 className="mb-4 text-[22px] font-bold">Users / User Management</h2>
 
       {error && (
@@ -146,10 +127,10 @@ export default function AdminUsersPage() {
         <p className="mb-3 text-[14px] text-[#4ade80]">{success}</p>
       )}
 
-      <div style={cardStyle}>
+      <div className={cardClass}>
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
           <div>
-            <label style={labelStyle}>Email *</label>
+            <label className={labelClass}>Email *</label>
             <input
               type="email"
               value={form.email}
@@ -161,7 +142,7 @@ export default function AdminUsersPage() {
                   setErrors((prev) => ({ ...prev, email: "" }));
                 }
               }}
-              style={inputStyleWithError(!!errors.email)}
+              className={inputClassWithError(!!errors.email)}
               placeholder="name@example.com"
               autoComplete="email"
             />
@@ -169,7 +150,7 @@ export default function AdminUsersPage() {
           </div>
 
           <div>
-            <label style={labelStyle}>Password *</label>
+            <label className={labelClass}>Password *</label>
             <input
               type="password"
               value={form.password}
@@ -180,14 +161,14 @@ export default function AdminUsersPage() {
                   setErrors((prev) => ({ ...prev, password: "" }));
                 }
               }}
-              style={inputStyleWithError(!!errors.password)}
+              className={inputClassWithError(!!errors.password)}
               autoComplete="new-password"
             />
             {errors.password ? <p style={fieldErrorStyle}>{errors.password}</p> : null}
           </div>
 
           <div>
-            <label style={labelStyle}>Role *</label>
+            <label className={labelClass}>Role *</label>
             <select
               value={form.role}
               onChange={(e) => {
@@ -197,7 +178,7 @@ export default function AdminUsersPage() {
                   setErrors((prev) => ({ ...prev, role: "" }));
                 }
               }}
-              style={inputStyleWithError(!!errors.role)}
+              className={inputClassWithError(!!errors.role)}
             >
               <option value="" disabled>
                 Select role
@@ -210,12 +191,12 @@ export default function AdminUsersPage() {
           </div>
 
           <div>
-            <label style={labelStyle}>Name (optional)</label>
+            <label className={labelClass}>Name (optional)</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              style={inputStyle}
+              className={`${inputBaseClass} ${inputBorderOk}`}
               placeholder="Optional display name"
               autoComplete="name"
             />
@@ -238,7 +219,7 @@ export default function AdminUsersPage() {
                 setErrors({ email: "", password: "", role: "" });
                 setForm({ email: "", password: "", role: "", name: "" });
               }}
-              className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Clear
             </button>

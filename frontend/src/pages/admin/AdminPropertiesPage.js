@@ -10,28 +10,20 @@ const tableStyle = { width: "100%", borderCollapse: "collapse" };
 const thStyle = {
   textAlign: "left",
   padding: "12px 8px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  background: "#111520",
-  color: "#6b7a9a",
   fontSize: "9px",
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.8px",
 };
+const thClass =
+  "border-b border-black/10 dark:border-white/[0.05] bg-slate-100 dark:bg-[#111520] text-[#64748b] dark:text-[#6b7a9a]";
 const tdStyle = {
   padding: "12px 8px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  color: "#eef2ff",
 };
-const inputStyle = {
-  width: "100%",
-  padding: "8px 10px",
-  borderRadius: "8px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "#111520",
-  color: "#eef2ff",
-};
-const labelStyle = { display: "block", marginBottom: "4px", fontSize: "10px", fontWeight: 500, color: "#6b7a9a" };
+const tdClass = "border-b border-black/10 dark:border-white/[0.05] text-[#0f172a] dark:text-[#eef2ff]";
+const inputClass =
+  "w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-2.5 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff]";
+const labelClass = "mb-1 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]";
 
 function AdminPropertiesPage() {
   const [properties, setProperties] = useState([]);
@@ -136,12 +128,12 @@ function AdminPropertiesPage() {
 
   if (loading) {
     return (
-      <p className="min-h-[40vh] bg-[#07090f] px-2 py-8 text-[#6b7a9a]">Lade Liegenschaften …</p>
+      <p className="min-h-[40vh] bg-[#f8fafc] px-2 py-8 text-[#64748b] dark:bg-[#07090f] dark:text-[#6b7a9a]">Lade Liegenschaften …</p>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#07090f] px-2 py-4 text-[#eef2ff]">
+    <div className="min-h-screen bg-[#f8fafc] px-2 py-4 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <h2 className="mb-4 text-[22px] font-bold">Liegenschaften (Properties)</h2>
       {error && (
         <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
@@ -156,40 +148,40 @@ function AdminPropertiesPage() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#141824]">
+      <div className="overflow-hidden rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824]">
       <table style={tableStyle}>
         <thead>
           <tr>
-            <th style={thStyle}>Titel</th>
-            <th style={thStyle}>Adresse</th>
-            <th style={thStyle}>Vermieter</th>
-            <th style={thStyle}>Status</th>
-            <th style={thStyle}></th>
+            <th className={thClass} style={thStyle}>Titel</th>
+            <th className={thClass} style={thStyle}>Adresse</th>
+            <th className={thClass} style={thStyle}>Vermieter</th>
+            <th className={thClass} style={thStyle}>Status</th>
+            <th className={thClass} style={thStyle}></th>
           </tr>
         </thead>
         <tbody>
           {properties.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ ...tdStyle, color: "#6b7a9a" }}>
+              <td colSpan={5} className={`${tdClass} text-[#64748b] dark:text-[#6b7a9a]`} style={tdStyle}>
                 Noch keine Einträge. Erstellen Sie eine neue Liegenschaft.
               </td>
             </tr>
           ) : (
             properties.map((row) => (
               <tr key={row.id}>
-                <td style={tdStyle}>{row.title || "—"}</td>
-                <td style={tdStyle}>
+                <td className={tdClass} style={tdStyle}>{row.title || "—"}</td>
+                <td className={tdClass} style={tdStyle}>
                   {[row.street, row.house_number, [row.zip_code, row.city].filter(Boolean).join(" ")]
                     .filter(Boolean)
                     .join(", ") || "—"}
                 </td>
-                <td style={tdStyle}>{getLandlordLabel(row.landlord_id)}</td>
-                <td style={tdStyle}>{row.status || "—"}</td>
-                <td style={tdStyle}>
+                <td className={tdClass} style={tdStyle}>{getLandlordLabel(row.landlord_id)}</td>
+                <td className={tdClass} style={tdStyle}>{row.status || "—"}</td>
+                <td className={tdClass} style={tdStyle}>
                   <button
                     type="button"
                     onClick={() => openEdit(row)}
-                    className="cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                    className="cursor-pointer rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
                   >
                     Bearbeiten
                   </button>
@@ -207,30 +199,30 @@ function AdminPropertiesPage() {
           onClick={() => !saving && setFormOpen(false)}
         >
           <div
-            className="max-h-[90vh] w-full max-w-[420px] overflow-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-6"
+            className="max-h-[90vh] w-full max-w-[420px] overflow-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6 [color-scheme:light] dark:[color-scheme:dark]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-4 text-[18px] font-bold text-[#eef2ff]">
+            <h3 className="mb-4 text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
               {editingId ? "Liegenschaft bearbeiten" : "Neue Liegenschaft"}
             </h3>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
               <div>
-                <label style={labelStyle}>Titel *</label>
+                <label className={labelClass}>Titel *</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                  style={inputStyle}
+                  className={inputClass}
                   required
                   placeholder="z.B. Haus Musterstrasse"
                 />
               </div>
               <div>
-                <label style={labelStyle}>Vermieter (optional)</label>
+                <label className={labelClass}>Vermieter (optional)</label>
                 <select
                   value={form.landlord_id}
                   onChange={(e) => setForm((f) => ({ ...f, landlord_id: e.target.value }))}
-                  style={inputStyle}
+                  className={inputClass}
                 >
                   <option value="">— Keiner —</option>
                   {landlords.map((l) => (
@@ -241,68 +233,69 @@ function AdminPropertiesPage() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Strasse (optional)</label>
+                <label className={labelClass}>Strasse (optional)</label>
                 <input
                   type="text"
                   value={form.street}
                   onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))}
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label style={labelStyle}>Hausnummer (optional)</label>
+                <label className={labelClass}>Hausnummer (optional)</label>
                 <input
                   type="text"
                   value={form.house_number}
                   onChange={(e) => setForm((f) => ({ ...f, house_number: e.target.value }))}
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label style={labelStyle}>PLZ / Ort (optional)</label>
+                <label className={labelClass}>PLZ / Ort (optional)</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "8px" }}>
                   <input
                     type="text"
                     value={form.zip_code}
                     onChange={(e) => setForm((f) => ({ ...f, zip_code: e.target.value }))}
-                    style={inputStyle}
+                    className={inputClass}
                     placeholder="PLZ"
                   />
                   <input
                     type="text"
                     value={form.city}
                     onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                    style={inputStyle}
+                    className={inputClass}
                     placeholder="Ort"
                   />
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Land (optional)</label>
+                <label className={labelClass}>Land (optional)</label>
                 <input
                   type="text"
                   value={form.country}
                   onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label style={labelStyle}>Status</label>
+                <label className={labelClass}>Status</label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                  style={inputStyle}
+                  className={inputClass}
                 >
                   <option value="active">Aktiv</option>
                   <option value="inactive">Inaktiv</option>
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Notizen (optional)</label>
+                <label className={labelClass}>Notizen (optional)</label>
                 <textarea
                   value={form.notes}
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  style={{ ...inputStyle, minHeight: "60px" }}
+                  className={inputClass}
+                  style={{ minHeight: "60px" }}
                   rows={2}
                 />
               </div>
@@ -317,7 +310,7 @@ function AdminPropertiesPage() {
                 <button
                   type="button"
                   onClick={() => !saving && setFormOpen(false)}
-                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>

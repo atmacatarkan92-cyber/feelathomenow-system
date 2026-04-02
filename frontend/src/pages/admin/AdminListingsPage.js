@@ -1,31 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL, getApiHeaders } from "../../config";
 
-const cardStyle = {
-  background: "#141824",
-  border: "1px solid rgba(255, 255, 255, 0.07)",
-  borderRadius: "14px",
-  padding: "24px",
-};
+const cardClass =
+  "rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6";
 
-const inputStyle = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: "8px",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  background: "#111520",
-  color: "#eef2ff",
-  fontSize: "14px",
-  boxSizing: "border-box",
-};
+const inputClass =
+  "w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2.5 text-sm text-[#0f172a] dark:text-[#eef2ff] box-border";
 
-const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "10px",
-  fontWeight: 600,
-  color: "#6b7a9a",
-};
+const labelClass = "mb-1.5 block text-[10px] font-semibold text-[#64748b] dark:text-[#6b7a9a]";
 
 const initialForm = {
   unit_id: "",
@@ -313,13 +295,13 @@ function AdminListingsPage() {
 
   const secondaryBtn = {
     padding: "8px 12px",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
     borderRadius: "8px",
     background: "transparent",
     color: "#8090b0",
     cursor: "pointer",
     fontSize: "13px",
   };
+  const secondaryBtnClass = "border border-black/10 dark:border-white/[0.1]";
 
   const dangerBtn = {
     padding: "8px 12px",
@@ -333,19 +315,19 @@ function AdminListingsPage() {
 
   return (
     <div
-      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
       style={{ display: "grid", gap: "24px" }}
     >
       <div>
-        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "0 0 8px 0", color: "#eef2ff" }}>
+        <h2 className="mb-2 text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
           Website Listings
         </h2>
-        <p style={{ color: "#6b7a9a", margin: 0, fontSize: "12px" }}>
+        <p className="m-0 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Listing basiert auf einer bestehenden Unit. Unit wählen, dann Website-Felder ausfüllen.
         </p>
       </div>
 
-      <div style={cardStyle}>
+      <div className={cardClass}>
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
@@ -364,18 +346,9 @@ function AdminListingsPage() {
         {showForm && (
           <form onSubmit={handleSubmitCreate} style={{ display: "grid", gap: "16px", maxWidth: "680px" }}>
             <div>
-              <label style={labelStyle}>Listing-Typ *</label>
+              <label className={labelClass}>Listing-Typ *</label>
               <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap" }}>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    color: "#eef2ff",
-                  }}
-                >
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#0f172a] dark:text-[#eef2ff]">
                   <input
                     type="radio"
                     name="listing_type"
@@ -385,16 +358,7 @@ function AdminListingsPage() {
                   />
                   Gesamte Wohnung (Unit)
                 </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    color: "#eef2ff",
-                  }}
-                >
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#0f172a] dark:text-[#eef2ff]">
                   <input
                     type="radio"
                     name="listing_type"
@@ -408,8 +372,8 @@ function AdminListingsPage() {
             </div>
 
             <div>
-              <label style={labelStyle}>Unit (Apartment) *</label>
-              {unitsLoading && <p style={{ fontSize: "13px", color: "#6b7a9a", margin: "0 0 8px 0" }}>Units werden geladen…</p>}
+              <label className={labelClass}>Unit (Apartment) *</label>
+              {unitsLoading && <p className="mb-2 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Units werden geladen…</p>}
               {unitsError && <p style={{ fontSize: "13px", color: "#f87171", margin: "0 0 8px 0" }}>{unitsError}</p>}
               <select
                 name="unit_id"
@@ -417,7 +381,7 @@ function AdminListingsPage() {
                 onChange={handleUnitChange}
                 required
                 disabled={unitsLoading}
-                style={inputStyle}
+                className={inputClass}
               >
                 <option value="">— Unit wählen —</option>
                 {units.map((u) => {
@@ -431,21 +395,21 @@ function AdminListingsPage() {
                 })}
               </select>
               {!unitsLoading && !unitsError && units.length === 0 && (
-                <p style={{ fontSize: "12px", color: "#6b7a9a", margin: "4px 0 0 0" }}>
+                <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
                   Keine Units in der Datenbank. Zuerst Units anlegen (z.B. per Seed-Script).
                 </p>
               )}
             </div>
 
             <div>
-              <label style={labelStyle}>Stadt (City) *</label>
+              <label className={labelClass}>Stadt (City) *</label>
               {hasCities ? (
                 <select
                   name="city_id"
                   value={form.city_id}
                   onChange={handleCityChange}
                   required
-                  style={inputStyle}
+                  className={inputClass}
                 >
                   <option value="">— Stadt wählen —</option>
                   {citiesFromListings.map((c) => (
@@ -463,9 +427,9 @@ function AdminListingsPage() {
                     onChange={handleChange}
                     required
                     placeholder="city_id (UUID aus DB)"
-                    style={inputStyle}
+                    className={inputClass}
                   />
-                  <p style={{ fontSize: "12px", color: "#6b7a9a", margin: "4px 0 0 0" }}>
+                  <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
                     Noch keine Städte aus Listings. UUID der Stadt eingeben (z.B. aus Seed) oder zuerst ein Listing mit Stadt anlegen.
                   </p>
                 </>
@@ -474,15 +438,15 @@ function AdminListingsPage() {
 
             {listingType === "room" && (
               <div>
-                <label style={labelStyle}>Room *</label>
-                {roomsLoading && <p style={{ fontSize: "13px", color: "#6b7a9a", margin: "0 0 8px 0" }}>Rooms werden geladen…</p>}
+                <label className={labelClass}>Room *</label>
+                {roomsLoading && <p className="mb-2 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Rooms werden geladen…</p>}
                 {!roomsLoading && roomsForSelectedUnit.length > 0 ? (
                   <select
                     name="room_id"
                     value={form.room_id}
                     onChange={handleChange}
                     required
-                    style={inputStyle}
+                    className={inputClass}
                   >
                     <option value="">— Room wählen —</option>
                     {roomsForSelectedUnit.map((r) => (
@@ -500,9 +464,9 @@ function AdminListingsPage() {
                       onChange={handleChange}
                       required
                       placeholder="room_id (UUID aus Datenbank)"
-                      style={inputStyle}
+                      className={inputClass}
                     />
-                    <p style={{ fontSize: "12px", color: "#6b7a9a", margin: "4px 0 0 0" }}>
+                    <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
                       Keine Rooms für diese Unit in der Datenbank. room_id manuell eingeben oder Rooms für die Unit anlegen.
                     </p>
                   </>
@@ -511,7 +475,7 @@ function AdminListingsPage() {
             )}
 
             <div>
-              <label style={labelStyle}>slug *</label>
+              <label className={labelClass}>slug *</label>
               <input
                 type="text"
                 name="slug"
@@ -519,111 +483,113 @@ function AdminListingsPage() {
                 onChange={handleChange}
                 required
                 placeholder="z.B. zurich-bahnhof-1"
-                style={inputStyle}
+                className={inputClass}
               />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
-                <label style={labelStyle}>title_de</label>
+                <label className={labelClass}>title_de</label>
                 <input
                   type="text"
                   name="title_de"
                   value={form.title_de}
                   onChange={handleChange}
                   placeholder="Titel DE"
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label style={labelStyle}>title_en</label>
+                <label className={labelClass}>title_en</label>
                 <input
                   type="text"
                   name="title_en"
                   value={form.title_en}
                   onChange={handleChange}
                   placeholder="Title EN"
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div>
-              <label style={labelStyle}>description_de</label>
+              <label className={labelClass}>description_de</label>
               <textarea
                 name="description_de"
                 value={form.description_de}
                 onChange={handleChange}
                 placeholder="Beschreibung DE"
                 rows={2}
-                style={{ ...inputStyle, resize: "vertical" }}
+                className={inputClass}
+                style={{ resize: "vertical" }}
               />
             </div>
             <div>
-              <label style={labelStyle}>description_en</label>
+              <label className={labelClass}>description_en</label>
               <textarea
                 name="description_en"
                 value={form.description_en}
                 onChange={handleChange}
                 placeholder="Description EN"
                 rows={2}
-                style={{ ...inputStyle, resize: "vertical" }}
+                className={inputClass}
+                style={{ resize: "vertical" }}
               />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
               <div>
-                <label style={labelStyle}>price_chf_month</label>
+                <label className={labelClass}>price_chf_month</label>
                 <input
                   type="number"
                   name="price_chf_month"
                   value={form.price_chf_month}
                   onChange={handleChange}
                   min={0}
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label style={labelStyle}>bedrooms</label>
-                <input type="number" name="bedrooms" value={form.bedrooms} onChange={handleChange} min={0} style={inputStyle} />
+                <label className={labelClass}>bedrooms</label>
+                <input type="number" name="bedrooms" value={form.bedrooms} onChange={handleChange} min={0} className={inputClass} />
               </div>
               <div>
-                <label style={labelStyle}>bathrooms</label>
-                <input type="number" name="bathrooms" value={form.bathrooms} onChange={handleChange} min={0} style={inputStyle} />
+                <label className={labelClass}>bathrooms</label>
+                <input type="number" name="bathrooms" value={form.bathrooms} onChange={handleChange} min={0} className={inputClass} />
               </div>
               <div>
-                <label style={labelStyle}>size_sqm</label>
-                <input type="number" name="size_sqm" value={form.size_sqm} onChange={handleChange} min={0} style={inputStyle} />
+                <label className={labelClass}>size_sqm</label>
+                <input type="number" name="size_sqm" value={form.size_sqm} onChange={handleChange} min={0} className={inputClass} />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
-                <label style={labelStyle}>latitude</label>
+                <label className={labelClass}>latitude</label>
                 <input
                   type="text"
                   name="latitude"
                   value={form.latitude}
                   onChange={handleChange}
                   placeholder="z.B. 47.3769"
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label style={labelStyle}>longitude</label>
+                <label className={labelClass}>longitude</label>
                 <input
                   type="text"
                   name="longitude"
                   value={form.longitude}
                   onChange={handleChange}
                   placeholder="z.B. 8.5417"
-                  style={inputStyle}
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div>
-              <label style={labelStyle}>Bilder (URLs)</label>
+              <label className={labelClass}>Bilder (URLs)</label>
               {imageUrls.map((url, index) => (
                 <div key={index} style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
                   <input
@@ -631,7 +597,7 @@ function AdminListingsPage() {
                     value={url}
                     onChange={(e) => setImageUrl(index, e.target.value)}
                     placeholder={`Bild-URL ${index + 1}`}
-                    style={inputStyle}
+                    className={inputClass}
                   />
                   <button
                     type="button"
@@ -642,43 +608,34 @@ function AdminListingsPage() {
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={addImageRow} style={secondaryBtn}>
+              <button type="button" onClick={addImageRow} className={secondaryBtnClass} style={secondaryBtn}>
                 + Bild-URL hinzufügen
               </button>
             </div>
 
             <div>
-              <label style={labelStyle}>Amenities DE (kommagetrennt)</label>
+              <label className={labelClass}>Amenities DE (kommagetrennt)</label>
               <input
                 type="text"
                 value={amenitiesDe}
                 onChange={(e) => setAmenitiesDe(e.target.value)}
                 placeholder="z.B. WLAN, Waschmaschine, Balkon"
-                style={inputStyle}
+                className={inputClass}
               />
             </div>
             <div>
-              <label style={labelStyle}>Amenities EN (kommagetrennt)</label>
+              <label className={labelClass}>Amenities EN (kommagetrennt)</label>
               <input
                 type="text"
                 value={amenitiesEn}
                 onChange={(e) => setAmenitiesEn(e.target.value)}
                 placeholder="e.g. WiFi, Washing machine, Balcony"
-                style={inputStyle}
+                className={inputClass}
               />
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  color: "#eef2ff",
-                }}
-              >
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[#0f172a] dark:text-[#eef2ff]">
                 <input
                   type="checkbox"
                   name="is_published"
@@ -688,13 +645,14 @@ function AdminListingsPage() {
                 is_published
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <label style={labelStyle}>sort_order</label>
+                <label className={labelClass}>sort_order</label>
                 <input
                   type="number"
                   name="sort_order"
                   value={form.sort_order}
                   onChange={handleChange}
-                  style={{ ...inputStyle, width: "80px" }}
+                  className={inputClass}
+                  style={{ width: "80px" }}
                 />
               </div>
             </div>
@@ -732,23 +690,14 @@ function AdminListingsPage() {
         )}
       </div>
 
-      <div style={cardStyle}>
-        <h3
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            color: "#6b7a9a",
-            margin: "0 0 16px 0",
-          }}
-        >
+      <div className={cardClass}>
+        <h3 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
           Alle Listings
         </h3>
-        {loading && <p style={{ color: "#6b7a9a" }}>Listings werden geladen…</p>}
+        {loading && <p className="text-[#64748b] dark:text-[#6b7a9a]">Listings werden geladen…</p>}
         {error && <p style={{ color: "#f87171" }}>{error}</p>}
         {!loading && !error && listings.length === 0 && (
-          <p style={{ color: "#6b7a9a" }}>
+          <p className="text-[#64748b] dark:text-[#6b7a9a]">
             Noch keine Listings. Unit wählen und oben ein neues Listing anlegen.
           </p>
         )}
@@ -757,27 +706,17 @@ function AdminListingsPage() {
         )}
         {!loading && !error && listings.length > 0 && (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+            <table className="w-full border-collapse text-sm">
               <thead>
-                <tr
-                  style={{
-                    textAlign: "left",
-                    background: "#111520",
-                    color: "#6b7a9a",
-                    fontSize: "9px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.8px",
-                  }}
-                >
-                  <th style={{ padding: "12px" }}>Slug</th>
-                  <th style={{ padding: "12px" }}>Titel (DE/EN)</th>
-                  <th style={{ padding: "12px" }}>City</th>
-                  <th style={{ padding: "12px" }}>Preis (CHF)</th>
-                  <th style={{ padding: "12px" }}>Published</th>
-                  <th style={{ padding: "12px" }}>Availability</th>
-                  <th style={{ padding: "12px" }}>Sort</th>
-                  <th style={{ padding: "12px" }}>ID</th>
+                <tr className="text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:bg-[#111520] dark:text-[#6b7a9a] bg-slate-100">
+                  <th className="p-3">Slug</th>
+                  <th className="p-3">Titel (DE/EN)</th>
+                  <th className="p-3">City</th>
+                  <th className="p-3">Preis (CHF)</th>
+                  <th className="p-3">Published</th>
+                  <th className="p-3">Availability</th>
+                  <th className="p-3">Sort</th>
+                  <th className="p-3">ID</th>
                 </tr>
               </thead>
               <tbody>
@@ -785,45 +724,33 @@ function AdminListingsPage() {
                   const isUpdating = statusUpdateLoadingId === row.id;
                   const status = row.availability_status || "available";
                   const badgeStyle = availabilityBadgeStyle(status);
+                  const isUnavailable = (status || "available").toLowerCase() === "unavailable";
                   return (
                     <tr
                       key={row.id}
-                      style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+                      className="border-b border-black/10 dark:border-white/[0.05]"
                     >
-                      <td
-                        style={{
-                          padding: "12px",
-                          fontWeight: 600,
-                          color: "#eef2ff",
-                          fontSize: "13px",
-                        }}
-                      >
+                      <td className="p-3 text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">
                         {row.slug || "—"}
                       </td>
-                      <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                      <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                         {row.title_de || "—"} / {row.title_en || "—"}
                       </td>
-                      <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                      <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                         {row.city_code || row.city_id || "—"}
                       </td>
-                      <td
-                        style={{
-                          padding: "12px",
-                          color: "#4ade80",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                        }}
-                      >
+                      <td className="p-3 text-[13px] font-medium text-[#4ade80]">
                         {row.price_chf_month != null ? row.price_chf_month : "—"}
                       </td>
-                      <td style={{ padding: "12px" }}>
-                        <span style={{ marginRight: "8px", color: "#eef2ff", fontSize: "13px" }}>
+                      <td className="p-3">
+                        <span className="mr-2 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                           {row.is_published ? "Online" : "Offline"}
                         </span>
                         <button
                           type="button"
                           disabled={isUpdating}
                           onClick={() => patchListingStatus(row.id, { is_published: !row.is_published })}
+                          className={secondaryBtnClass}
                           style={{
                             ...secondaryBtn,
                             padding: "4px 10px",
@@ -835,20 +762,37 @@ function AdminListingsPage() {
                           {isUpdating ? "…" : row.is_published ? "Ausblenden" : "Veröffentlichen"}
                         </button>
                       </td>
-                      <td style={{ padding: "12px" }}>
+                      <td className="p-3">
                         <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            padding: "6px 10px",
-                            borderRadius: "999px",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            background: badgeStyle.bg,
-                            color: badgeStyle.color,
-                            border: `1px solid ${badgeStyle.border}`,
-                            marginRight: "8px",
-                          }}
+                          style={
+                            isUnavailable
+                              ? {
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  padding: "6px 10px",
+                                  borderRadius: "999px",
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  marginRight: "8px",
+                                }
+                              : {
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  padding: "6px 10px",
+                                  borderRadius: "999px",
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  background: badgeStyle.bg,
+                                  color: badgeStyle.color,
+                                  border: `1px solid ${badgeStyle.border}`,
+                                  marginRight: "8px",
+                                }
+                          }
+                          className={
+                            isUnavailable
+                              ? "mr-2 border border-black/10 bg-slate-100 text-[10px] font-bold text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]"
+                              : undefined
+                          }
                         >
                           {availabilityLabel(status)}
                         </span>
@@ -856,25 +800,18 @@ function AdminListingsPage() {
                           value={status}
                           disabled={isUpdating}
                           onChange={(e) => patchListingStatus(row.id, { availability_status: e.target.value })}
-                          style={{
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                            borderRadius: "8px",
-                            background: "#111520",
-                            color: "#eef2ff",
-                            minWidth: "120px",
-                          }}
+                          className={`${inputClass} min-w-[120px] px-2 py-1 text-xs`}
+                          style={{ padding: "4px 8px" }}
                         >
                           <option value="available">Verfügbar</option>
                           <option value="occupied">Belegt</option>
                           <option value="unavailable">Nicht verfügbar</option>
                         </select>
                       </td>
-                      <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                      <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                         {row.sort_order != null ? row.sort_order : "—"}
                       </td>
-                      <td style={{ padding: "12px", fontSize: "12px", color: "#6b7a9a" }}>{row.id}</td>
+                      <td className="p-3 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{row.id}</td>
                     </tr>
                   );
                 })}
