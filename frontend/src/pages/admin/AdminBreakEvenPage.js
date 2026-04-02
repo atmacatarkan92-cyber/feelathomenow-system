@@ -1,5 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { fetchAdminUnits, fetchAdminUnitCosts, normalizeUnit } from "../../api/adminData";
 import { getUnitCostsTotal } from "../../utils/adminUnitRunningCosts";
 
@@ -33,6 +46,40 @@ function normalizeUnitTypeLabel(type) {
 function isCoverageBreakEven(coverage) {
   if (coverage == null || !Number.isFinite(coverage)) return false;
   return Math.abs(coverage - 1) < 1e-9;
+}
+
+/** Mirrors table row classification for summary visuals only (does not alter row data). */
+function portfolioBucketForRow(row) {
+  const isApartment = row.unitType === "apartment";
+  const isCoLiving = row.unitType === "co-living";
+  const apartmentInvalid =
+    isApartment &&
+    (row.revenue == null || row.costs == null || row.costs <= 0);
+  const coLivingInvalid =
+    isCoLiving &&
+    (row.revenue === null ||
+      row.costs === null ||
+      row.costs === 0 ||
+      row.occupiedRooms === 0 ||
+      row.totalRooms === 0);
+  const metricUnavailable =
+    apartmentInvalid || coLivingInvalid || (!isApartment && !isCoLiving);
+  if (metricUnavailable) return "not_calculable";
+  if (isApartment) {
+    if (row.deckungsgrad01 != null && row.deckungsgrad01 > 1) return "profitable";
+    return "not_profitable";
+  }
+  const coLivingHasStatus = isCoLiving && !coLivingInvalid;
+  const coLivingIsProfitable =
+    coLivingHasStatus ? row.occupiedRooms >= row.breakEvenRooms : null;
+  if (coLivingIsProfitable === true) return "profitable";
+  return "not_profitable";
+}
+
+function truncateChartLabel(s, maxLen) {
+  const t = String(s || "").trim();
+  if (t.length <= maxLen) return t || "—";
+  return `${t.slice(0, maxLen - 1)}…`;
 }
 
 function AdminBreakEvenPage() {
@@ -134,6 +181,50 @@ function AdminBreakEvenPage() {
     });
   }, [units, unitCostsByUnitId]);
 
+  const barChartData = useMemo(() => {
+    return rows.map((row) => {
+      const rev =
+        row.revenue == null || !Number.isFinite(Number(row.revenue)) ? null : Number(row.revenue);
+      const cst =
+        row.costs == null || !Number.isFinite(Number(row.costs)) ? null : Number(row.costs);
+      return {
+        label: truncateChartLabel(row.addressPrimary || row.id, 22),
+        revenue: rev,
+        costs: cst,
+        revenueMissing: row.revenue == null,
+        costsMissing: row.costs == null,
+      };
+    });
+  }, [rows]);
+
+  const portfolioSummary = useMemo(() => {
+    let profitable = 0;
+    let notProfitable = 0;
+    let notCalculable = 0;
+    for (const row of rows) {
+      const b = portfolioBucketForRow(row);
+      if (b === "profitable") profitable += 1;
+      else if (b === "not_profitable") notProfitable += 1;
+      else notCalculable += 1;
+    }
+    return { profitable, notProfitable, notCalculable, total: rows.length };
+  }, [rows]);
+
+  const donutData = useMemo(() => {
+    const { profitable, notProfitable, notCalculable } = portfolioSummary;
+    return [
+      { name: "Über Break-Even", value: profitable, key: "ok" },
+      { name: "Darunter / knapp", value: notProfitable, key: "risk" },
+      { name: "Nicht berechenbar", value: notCalculable, key: "na" },
+    ].filter((d) => d.value > 0);
+  }, [portfolioSummary]);
+
+  const donutColors = {
+    ok: "#0d9488",
+    risk: "#f43f5e",
+    na: "#94a3b8",
+  };
+
   return (
     <div
       className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
@@ -167,6 +258,146 @@ function AdminBreakEvenPage() {
         >
           Zeigt ab welcher Belegung eine Unit profitabel wird.
         </p>
+      </div>
+
+      <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+        <h3 className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748b] dark:text-[#6b7a9a]">
+          Portfolio-Überblick
+        </h3>
+        <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
+          Umsatz und Kosten pro Unit; rechts die Einordnung nach derselben Logik wie die Tabelle.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)] lg:items-center">
+          <div className="min-h-[260px] w-full min-w-0">
+            {rows.length === 0 ? (
+              <p className="py-12 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+                Keine Units geladen.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={barChartData}
+                  margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                  barCategoryGap="18%"
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.35)" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: "currentColor" }}
+                    className="text-slate-500 dark:text-[#6b7a9a]"
+                    interval={0}
+                    angle={-28}
+                    textAnchor="end"
+                    height={56}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "currentColor" }}
+                    className="text-slate-500 dark:text-[#6b7a9a]"
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `${(v / 1000).toLocaleString("de-CH", { maximumFractionDigits: 1 })}k` : String(v)
+                    }
+                    width={44}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 10,
+                      border: "1px solid rgba(148,163,184,0.35)",
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ fontWeight: 600 }}
+                    formatter={(value, name, item) => {
+                      const payload = item?.payload;
+                      const missing =
+                        name === "Umsatz" ? payload?.revenueMissing : payload?.costsMissing;
+                      if (missing) return ["—", name];
+                      return [`CHF ${Number(value).toLocaleString("de-CH")}`, name];
+                    }}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                    wrapperClassName="text-slate-600 dark:text-[#94a3b8]"
+                  />
+                  <Bar
+                    dataKey="revenue"
+                    name="Umsatz"
+                    fill="#0d9488"
+                    fillOpacity={0.88}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={32}
+                  />
+                  <Bar
+                    dataKey="costs"
+                    name="Kosten"
+                    fill="#64748b"
+                    fillOpacity={0.55}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={32}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-black/10 bg-slate-50/80 px-4 py-5 dark:border-white/[0.08] dark:bg-white/[0.04]">
+            <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-[#64748b] dark:text-[#6b7a9a]">
+              Status (Portfolio)
+            </p>
+            {portfolioSummary.total === 0 ? (
+              <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">—</p>
+            ) : donutData.length === 0 ? (
+              <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Daten</p>
+            ) : (
+              <>
+                <div className="h-[140px] w-full max-w-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={44}
+                        outerRadius={58}
+                        paddingAngle={2}
+                        strokeWidth={0}
+                      >
+                        {donutData.map((entry) => (
+                          <Cell
+                            key={entry.key}
+                            fill={donutColors[entry.key] || "#94a3b8"}
+                            fillOpacity={entry.key === "na" ? 0.65 : 0.9}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(v) => [String(v), "Units"]}
+                        contentStyle={{
+                          borderRadius: 10,
+                          border: "1px solid rgba(148,163,184,0.35)",
+                          fontSize: 12,
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <ul className="mt-3 w-full space-y-1.5 text-[12px] text-[#0f172a] dark:text-[#eef2ff]">
+                  <li className="flex justify-between gap-2">
+                    <span className="text-emerald-700 dark:text-emerald-400">Über Break-Even</span>
+                    <span className="font-semibold tabular-nums">{portfolioSummary.profitable}</span>
+                  </li>
+                  <li className="flex justify-between gap-2">
+                    <span className="text-rose-600 dark:text-rose-400">Darunter / knapp</span>
+                    <span className="font-semibold tabular-nums">{portfolioSummary.notProfitable}</span>
+                  </li>
+                  <li className="flex justify-between gap-2">
+                    <span className="text-slate-500 dark:text-[#6b7a9a]">Nicht berechenbar</span>
+                    <span className="font-semibold tabular-nums">{portfolioSummary.notCalculable}</span>
+                  </li>
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <div
