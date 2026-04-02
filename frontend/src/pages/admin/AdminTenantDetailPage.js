@@ -566,6 +566,27 @@ function secondParticipantZweitmieterLine(participants) {
   return `Zweitmieter: ${name} (${roleDe})`;
 }
 
+/** Primary-tenant tenancies for this page: find active/reserved row for room/unit (PATCH vs POST). */
+function findOpenPrimaryTenancyForRoom(tenancyList, unitId, roomId) {
+  const uid = String(unitId);
+  const rid = String(roomId);
+  const candidates = (tenancyList || []).filter(
+    (t) => String(t.unit_id) === uid && String(t.room_id) === rid
+  );
+  const isOpen = (s) => {
+    const x = String(s || "").toLowerCase();
+    return x === "active" || x === "reserved";
+  };
+  const open = candidates.filter((t) => isOpen(t.status));
+  if (!open.length) return null;
+  open.sort((a, b) => {
+    const da = String(a.move_in_date || "");
+    const db = String(b.move_in_date || "");
+    return db.localeCompare(da);
+  });
+  return open[0];
+}
+
 function getStatusMeta(status) {
   const normalized = String(status || "").toLowerCase();
   if (
@@ -1622,12 +1643,37 @@ export default function AdminTenantDetailPage() {
             return;
           }
         }
+        const participantsPayload =
+          secondTenantId && roleForParticipants
+            ? [
+                { tenant_id: String(tenantId), role: "primary_tenant" },
+                { tenant_id: secondTenantId, role: roleForParticipants },
+              ]
+            : null;
+        if (participantsPayload) {
+          const existingTenancy = findOpenPrimaryTenancyForRoom(
+            tenancies,
+            assignUnitId,
+            assignRoomId
+          );
+          if (existingTenancy?.id != null) {
+            await patchAdminTenancy(String(existingTenancy.id), {
+              participants: participantsPayload,
+            });
+            const [, eData] = await Promise.all([
+              reloadTenanciesForTenant(),
+              fetchAdminTenantEvents(tenantId),
+              reloadTenantAuditLogs(),
+            ]);
+            if (eData?.items) setEvents(eData.items);
+            setAssignOpen(false);
+            resetAssignForm();
+            return;
+          }
+        }
         const body = { ...bodyBase };
-        if (secondTenantId && roleForParticipants) {
-          body.participants = [
-            { tenant_id: String(tenantId), role: "primary_tenant" },
-            { tenant_id: secondTenantId, role: roleForParticipants },
-          ];
+        if (participantsPayload) {
+          body.participants = participantsPayload;
         }
         const createdTenancy = await createAdminTenancy(body);
         const tid = createdTenancy?.id != null ? String(createdTenancy.id) : "";
