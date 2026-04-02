@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -52,7 +52,7 @@ function getStatusMeta(status) {
   ) {
     return {
       label: "Aktiv",
-      pillClass: `${pillBase} border-green-500/20 bg-green-500/10 text-green-400`,
+      pillClass: `${pillBase} border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400`,
     };
   }
 
@@ -535,7 +535,19 @@ function AdminTenantsPage() {
                       </td>
 
                       <td className="px-3 py-3 align-top">
-                        <div className="text-[13px] font-medium text-[#7aaeff]">{row.unitAddress}</div>
+                        {row.unitId && row.unitId !== "—" ? (
+                          <Link
+                            to={`/admin/units/${encodeURIComponent(row.unitId)}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[13px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            {row.unitAddress}
+                          </Link>
+                        ) : (
+                          <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                            {row.unitAddress}
+                          </div>
+                        )}
                         <div className="mt-0.5 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">{row.unitId}</div>
                       </td>
 
