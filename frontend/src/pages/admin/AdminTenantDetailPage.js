@@ -29,6 +29,7 @@ import { getDisplayUnitId } from "../../utils/unitDisplayId";
 import {
   UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE,
   deriveTenantOperationalStatus,
+  getRoomOccupancyStatus,
   getTodayIsoForOccupancy,
   parseIsoDate,
 } from "../../utils/unitOccupancyStatus";
@@ -409,6 +410,67 @@ function dateOnlyOrNull(value) {
   return s.slice(0, 10);
 }
 
+/** Mirrors backend scheduling_end_date_from_parts (tenancy_lifecycle). */
+function maxIsoDate(a, b) {
+  if (!a) return b || null;
+  if (!b) return a || null;
+  return a >= b ? a : b;
+}
+
+function schedulingEndDateFromPartsJs(moveOutRaw, termRaw, actualRaw) {
+  const mo = dateOnlyOrNull(moveOutRaw);
+  const te = dateOnlyOrNull(termRaw);
+  const act = dateOnlyOrNull(actualRaw);
+  const contract = maxIsoDate(te, mo);
+  if (act) {
+    return maxIsoDate(contract, act);
+  }
+  return contract;
+}
+
+function tenancySchedulingEndIso(t) {
+  return schedulingEndDateFromPartsJs(
+    t?.move_out_date,
+    t?.termination_effective_date,
+    t?.actual_move_out_date
+  );
+}
+
+/** Same interval rule as backend _overlaps (routes_admin_tenancies). */
+function roomOverlapsAssignProposal(room, unitTenancies, newMoveInRaw, termRaw, actualRaw) {
+  const rid = String(room?.id ?? room?.room_id ?? "").trim();
+  const ourStart = dateOnlyOrNull(newMoveInRaw);
+  if (!rid || !ourStart) return false;
+  const newEffOut = schedulingEndDateFromPartsJs(null, termRaw, actualRaw);
+  const ourEnd = newEffOut || "9999-12-31";
+  const list = Array.isArray(unitTenancies) ? unitTenancies : [];
+  for (const t of list) {
+    if (String(t.room_id || t.roomId || "").trim() !== rid) continue;
+    const st = String(t.status || "").trim().toLowerCase();
+    if (st !== "active" && st !== "reserved") continue;
+    const tIn = dateOnlyOrNull(t.move_in_date);
+    if (!tIn) continue;
+    const tEnd = tenancySchedulingEndIso(t) || "9999-12-31";
+    if (ourStart < tEnd && ourEnd > tIn) return true;
+  }
+  return false;
+}
+
+function assignRoomStatusSuffixDe(status) {
+  if (status === "belegt") return "belegt";
+  if (status === "reserviert") return "reserviert";
+  return "frei";
+}
+
+function assignRoomOptionTitleDe(status, disabled, overlaps) {
+  if (disabled && overlaps && status === "frei") {
+    return "Nicht verfügbar für gewählten Zeitraum (Überschneidung)";
+  }
+  if (status === "belegt") return "Bereits vermietet / belegt";
+  if (status === "reserviert") return "Bereits reserviert";
+  return "Verfügbar";
+}
+
 function applyRecurringRevenueDatesFromTenancy(form, freqRaw, moveInRaw, _moveOutRaw) {
   const nf = normalizeRevenueFrequency(freqRaw);
   const mi = dateOnlyOrNull(moveInRaw) || "";
@@ -775,6 +837,7 @@ export default function AdminTenantDetailPage() {
   const [assignUnitsErr, setAssignUnitsErr] = useState(null);
   const [assignRooms, setAssignRooms] = useState([]);
   const [assignRoomsLoading, setAssignRoomsLoading] = useState(false);
+  const [assignUnitTenancies, setAssignUnitTenancies] = useState([]);
   const [assignUnitId, setAssignUnitId] = useState("");
   const [assignRoomId, setAssignRoomId] = useState("");
   const [assignMoveIn, setAssignMoveIn] = useState("");
@@ -1270,17 +1333,48 @@ export default function AdminTenantDetailPage() {
     if (!assignUnitId) {
       setAssignRooms([]);
       setAssignRoomId("");
+      setAssignUnitTenancies([]);
       return;
     }
     setAssignRoomsLoading(true);
-    fetchAdminRooms(assignUnitId)
-      .then((raw) => {
-        const arr = Array.isArray(raw) ? raw : [];
-        setAssignRooms(arr.map(normalizeRoom));
+    Promise.all([
+      fetchAdminRooms(assignUnitId)
+        .then((raw) => (Array.isArray(raw) ? raw : []))
+        .catch(() => []),
+      fetchAdminTenancies({ unit_id: assignUnitId, limit: 200 })
+        .then((items) => (Array.isArray(items) ? items : []))
+        .catch(() => []),
+    ])
+      .then(([roomRaw, tenRows]) => {
+        setAssignRooms(roomRaw.map(normalizeRoom));
+        setAssignUnitTenancies(tenRows);
       })
-      .catch(() => setAssignRooms([]))
       .finally(() => setAssignRoomsLoading(false));
   }, [assignUnitId]);
+
+  useEffect(() => {
+    if (!assignRoomId || assignRoomsLoading) return;
+    const r = assignRooms.find((x) => String(x.id) === String(assignRoomId));
+    if (!r) return;
+    const status = getRoomOccupancyStatus(r, assignUnitTenancies) || "frei";
+    const overlaps = roomOverlapsAssignProposal(
+      r,
+      assignUnitTenancies,
+      assignMoveIn,
+      assignTerminationEffective,
+      assignActualMoveOut
+    );
+    const disabled = overlaps || status !== "frei";
+    if (disabled) setAssignRoomId("");
+  }, [
+    assignRoomId,
+    assignRooms,
+    assignRoomsLoading,
+    assignUnitTenancies,
+    assignMoveIn,
+    assignTerminationEffective,
+    assignActualMoveOut,
+  ]);
 
   useEffect(() => {
     if (tenancyEditingId == null) return undefined;
@@ -2869,11 +2963,32 @@ export default function AdminTenantDetailPage() {
                                 ? "Lade Zimmer …"
                                 : "— Zimmer wählen"}
                           </option>
-                          {assignRooms.map((r) => (
-                            <option key={String(r.id)} value={String(r.id)}>
-                              {r.roomName || r.name || r.room_number || r.id}
-                            </option>
-                          ))}
+                          {assignRooms.map((r) => {
+                            const base = r.roomName || r.name || r.room_number || r.id;
+                            const occ = getRoomOccupancyStatus(r, assignUnitTenancies) || "frei";
+                            const overlaps = roomOverlapsAssignProposal(
+                              r,
+                              assignUnitTenancies,
+                              assignMoveIn,
+                              assignTerminationEffective,
+                              assignActualMoveOut
+                            );
+                            const disabled = overlaps || occ !== "frei";
+                            let suffix = assignRoomStatusSuffixDe(occ);
+                            if (disabled && overlaps && occ === "frei") suffix = "nicht verfügbar";
+                            const label = `${base} — ${suffix}`;
+                            const title = assignRoomOptionTitleDe(occ, disabled, overlaps);
+                            return (
+                              <option
+                                key={String(r.id)}
+                                value={String(r.id)}
+                                disabled={disabled}
+                                title={title}
+                              >
+                                {label}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                       <div>
