@@ -148,7 +148,7 @@ function AdminPerformancePage() {
   if (loading) {
     return (
       <div
-        className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
+        className="min-h-full content-start bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
         style={{ display: "grid", gap: "24px" }}
       >
         <p className="text-[#64748b] dark:text-[#6b7a9a]">Lade Performance…</p>
@@ -158,7 +158,7 @@ function AdminPerformancePage() {
 
   return (
     <div
-      className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
+      className="min-h-full content-start bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
       style={{ display: "grid", gap: "24px" }}
     >
       <div>
