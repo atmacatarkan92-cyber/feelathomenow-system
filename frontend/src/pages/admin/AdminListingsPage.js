@@ -331,12 +331,12 @@ function AdminListingsPage() {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
+          className="text-sky-700 hover:text-sky-800 dark:text-sky-400"
           style={{
             background: "none",
             border: "none",
             fontSize: "16px",
             fontWeight: 700,
-            color: "#7aaeff",
             cursor: "pointer",
             marginBottom: showForm ? "16px" : 0,
           }}
@@ -659,6 +659,7 @@ function AdminListingsPage() {
 
             {createSuccess && (
               <p
+                className="text-sky-700 dark:text-sky-400"
                 style={{
                   margin: 0,
                   fontSize: "14px",
@@ -666,7 +667,6 @@ function AdminListingsPage() {
                   borderRadius: "10px",
                   background: "rgba(59, 130, 246, 0.06)",
                   border: "1px solid rgba(59, 130, 246, 0.12)",
-                  color: "#7aaeff",
                 }}
               >
                 {createSuccess}
