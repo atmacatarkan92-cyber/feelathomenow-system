@@ -286,7 +286,7 @@ function formatInvoiceAmount(amount, currency) {
 /** Dark pills for lifecycle preview in tenancy assign/edit UI (keys from deriveTenancyLifecyclePreviewForAssign). */
 const TENANCY_LIFECYCLE_PREVIEW_BADGE_CLASS = {
   active:
-    "inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400",
+    "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400",
   notice_given:
     "inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400",
   reserved:
@@ -803,6 +803,8 @@ export default function AdminTenantDetailPage() {
   const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
   const [tenancyEditErr, setTenancyEditErr] = useState(null);
 
+  const tenancyEditSectionRef = useRef(null);
+
   const [tenancyRevenueByTenancyId, setTenancyRevenueByTenancyId] = useState({});
   const [tenancyRevenueLoadingId, setTenancyRevenueLoadingId] = useState(null);
   const [tenancyRevenueErr, setTenancyRevenueErr] = useState(null);
@@ -1250,6 +1252,17 @@ export default function AdminTenantDetailPage() {
       .catch(() => setAssignRooms([]))
       .finally(() => setAssignRoomsLoading(false));
   }, [assignUnitId]);
+
+  useEffect(() => {
+    if (tenancyEditingId == null) return undefined;
+    const id = requestAnimationFrame(() => {
+      tenancyEditSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [tenancyEditingId]);
 
   const saveNote = () => {
     const text = noteDraft.trim();
@@ -1926,17 +1939,19 @@ export default function AdminTenantDetailPage() {
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                   <div className="min-w-0 flex-1 space-y-2">
                                     <span
-                                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                      className={
                                         dStat === "active"
-                                          ? "border border-green-500/20 bg-green-500/10 text-green-400"
-                                          : dStat === "reserved"
-                                            ? "border border-amber-500/20 bg-amber-500/10 text-amber-400"
-                                            : dStat === "notice_given"
-                                              ? "border border-amber-500/25 bg-amber-500/10 text-amber-300"
-                                              : dStat === "ended"
-                                                ? "border border-black/10 bg-slate-100 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-[#cbd5e1]"
-                                                : "border border-black/10 bg-slate-100 text-[#0f172a] dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-[#eef2ff]"
-                                      }`}
+                                          ? "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400"
+                                          : `inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                              dStat === "reserved"
+                                                ? "border border-amber-500/20 bg-amber-500/10 text-amber-400"
+                                                : dStat === "notice_given"
+                                                  ? "border border-amber-500/25 bg-amber-500/10 text-amber-300"
+                                                  : dStat === "ended"
+                                                    ? "border border-black/10 bg-slate-100 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-[#cbd5e1]"
+                                                    : "border border-black/10 bg-slate-100 text-[#0f172a] dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-[#eef2ff]"
+                                            }`
+                                      }
                                     >
                                       {tenancyDisplayStatusLabelDe(derivedStatusKey)}
                                     </span>
@@ -2268,7 +2283,10 @@ export default function AdminTenantDetailPage() {
                                 </div>
                               </div>
                               {String(tenancyEditingId) === String(tn.id) ? (
-                                <div className="mt-4 rounded-[14px] border border-black/10 bg-slate-100 p-5 dark:border-white/[0.07] dark:bg-[#111520]">
+                                <div
+                                  ref={tenancyEditSectionRef}
+                                  className="mt-4 rounded-[14px] border border-black/10 bg-slate-100 p-5 dark:border-white/[0.07] dark:bg-[#111520]"
+                                >
                                     <div className="mb-2 text-[12px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                                       Mietverhältnis bearbeiten
                                     </div>
