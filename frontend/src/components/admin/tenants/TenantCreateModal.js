@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { createAdminTenant } from "../../../api/adminData";
+import { createAdminTenant, verifyAdminAddress } from "../../../api/adminData";
+import { buildGoogleMapsSearchUrl } from "../../../utils/googleMapsUrl";
 
 const overlayStyle = {
   position: "fixed",
@@ -79,12 +80,16 @@ export default function TenantCreateModal({ open, onClose, onCreated }) {
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [addressCheckBusy, setAddressCheckBusy] = useState(false);
+  const [addressCheckHint, setAddressCheckHint] = useState(null);
 
   useEffect(() => {
     if (!open) return;
     setForm(initialForm());
     setError(null);
     setSubmitting(false);
+    setAddressCheckBusy(false);
+    setAddressCheckHint(null);
   }, [open]);
 
   if (!open) return null;
@@ -344,6 +349,78 @@ export default function TenantCreateModal({ open, onClose, onCreated }) {
                 disabled={submitting}
               />
             </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "6px",
+              marginTop: "12px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  window.open(
+                    buildGoogleMapsSearchUrl(form.street, form.postalCode, form.city),
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                  setAddressCheckBusy(true);
+                  setAddressCheckHint(null);
+                  verifyAdminAddress({
+                    address_line1: form.street,
+                    postal_code: form.postalCode,
+                    city: form.city,
+                  })
+                    .then((res) => {
+                      if (res?.valid) {
+                        setAddressCheckHint("Adresse bestätigt.");
+                      } else {
+                        setAddressCheckHint(
+                          "Adresse konnte nicht automatisch bestätigt werden."
+                        );
+                      }
+                    })
+                    .catch(() =>
+                      setAddressCheckHint(
+                        "Adresse konnte nicht automatisch geprüft werden."
+                      )
+                    )
+                    .finally(() => setAddressCheckBusy(false));
+                }}
+                disabled={
+                  submitting ||
+                  addressCheckBusy ||
+                  !(form.street || "").trim() ||
+                  !(form.postalCode || "").trim() ||
+                  !(form.city || "").trim()
+                }
+                className="self-start rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-xs font-semibold text-[#64748b] hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
+                style={{
+                  cursor:
+                    submitting || addressCheckBusy ? "not-allowed" : "pointer",
+                }}
+              >
+                {addressCheckBusy ? "…" : "Adresse prüfen"}
+              </button>
+            </div>
+            <p className="m-0 text-xs text-[#64748b] dark:text-[#6b7a9a]">
+              Öffnet Google Maps in einem neuen Tab. Die Adresse wird im Hintergrund geprüft.
+            </p>
+            {addressCheckHint ? (
+              <p className="m-0 text-xs text-[#64748b] dark:text-[#6b7a9a]">
+                {addressCheckHint}
+              </p>
+            ) : null}
           </div>
           <div style={{ marginTop: "12px", marginBottom: "18px" }}>
             <label htmlFor="tc-country" style={labelStyle}>
