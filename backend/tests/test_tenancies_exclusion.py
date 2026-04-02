@@ -1,7 +1,7 @@
 """
-PostgreSQL EXCLUDE constraint on tenancies (migration 026): no overlapping occupancy per unit.
+PostgreSQL EXCLUDE constraint on tenancies (migration 060): no overlapping occupancy per room.
 
-Requires DATABASE_URL and migrated schema including 026_tenancies_no_overlap.
+Requires DATABASE_URL and migrated schema including 060_tenancies_room_daterange_excl.
 """
 from __future__ import annotations
 
@@ -32,11 +32,11 @@ def _norm_constraint_def(s: str) -> str:
 
 
 def _assert_exclusion_constraint_semantics(defn: str, move_out_col_sql: str) -> None:
-    """Semantic validation of migration 026 EXCLUDE (tolerates pg_get_constraintdef formatting drift)."""
+    """Semantic validation of EXCLUDE (tolerates pg_get_constraintdef formatting drift)."""
     n = _norm_constraint_def(defn)
     n_lower = n.lower()
     assert "exclude using gist" in n_lower
-    assert "unit_id with =" in n_lower
+    assert "room_id with =" in n_lower
     assert "daterange(" in n_lower
     assert "move_in_date" in n_lower
     assert "coalesce" in n_lower
@@ -71,7 +71,7 @@ def _resolve_move_out_column_sql(session) -> str:
         return '"move_out_date date"'
     pytest.fail(
         "tenancies has neither move_out_date nor legacy 'move_out_date date' column; "
-        "migration 026 cannot be validated"
+        "tenancies exclusion migration cannot be validated"
     )
 
 
@@ -85,13 +85,13 @@ def _require_exclusion_constraint(engine):
                 JOIN pg_class t ON c.conrelid = t.oid
                 JOIN pg_namespace n ON n.oid = t.relnamespace
                 WHERE n.nspname = 'public' AND t.relname = 'tenancies'
-                  AND c.conname = 'tenancies_unit_daterange_excl'
+                  AND c.conname = 'tenancies_room_daterange_excl'
                 """
             )
         ).one_or_none()
         if row is None:
             pytest.skip(
-                "tenancies_unit_daterange_excl not present — apply migration 026_tenancies_no_overlap"
+                "tenancies_room_daterange_excl not present — apply migration 060_tenancies_room_daterange_excl"
             )
         defn, contype = row[0], row[1]
         assert contype == "x", f"expected EXCLUDE constraint, got contype={contype!r}"
@@ -201,17 +201,10 @@ def exclusion_seed(engine):
         session.commit()
 
 
-def test_tenancies_exclusion_rejects_overlap_same_unit(engine, exclusion_seed):
-    """Same unit_id: overlapping calendar ranges must fail at commit."""
+def test_tenancies_exclusion_rejects_overlap_same_room(engine, exclusion_seed):
+    """Same room_id: overlapping calendar ranges must fail at commit."""
     ids = exclusion_seed
-    org, ua, ra, ra2, ta, tb = (
-        ids["org"],
-        ids["ua"],
-        ids["ra"],
-        ids["ra2"],
-        ids["ta"],
-        ids["tb"],
-    )
+    org, ua, ra, ta, tb = ids["org"], ids["ua"], ids["ra"], ids["ta"], ids["tb"]
     t1 = f"excl-tn1-{uuid.uuid4().hex[:10]}"
     t2 = f"excl-tn2-{uuid.uuid4().hex[:10]}"
 
@@ -238,7 +231,7 @@ def test_tenancies_exclusion_rejects_overlap_same_unit(engine, exclusion_seed):
                 id=t2,
                 organization_id=org,
                 tenant_id=tb,
-                room_id=ra2,
+                room_id=ra,
                 unit_id=ua,
                 move_in_date=date(2026, 4, 15),
                 move_out_date=date(2026, 5, 15),
@@ -250,8 +243,8 @@ def test_tenancies_exclusion_rejects_overlap_same_unit(engine, exclusion_seed):
         session.rollback()
 
 
-def test_tenancies_exclusion_allows_back_to_back_same_unit(engine, exclusion_seed):
-    """Same unit: move_out Apr 30 then move_in May 1 — allowed (half-open ranges)."""
+def test_tenancies_exclusion_allows_overlap_same_unit_different_rooms(engine, exclusion_seed):
+    """Same unit_id, different rooms: overlapping calendar ranges are allowed (co-living)."""
     ids = exclusion_seed
     org, ua, ra, ra2, ta, tb = (
         ids["org"],
@@ -261,6 +254,42 @@ def test_tenancies_exclusion_allows_back_to_back_same_unit(engine, exclusion_see
         ids["ta"],
         ids["tb"],
     )
+    t1 = f"excl-su1-{uuid.uuid4().hex[:10]}"
+    t2 = f"excl-su2-{uuid.uuid4().hex[:10]}"
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org)
+        session.add(
+            Tenancy(
+                id=t1,
+                organization_id=org,
+                tenant_id=ta,
+                room_id=ra,
+                unit_id=ua,
+                move_in_date=date(2026, 4, 1),
+                move_out_date=date(2026, 4, 30),
+                status=TenancyStatus.ended,
+            )
+        )
+        session.add(
+            Tenancy(
+                id=t2,
+                organization_id=org,
+                tenant_id=tb,
+                room_id=ra2,
+                unit_id=ua,
+                move_in_date=date(2026, 4, 15),
+                move_out_date=date(2026, 5, 15),
+                status=TenancyStatus.ended,
+            )
+        )
+        session.commit()
+
+
+def test_tenancies_exclusion_allows_back_to_back_same_room(engine, exclusion_seed):
+    """Same room: move_out Apr 30 then move_in May 1 — allowed (half-open ranges)."""
+    ids = exclusion_seed
+    org, ua, ra, ta, tb = ids["org"], ids["ua"], ids["ra"], ids["ta"], ids["tb"]
     t1 = f"excl-b2b1-{uuid.uuid4().hex[:10]}"
     t2 = f"excl-b2b2-{uuid.uuid4().hex[:10]}"
 
@@ -283,7 +312,7 @@ def test_tenancies_exclusion_allows_back_to_back_same_unit(engine, exclusion_see
                 id=t2,
                 organization_id=org,
                 tenant_id=tb,
-                room_id=ra2,
+                room_id=ra,
                 unit_id=ua,
                 move_in_date=date(2026, 5, 1),
                 move_out_date=date(2026, 5, 31),
