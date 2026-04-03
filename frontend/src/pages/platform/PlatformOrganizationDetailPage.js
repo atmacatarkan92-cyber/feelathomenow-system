@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { fetchPlatformOrganization } from "../../api/adminData";
+import { fetchPlatformOrganization, platformImpersonate } from "../../api/adminData";
 import { formatPlatformDateTime } from "../../utils/platformDateTime";
 
 function roleSortKey(role) {
@@ -30,10 +30,12 @@ function isOrgAdminRole(role) {
 
 function PlatformOrganizationDetailPage() {
   const { organizationId } = useParams();
-  const { user, loading: authLoading, isPlatformAdminAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { user, loading: authLoading, isPlatformAdminAuthenticated, login } = useAuth();
   const [org, setOrg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [opening, setOpening] = useState(false);
 
   useEffect(() => {
     if (!organizationId) {
@@ -106,11 +108,30 @@ function PlatformOrganizationDetailPage() {
           </Link>
           <button
             type="button"
-            disabled
-            title="Bald verfügbar"
-            className="inline-flex h-[40px] cursor-not-allowed items-center justify-center rounded-[8px] border border-black/10 bg-slate-100 px-4 text-[13px] font-semibold text-[#94a3b8] opacity-70 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#627588]"
+            disabled={opening || !organizationId}
+            onClick={() => {
+              if (!organizationId) return;
+              setOpening(true);
+              setError("");
+              platformImpersonate(organizationId)
+                .then((data) => {
+                  const t = data?.access_token;
+                  if (!t) {
+                    setError("Kein Zugriffstoken erhalten.");
+                    return null;
+                  }
+                  return login(t);
+                })
+                .then((me) => {
+                  if (me) navigate("/admin", { replace: true });
+                })
+                .catch((e) => setError(e.message || "Support-Modus konnte nicht gestartet werden."))
+                .finally(() => setOpening(false));
+            }}
+            title="Organisation im Support-Modus öffnen (Kunden-Admin)"
+            className="inline-flex h-[40px] cursor-pointer items-center justify-center rounded-[8px] border border-black/10 bg-white px-4 text-[13px] font-semibold text-[#0f172a] hover:bg-black/[0.03] disabled:cursor-wait disabled:opacity-60 dark:border-white/[0.1] dark:bg-[#141824] dark:text-[#eef2ff] dark:hover:bg-white/[0.04]"
           >
-            Organisation öffnen
+            {opening ? "Öffnen…" : "Organisation öffnen"}
           </button>
         </div>
       </div>

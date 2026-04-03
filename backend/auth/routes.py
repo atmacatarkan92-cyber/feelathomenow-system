@@ -496,12 +496,15 @@ def logout(request: Request, session=Depends(get_db_session)):
 
 
 @router.get("/me", response_model=UserMe)
-def read_me(current_user: User = Depends(get_current_user)) -> UserMe:
+def read_me(request: Request, current_user: User = Depends(get_current_user)) -> UserMe:
     role_str = (
         getattr(current_user.role, "value", current_user.role)
         if getattr(current_user, "role", None) is not None
         else ""
     )
+    imp_active = getattr(request.state, "impersonation_active", False)
+    imp_name = getattr(request.state, "imp_target_org_name", None) if imp_active else None
+    imp_orig = getattr(request.state, "imp_original_role", None) if imp_active else None
     return UserMe(
         id=current_user.id,
         email=current_user.email,
@@ -510,5 +513,8 @@ def read_me(current_user: User = Depends(get_current_user)) -> UserMe:
         is_active=current_user.is_active,
         last_login_at=current_user.last_login_at,
         organization_id=str(current_user.organization_id),
+        is_impersonating=bool(imp_active),
+        impersonated_organization_name=imp_name,
+        original_role=imp_orig,
     )
 

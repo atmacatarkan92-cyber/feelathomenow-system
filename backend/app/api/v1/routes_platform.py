@@ -7,6 +7,7 @@ table or related reads, revisit session/context so platform-admin queries remain
 without weakening customer org isolation for normal routes.
 """
 
+import logging
 from datetime import datetime
 from typing import Optional
 
@@ -21,7 +22,11 @@ from app.services.organization_onboarding_service import (
     platform_create_organization_with_optional_admin,
 )
 from auth.dependencies import get_db_session, require_platform_admin
-from db.models import Organization, User
+from auth.schemas import Token
+from auth.security import create_access_token, password_version_ts
+from db.models import Organization, User, UserCredentials
+
+logger = logging.getLogger(__name__)
 
 # Paths are mounted at /api/platform via server.include_router(..., prefix="/api/platform").
 router = APIRouter(tags=["platform"])
@@ -142,6 +147,43 @@ def get_organization(
         created_at=getattr(org, "created_at", None),
         users=users,
     )
+
+
+@router.post("/impersonate/{organization_id}", response_model=Token)
+def platform_impersonate(
+    organization_id: str,
+    current_user: User = Depends(require_platform_admin),
+    session: Session = Depends(get_db_session),
+) -> Token:
+    """
+    Issue a short-lived access token that puts the platform admin in the target org context
+    (support mode). Does not change the database user row; refresh uses the DB and clears imp.
+    """
+    org = session.get(Organization, organization_id)
+    if org is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+    creds = session.exec(
+        select(UserCredentials).where(UserCredentials.user_id == str(current_user.id))
+    ).first()
+    if creds is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+        )
+    logger.info(
+        "event=platform_admin_impersonation_started actor_user_id=%s target_organization_id=%s",
+        str(current_user.id),
+        str(org.id),
+    )
+    access_token = create_access_token(
+        {
+            "sub": str(current_user.id),
+            "imp": True,
+            "imp_org": str(org.id),
+            "pv": password_version_ts(creds.password_changed_at),
+        }
+    )
+    return Token(access_token=access_token)
 
 
 @router.post(

@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from sqlmodel import select
@@ -8,7 +8,7 @@ from sqlmodel import select
 from app.core.request_logging import set_log_user_id
 from auth.security import decode_access_token, password_version_ts
 from db.database import get_session as _db_get_session
-from db.models import Landlord, Tenant, User, UserCredentials
+from db.models import Landlord, Organization, Tenant, User, UserCredentials, UserRole
 from db.rls import (
     apply_pg_organization_context,
     apply_pg_user_context,
@@ -41,10 +41,12 @@ def _user_role_value(user: User) -> str:
 
 
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
     db: Session = Depends(get_db_session),
 ) -> User:
     """Resolve current user from Bearer JWT. 401 if invalid or inactive."""
+    request.state.impersonation_active = False
     token = credentials.credentials
     try:
         payload = decode_access_token(token)
@@ -86,6 +88,32 @@ def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
             )
+
+    # Platform support-mode impersonation: JWT-only; DB row stays platform_admin.
+    if payload.get("imp") is True:
+        imp_org = payload.get("imp_org")
+        if not imp_org or not str(imp_org).strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        if _user_role_value(user) != _PLATFORM_ADMIN_ROLE:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        org_row = db.get(Organization, str(imp_org).strip())
+        if org_row is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        db.expunge(user)
+        user.organization_id = str(org_row.id)
+        user.role = UserRole.admin
+        request.state.impersonation_active = True
+        request.state.imp_original_role = _PLATFORM_ADMIN_ROLE
+        request.state.imp_target_org_name = org_row.name or ""
 
     _oid = getattr(user, "organization_id", None)
     if _oid is not None and str(_oid).strip():

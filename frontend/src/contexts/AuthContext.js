@@ -5,6 +5,7 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getMe, refresh, logout as apiLogout } from "../api/auth";
+import { setAccessToken, clearAccessToken } from "../authStore";
 
 const AuthContext = createContext(null);
 
@@ -59,15 +60,20 @@ export function AuthProvider({ children }) {
 
   const login = useCallback((accessToken) => {
     setToken(accessToken);
+    if (accessToken) {
+      setAccessToken(accessToken);
+    }
     setLoading(true);
-    getMe()
+    return getMe()
       .then((me) => {
         setUser(me || null);
         if (!me) setToken(null);
+        return me;
       })
       .catch(() => {
         setToken(null);
         setUser(null);
+        return null;
       })
       .finally(() => setLoading(false));
   }, []);
@@ -78,8 +84,34 @@ export function AuthProvider({ children }) {
     } finally {
       setToken(null);
       setUser(null);
+      clearAccessToken();
     }
   }, []);
+
+  /** Exit platform support-mode impersonation: new access token from refresh cookie (DB role). */
+  const exitImpersonation = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await refresh();
+      if (data?.access_token) {
+        setToken(data.access_token);
+        setAccessToken(data.access_token);
+      }
+      const me = await getMe();
+      setUser(me || null);
+      if (!me) {
+        setToken(null);
+      }
+    } catch {
+      setToken(null);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const isImpersonating = !!(user && user.is_impersonating);
+  const impersonatedOrganizationName = user?.impersonated_organization_name ?? null;
 
   const value = {
     token,
@@ -88,9 +120,12 @@ export function AuthProvider({ children }) {
     isPlatformAdminAuthenticated,
     isTenantAuthenticated,
     isLandlordAuthenticated,
+    isImpersonating,
+    impersonatedOrganizationName,
     loading,
     login,
     logout,
+    exitImpersonation,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1386,3 +1386,17 @@ export async function createPlatformOrganization(body) {
   }
   return res.json();
 }
+
+/** POST /api/platform/impersonate/{organizationId} — platform_admin only; returns new access_token (support mode). */
+export async function platformImpersonate(organizationId) {
+  const id = encodeURIComponent(organizationId);
+  const res = await fetch(`${API_BASE_URL}/api/platform/impersonate/${id}`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}

@@ -32,6 +32,10 @@ class UserMe(BaseModel):
     last_login_at: datetime | None = None
     # Canonical org for this account; clients may send this as login.organization_id when email is reused across orgs.
     organization_id: str
+    # Set when JWT has platform support-mode impersonation (platform_admin acting as org admin).
+    is_impersonating: bool = False
+    impersonated_organization_name: str | None = None
+    original_role: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

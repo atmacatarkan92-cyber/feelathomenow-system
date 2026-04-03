@@ -283,6 +283,34 @@ class TestPlatformOrganizationsAccess:
         finally:
             app.dependency_overrides.pop(get_current_user, None)
 
+    def test_org_admin_cannot_start_impersonation(
+        self,
+        client: TestClient,
+        app,
+        override_platform_db,
+    ):
+        app.dependency_overrides[get_current_user] = lambda: _user(role=UserRole.admin)
+        try:
+            r = client.post("/api/platform/impersonate/o1")
+            assert r.status_code == 403
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)
+
+    def test_platform_admin_impersonate_unknown_org_returns_404(
+        self,
+        client: TestClient,
+        app,
+        override_platform_db,
+    ):
+        app.dependency_overrides[get_current_user] = lambda: _user(
+            role=_PLATFORM_ADMIN_TEST_ROLE
+        )
+        try:
+            r = client.post("/api/platform/impersonate/does-not-exist")
+            assert r.status_code == 404
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)
+
 
 # ---------- PostgreSQL: onboarding service invariants ----------
 
