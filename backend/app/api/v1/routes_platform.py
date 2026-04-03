@@ -23,7 +23,8 @@ from app.services.organization_onboarding_service import (
 from auth.dependencies import get_db_session, require_platform_admin
 from db.models import Organization, User
 
-router = APIRouter(prefix="/api/platform", tags=["platform"])
+# Paths are mounted at /api/platform via server.include_router(..., prefix="/api/platform").
+router = APIRouter(tags=["platform"])
 
 
 class OrganizationListItem(BaseModel):

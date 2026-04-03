@@ -217,13 +217,19 @@ class TestOrganizationOnboardingServiceDB:
     def test_duplicate_admin_does_not_overwrite_password(
         self, platform_db_session: Session
     ):
-        from app.services.organization_onboarding_service import create_initial_org_admin
+        from app.services.organization_onboarding_service import (
+            create_initial_org_admin,
+            organization_slug_column_exists,
+        )
 
         delete_org_scoped_auth_and_users(platform_db_session)
         platform_db_session.exec(Organization.__table__.delete())  # type: ignore[attr-defined]
         platform_db_session.commit()
 
-        org = Organization(name="Svc Test Org", slug="svc-test-org-dup")
+        org_kwargs: dict = {"name": "Svc Test Org"}
+        if organization_slug_column_exists(platform_db_session):
+            org_kwargs["slug"] = "svc-test-org-dup"
+        org = Organization(**org_kwargs)
         platform_db_session.add(org)
         platform_db_session.commit()
         platform_db_session.refresh(org)
@@ -278,8 +284,12 @@ class TestOrganizationOnboardingServiceDB:
     ):
         from app.services.organization_onboarding_service import (
             OrganizationDuplicateError,
+            organization_slug_column_exists,
             platform_create_organization_with_optional_admin,
         )
+
+        if not organization_slug_column_exists(platform_db_session):
+            pytest.skip("organization.slug column not present; duplicate-slug test requires it")
 
         delete_org_scoped_auth_and_users(platform_db_session)
         platform_db_session.exec(Organization.__table__.delete())  # type: ignore[attr-defined]
@@ -308,6 +318,7 @@ class TestOrganizationOnboardingServiceDB:
         self, platform_db_session: Session
     ):
         from app.services.organization_onboarding_service import (
+            organization_slug_column_exists,
             platform_create_organization_with_optional_admin,
         )
 
@@ -315,19 +326,27 @@ class TestOrganizationOnboardingServiceDB:
         platform_db_session.exec(Organization.__table__.delete())  # type: ignore[attr-defined]
         platform_db_session.commit()
 
-        slug = "atomic-org-slug-xyz"
         email = "firstadmin@atomic.test"
+        org_name = "Atomic Org CI Test"
+        slug = "atomic-org-slug-xyz"
+        slug_ok = organization_slug_column_exists(platform_db_session)
         platform_create_organization_with_optional_admin(
             platform_db_session,
-            organization_name="Atomic Org",
-            organization_slug=slug,
+            organization_name=org_name,
+            organization_slug=slug if slug_ok else None,
             create_admin=True,
             admin_email=email,
             admin_password="ValidPwd1ab",
         )
-        org = platform_db_session.exec(
-            select(Organization).where(Organization.slug == slug)
-        ).first()
+        org = (
+            platform_db_session.exec(
+                select(Organization).where(Organization.slug == slug)
+            ).first()
+            if slug_ok
+            else platform_db_session.exec(
+                select(Organization).where(Organization.name == org_name)
+            ).first()
+        )
         assert org is not None
         u = platform_db_session.exec(
             select(User).where(

@@ -1,47 +1,47 @@
-import os
 import logging
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from db.database import engine
-from db.rls import OrgContextMiddleware
-from auth.routes import router as auth_router
-from auth.security import validate_auth_config
+from app.api.v1.routes_admin_address import router as admin_address_router
+from app.api.v1.routes_admin_audit_logs import router as admin_audit_logs_router
+from app.api.v1.routes_admin_dashboard import router as admin_dashboard_router
+from app.api.v1.routes_admin_landlord_documents import router as admin_landlord_documents_router
+from app.api.v1.routes_admin_landlords import router as admin_landlords_router
+from app.api.v1.routes_admin_listings import router as admin_listings_router
+from app.api.v1.routes_admin_owner_documents import router as admin_owner_documents_router
+from app.api.v1.routes_admin_owners import router as admin_owners_router
+from app.api.v1.routes_admin_properties import router as admin_properties_router
+from app.api.v1.routes_admin_property_managers import router as admin_property_managers_router
+from app.api.v1.routes_admin_rooms import router as admin_rooms_router
+from app.api.v1.routes_admin_tenancies import router as admin_tenancies_router
+from app.api.v1.routes_admin_tenant_documents import router as admin_tenant_documents_router
+from app.api.v1.routes_admin_tenants import router as admin_tenants_router
+from app.api.v1.routes_admin_unit_documents import router as admin_unit_documents_router
+from app.api.v1.routes_admin_units import router as admin_units_router
+from app.api.v1.routes_admin_users import router as admin_users_router
+from app.api.v1.routes_apartments import router as apartments_router
+from app.api.v1.routes_contact import router as contact_router
+from app.api.v1.routes_health import router as health_router
+from app.api.v1.routes_invoices import router as invoices_router
+from app.api.v1.routes_landlord import router as landlord_router
+from app.api.v1.routes_platform import router as platform_router
+from app.api.v1.routes_tenant import router as tenant_router
 from app.core.rate_limit import limiter
 from app.core.request_logging import (
     RequestLoggingMiddleware,
     install_request_context_filter,
 )
 from app.core.security_headers_middleware import SecurityHeadersMiddleware
-from app.api.v1.routes_health import router as health_router
-from app.api.v1.routes_contact import router as contact_router
-from app.api.v1.routes_apartments import router as apartments_router
-from app.api.v1.routes_admin_listings import router as admin_listings_router
-from app.api.v1.routes_admin_units import router as admin_units_router
-from app.api.v1.routes_admin_rooms import router as admin_rooms_router
-from app.api.v1.routes_admin_tenants import router as admin_tenants_router
-from app.api.v1.routes_admin_tenancies import router as admin_tenancies_router
-from app.api.v1.routes_admin_dashboard import router as admin_dashboard_router
-from app.api.v1.routes_admin_landlords import router as admin_landlords_router
-from app.api.v1.routes_admin_address import router as admin_address_router
-from app.api.v1.routes_admin_property_managers import router as admin_property_managers_router
-from app.api.v1.routes_admin_owners import router as admin_owners_router
-from app.api.v1.routes_admin_audit_logs import router as admin_audit_logs_router
-from app.api.v1.routes_admin_unit_documents import router as admin_unit_documents_router
-from app.api.v1.routes_admin_tenant_documents import router as admin_tenant_documents_router
-from app.api.v1.routes_admin_landlord_documents import router as admin_landlord_documents_router
-from app.api.v1.routes_admin_owner_documents import router as admin_owner_documents_router
-from app.api.v1.routes_admin_properties import router as admin_properties_router
-from app.api.v1.routes_admin_users import router as admin_users_router
-from app.api.v1.routes_invoices import router as invoices_router
-from app.api.v1.routes_tenant import router as tenant_router
-from app.api.v1.routes_landlord import router as landlord_router
-
+from auth.routes import router as auth_router
+from auth.security import validate_auth_config
+from db.database import engine
+from db.rls import OrgContextMiddleware
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -177,6 +177,7 @@ app.include_router(admin_landlord_documents_router)
 app.include_router(admin_owner_documents_router)
 app.include_router(admin_properties_router)
 app.include_router(admin_users_router)
+app.include_router(platform_router, prefix="/api/platform")
 app.include_router(tenant_router)
 app.include_router(landlord_router)
 app.include_router(health_router)
