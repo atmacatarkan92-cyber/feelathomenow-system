@@ -72,7 +72,20 @@ async function parseAdminErrorResponse(res) {
     }
     throw new Error(String(e?.message ?? e));
   }
-  let msg = parseAdminErrorBodyText(text).trim();
+  // FastAPI HTTPException often uses { "detail": "<plain string>" }; read it before generic parsing
+  // so we never fall through to the generic HTTP ${status} message when JSON is present.
+  let msg = "";
+  try {
+    const j = JSON.parse(text);
+    if (typeof j.detail === "string") {
+      msg = j.detail.trim();
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  if (!msg) {
+    msg = parseAdminErrorBodyText(text).trim();
+  }
   if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
     msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
   }
