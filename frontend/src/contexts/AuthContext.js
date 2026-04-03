@@ -1,15 +1,15 @@
 /**
  * Auth state for admin: token (in-memory), user, isAuthenticated, loading.
  * Phase 2: Session restore via POST /auth/refresh (HttpOnly cookie); no primary use of localStorage.
- * Admin area: admin, manager, and platform_admin (platform_admin for Plattform routes only).
+ * Customer /admin: admin + manager only. Platform /platform: platform_admin only (separate layout).
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getMe, refresh, logout as apiLogout } from "../api/auth";
-import { getAccessToken } from "../authStore";
 
 const AuthContext = createContext(null);
 
-const ALLOWED_ADMIN_ROLES = ["admin", "manager", "platform_admin"];
+const CUSTOMER_ADMIN_ROLES = ["admin", "manager"];
+const PLATFORM_ADMIN_ROLE = "platform_admin";
 const TENANT_ROLE = "tenant";
 const LANDLORD_ROLE = "landlord";
 
@@ -18,7 +18,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const isAuthenticated = !!(token && user && ALLOWED_ADMIN_ROLES.includes(user.role));
+  /** Customer-org admin shell (/admin) — admin or manager only. */
+  const isAuthenticated = !!(
+    token &&
+    user &&
+    CUSTOMER_ADMIN_ROLES.includes(user.role)
+  );
+  /** Platform control plane (/platform) — platform operators only. */
+  const isPlatformAdminAuthenticated = !!(
+    token &&
+    user &&
+    user.role === PLATFORM_ADMIN_ROLE
+  );
   const isTenantAuthenticated = !!(token && user && user.role === TENANT_ROLE);
   const isLandlordAuthenticated = !!(token && user && user.role === LANDLORD_ROLE);
 
@@ -74,6 +85,7 @@ export function AuthProvider({ children }) {
     token,
     user,
     isAuthenticated,
+    isPlatformAdminAuthenticated,
     isTenantAuthenticated,
     isLandlordAuthenticated,
     loading,

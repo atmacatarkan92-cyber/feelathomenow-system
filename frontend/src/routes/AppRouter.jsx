@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ChatWidget from "../components/ChatWidget";
 import AdminLayout from "../components/admin/AdminLayout";
+import PlatformLayout from "../components/platform/PlatformLayout";
 import { AuthProvider } from "../contexts/AuthContext";
 
 import AdminUebersichtPage from "../pages/admin/AdminUebersichtPage";
@@ -34,7 +35,7 @@ import AdminOwnerDetailPage from "../pages/admin/AdminOwnerDetailPage";
 import AdminListingsPage from "../pages/admin/AdminListingsPage";
 import AdminPropertiesPage from "../pages/admin/AdminPropertiesPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
-import AdminOrganizationsPage from "../pages/admin/AdminOrganizationsPage";
+import PlatformOrganizationsPage from "../pages/platform/PlatformOrganizationsPage";
 import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import TenantLayout from "../components/tenant/TenantLayout";
 import TenantLoginPage from "../pages/tenant/TenantLoginPage";
@@ -70,9 +71,11 @@ function ScrollToTop() {
 export default function AppRouter() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
+  const isPlatformRoute = location.pathname.startsWith("/platform");
   const isTenantRoute = location.pathname.startsWith("/tenant");
   const isLandlordRoute = location.pathname.startsWith("/landlord");
-  const showPublicUI = !isAdminRoute && !isTenantRoute && !isLandlordRoute;
+  const showPublicUI =
+    !isAdminRoute && !isPlatformRoute && !isTenantRoute && !isLandlordRoute;
 
   return (
     <div className="App">
@@ -109,7 +112,10 @@ export default function AppRouter() {
               <Route path="landlords/:id" element={<AdminLandlordDetailPage />} />
               <Route path="landlords" element={<AdminLandlordsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
-              <Route path="organizations" element={<AdminOrganizationsPage />} />
+              <Route
+                path="organizations"
+                element={<Navigate to="/platform/organizations" replace />}
+              />
               <Route path="properties" element={<AdminPropertiesPage />} />
               <Route path="bewirtschafter/:id" element={<AdminPropertyManagerDetailPage />} />
               <Route path="bewirtschafter" element={<AdminPropertyManagersPage />} />
@@ -134,6 +140,11 @@ export default function AppRouter() {
               <Route path="contracts" element={<AdminLandlordsPage />} />
               <Route path="leads/inquiries" element={<AdminLeadsPage />} />
               <Route path="leads/followups" element={<AdminLeadsPage />} />
+            </Route>
+
+            <Route path="/platform" element={<PlatformLayout />}>
+              <Route index element={<Navigate to="/platform/organizations" replace />} />
+              <Route path="organizations" element={<PlatformOrganizationsPage />} />
             </Route>
 
             <Route path="/tenant" element={<TenantLayout />}>

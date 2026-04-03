@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { login as apiLogin } from "../../api/auth";
+import { login as apiLogin, getMe } from "../../api/auth";
 
 const cardStyle = {
   maxWidth: "400px",
@@ -44,13 +44,18 @@ function AdminLoginPage() {
     setSubmitting(true);
 
     apiLogin(email, password)
-      .then((data) => {
+      .then(async (data) => {
         const token = data.access_token;
-        if (token) {
-          login(token);
-          navigate("/admin/dashboard", { replace: true });
-        } else {
+        if (!token) {
           setError("Kein Token in der Antwort.");
+          return;
+        }
+        login(token);
+        const me = await getMe();
+        if (me?.role === "platform_admin") {
+          navigate("/platform/organizations", { replace: true });
+        } else {
+          navigate("/admin/dashboard", { replace: true });
         }
       })
       .catch((err) => {

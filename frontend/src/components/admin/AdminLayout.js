@@ -7,7 +7,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 function AdminLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/admin/login";
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const { theme } = useTheme();
 
   const isDark = theme === "dark";
@@ -44,6 +44,10 @@ function AdminLayout() {
         <p>Lade …</p>
       </div>
     );
+  }
+
+  if (user && user.role === "platform_admin") {
+    return <Navigate to="/platform/organizations" replace />;
   }
 
   if (!isAuthenticated) {
