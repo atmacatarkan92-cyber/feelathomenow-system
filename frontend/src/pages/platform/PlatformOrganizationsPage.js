@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
 import { createPlatformOrganization, fetchPlatformOrganizations } from "../../api/adminData";
@@ -19,6 +19,7 @@ function formatCreatedAt(raw) {
 }
 
 function PlatformOrganizationsPage() {
+  const navigate = useNavigate();
   const { user, loading: authLoading, isPlatformAdminAuthenticated } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +183,16 @@ function PlatformOrganizationsPage() {
               {items.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-black/5 dark:border-white/[0.04]"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/platform/organizations/${encodeURIComponent(row.id)}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/platform/organizations/${encodeURIComponent(row.id)}`);
+                    }
+                  }}
+                  className="cursor-pointer border-b border-black/5 transition-colors hover:bg-black/[0.04] dark:border-white/[0.04] dark:hover:bg-white/[0.05]"
                 >
                   <td className="px-3 py-3 font-medium text-[#0f172a] dark:text-[#eef2ff]">
                     {row.name || "—"}

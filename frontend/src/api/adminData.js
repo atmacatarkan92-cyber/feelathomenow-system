@@ -1362,6 +1362,18 @@ export async function fetchPlatformOrganizations() {
   return Array.isArray(data) ? data : [];
 }
 
+/** GET /api/platform/organizations/{id} — platform_admin only */
+export async function fetchPlatformOrganization(organizationId) {
+  const id = encodeURIComponent(organizationId);
+  const res = await fetch(`${API_BASE_URL}/api/platform/organizations/${id}`, {
+    headers: getApiHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
 /** POST /api/platform/organizations — platform_admin only */
 export async function createPlatformOrganization(body) {
   const res = await fetch(`${API_BASE_URL}/api/platform/organizations`, {
