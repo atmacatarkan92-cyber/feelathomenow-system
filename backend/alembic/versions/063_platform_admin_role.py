@@ -23,7 +23,24 @@ _ALLOWED = (
 
 
 def upgrade() -> None:
-    op.drop_constraint(CHECK_NAME, "users", type_="check")
+    conn = op.get_bind()
+    conn.execute(
+        text(
+            f"""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1
+                FROM pg_constraint
+                WHERE conname = '{CHECK_NAME}'
+                  AND conrelid = 'users'::regclass
+            ) THEN
+                ALTER TABLE users DROP CONSTRAINT {CHECK_NAME};
+            END IF;
+        END $$;
+        """
+        )
+    )
     op.create_check_constraint(
         CHECK_NAME,
         "users",
