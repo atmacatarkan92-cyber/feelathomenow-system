@@ -390,6 +390,7 @@ export function fetchAdminTenancies(params = {}) {
   if (params.room_id) sp.set("room_id", params.room_id);
   if (params.unit_id) sp.set("unit_id", params.unit_id);
   if (params.tenant_id) sp.set("tenant_id", params.tenant_id);
+  if (params.include_participant) sp.set("include_participant", "true");
   if (params.status) sp.set("status", params.status);
   if (params.limit != null) sp.set("limit", String(params.limit));
   if (params.skip != null) sp.set("skip", String(params.skip));

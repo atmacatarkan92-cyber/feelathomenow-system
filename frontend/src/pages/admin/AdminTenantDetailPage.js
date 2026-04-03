@@ -566,6 +566,18 @@ function secondParticipantZweitmieterLine(participants) {
   return `Zweitmieter: ${name} (${roleDe})`;
 }
 
+/** When viewing tenant detail as co-tenant/solidarhafter (not tenancies.tenant_id). */
+function viewerTenancyRoleLabelDe(tenancy, viewerTenantId) {
+  if (String(tenancy?.tenant_id) === String(viewerTenantId)) return null;
+  const parts = tenancy?.participants;
+  if (!Array.isArray(parts)) return null;
+  const me = parts.find((p) => p && String(p.tenant_id) === String(viewerTenantId));
+  if (!me?.role) return null;
+  if (me.role === "co_tenant") return "Co-Mieter (Zweitmieter)";
+  if (me.role === "solidarhafter") return "Solidarhafter";
+  return null;
+}
+
 /** Primary-tenant tenancies for this page: find active/reserved row for room/unit (PATCH vs POST). */
 function findOpenPrimaryTenancyForRoom(tenancyList, unitId, roomId) {
   const uid = String(unitId);
@@ -976,7 +988,11 @@ export default function AdminTenantDetailPage() {
 
   const reloadTenanciesForTenant = useCallback(async () => {
     try {
-      const items = await fetchAdminTenancies({ tenant_id: tenantId, limit: 200 });
+      const items = await fetchAdminTenancies({
+        tenant_id: tenantId,
+        limit: 200,
+        include_participant: true,
+      });
       const list = Array.isArray(items) ? items : [];
       setTenancies(list);
       await prefetchTenancyRevenueForTenancyList(list);
@@ -1340,7 +1356,11 @@ export default function AdminTenantDetailPage() {
         }
         setTenant(t);
         setForm(tenantToForm(t));
-        const tenanciesFetch = fetchAdminTenancies({ tenant_id: tenantId, limit: 200 })
+        const tenanciesFetch = fetchAdminTenancies({
+          tenant_id: tenantId,
+          limit: 200,
+          include_participant: true,
+        })
           .then((items) => (Array.isArray(items) ? items : []))
           .catch(() => []);
         const [nData, eData, invData, tenancyItems, auditData, tdDocs] = await Promise.all([
@@ -2222,6 +2242,14 @@ export default function AdminTenantDetailPage() {
                                       {tenancyDateRangeLabel(tn)}
                                     </p>
                                     {(() => {
+                                      const roleLabel = viewerTenancyRoleLabelDe(tn, tenantId);
+                                      if (roleLabel) {
+                                        return (
+                                          <p className="m-0 text-[11px] leading-snug text-[#64748b] dark:text-[#7f8daa]">
+                                            {roleLabel}
+                                          </p>
+                                        );
+                                      }
                                       const zmLine = secondParticipantZweitmieterLine(tn.participants);
                                       return zmLine ? (
                                         <p className="m-0 text-[11px] leading-snug text-[#64748b] dark:text-[#7f8daa]">

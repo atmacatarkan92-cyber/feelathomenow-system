@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import delete, func
+from sqlalchemy import delete, func, or_
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
@@ -662,6 +662,10 @@ def admin_list_tenancies(
     room_id: Optional[str] = None,
     unit_id: Optional[str] = None,
     tenant_id: Optional[str] = None,
+    include_participant: bool = Query(
+        False,
+        description="With tenant_id: include tenancies where tenant appears in tenancy_participants",
+    ),
     status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -680,7 +684,16 @@ def admin_list_tenancies(
     if unit_id:
         base_query = base_query.where(Tenancy.unit_id == unit_id)
     if tenant_id:
-        base_query = base_query.where(Tenancy.tenant_id == tenant_id)
+        if include_participant:
+            tp_tenancy_ids = select(TenancyParticipant.tenancy_id).where(
+                TenancyParticipant.organization_id == org_id,
+                TenancyParticipant.tenant_id == tenant_id,
+            )
+            base_query = base_query.where(
+                or_(Tenancy.tenant_id == tenant_id, Tenancy.id.in_(tp_tenancy_ids))
+            )
+        else:
+            base_query = base_query.where(Tenancy.tenant_id == tenant_id)
     if status:
         base_query = base_query.where(Tenancy.status == status)
     count_query = (
@@ -693,7 +706,16 @@ def admin_list_tenancies(
     if unit_id:
         count_query = count_query.where(Tenancy.unit_id == unit_id)
     if tenant_id:
-        count_query = count_query.where(Tenancy.tenant_id == tenant_id)
+        if include_participant:
+            tp_tenancy_ids_c = select(TenancyParticipant.tenancy_id).where(
+                TenancyParticipant.organization_id == org_id,
+                TenancyParticipant.tenant_id == tenant_id,
+            )
+            count_query = count_query.where(
+                or_(Tenancy.tenant_id == tenant_id, Tenancy.id.in_(tp_tenancy_ids_c))
+            )
+        else:
+            count_query = count_query.where(Tenancy.tenant_id == tenant_id)
     if status:
         count_query = count_query.where(Tenancy.status == status)
     _total_rows = session.exec(count_query).all()

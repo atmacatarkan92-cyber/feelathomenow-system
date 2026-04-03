@@ -65,6 +65,7 @@ import {
   revenueTypeLabelForDisplay,
   revenueFrequencyLabel,
 } from "../../utils/tenancyRevenueBreakdown";
+import { tenantDisplayName } from "../../utils/tenantDisplayName";
 
 const UNIT_AUDIT_FIELD_LABELS = {
   landlord_id: "Verwaltung",
@@ -882,15 +883,40 @@ function roomDisplayMoveOut(room, unitTenancies) {
   return m && m !== "-" ? String(m) : null;
 }
 
+function getActiveOrFutureTenancyForRoom(room, unitTenancies) {
+  if (!unitTenancies) return null;
+  const today = getTodayIsoForOccupancy();
+  const active = getActiveTenancyForRoom(room, unitTenancies, today);
+  const future = getFutureTenancyForRoom(room, unitTenancies, today);
+  return active || future || null;
+}
+
+/** Co-Mieter / Solidarhafter from API participants (primary stays on tenancy.tenant_id). */
+function secondaryParticipantLabels(tenancy, tenantNameMap) {
+  if (!tenancy) return [];
+  const parts = tenancy.participants;
+  if (!Array.isArray(parts)) return [];
+  const out = [];
+  for (const p of parts) {
+    if (!p || (p.role !== "co_tenant" && p.role !== "solidarhafter")) continue;
+    const tid = String(p.tenant_id || "").trim();
+    if (!tid) continue;
+    const label =
+      tenantDisplayName(p.tenant) ||
+      (tenantNameMap && tenantNameMap[tid]) ||
+      tid;
+    const roleDe = p.role === "co_tenant" ? "Co-Mieter" : "Solidarhafter";
+    out.push({ tenantId: tid, label, roleDe });
+  }
+  return out;
+}
+
 function roomDisplayTenantName(room, unitTenancies, tenantNameMap) {
   if (!unitTenancies) {
     const r = room.tenant;
     return r && r !== "-" ? String(r) : "—";
   }
-  const today = getTodayIsoForOccupancy();
-  const active = getActiveTenancyForRoom(room, unitTenancies, today);
-  const future = getFutureTenancyForRoom(room, unitTenancies, today);
-  const tn = active || future;
+  const tn = getActiveOrFutureTenancyForRoom(room, unitTenancies);
   if (!tn) {
     const r = room.tenant;
     return r && r !== "-" ? String(r) : "—";
@@ -1450,13 +1476,19 @@ function AdminUnitDetailPage() {
   useEffect(() => {
     if (!unitTenancies || !unitId) return;
     const uid = String(unitId);
-    const ids = [
-      ...new Set(
-        unitTenancies
-          .filter((t) => String(t.unit_id || t.unitId) === uid)
-          .map((t) => String(t.tenant_id))
-      ),
-    ].filter((id) => id && id !== "undefined");
+    const idSet = new Set();
+    for (const t of unitTenancies.filter((x) => String(x.unit_id || x.unitId) === uid)) {
+      const pt = String(t.tenant_id || "").trim();
+      if (pt) idSet.add(pt);
+      const parts = t.participants;
+      if (Array.isArray(parts)) {
+        for (const p of parts) {
+          const pid = p && String(p.tenant_id || "").trim();
+          if (pid) idSet.add(pid);
+        }
+      }
+    }
+    const ids = [...idSet].filter((id) => id && id !== "undefined");
     if (ids.length === 0) {
       setTenantNameMap({});
       return;
@@ -3029,15 +3061,31 @@ function AdminUnitDetailPage() {
                   {unitTenanciesForMieterTable.map((tn) => {
                     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
                     const statusMeta = tenancyMieterTableStatusMeta(tn);
+                    const secMieter = secondaryParticipantLabels(tn, tenantNameMap);
                     return (
                     <tr key={String(tn.id)} className="border-b border-black/10 dark:border-white/[0.05]">
                         <td className="py-2 pr-4 font-medium">
-                          <Link
-                            to={`/admin/tenants/${String(tn.tenant_id)}`}
-                            className="text-sky-700 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
-                          >
-                            {tenantNameMap[String(tn.tenant_id)] || "…"}
-                          </Link>
+                          <div className="space-y-0.5">
+                            <Link
+                              to={`/admin/tenants/${String(tn.tenant_id)}`}
+                              className="text-sky-700 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
+                            >
+                              {tenantNameMap[String(tn.tenant_id)] || "…"}
+                            </Link>
+                            {secMieter.map((s) => (
+                              <div
+                                key={s.tenantId}
+                                className="text-[12px] font-normal text-[#64748b] dark:text-[#6b7a9a]"
+                              >
+                                <Link
+                                  to={`/admin/tenants/${s.tenantId}`}
+                                  className="text-sky-700/90 hover:underline dark:text-sky-400/90"
+                                >
+                                  + {s.label} ({s.roleDe})
+                                </Link>
+                              </div>
+                            ))}
+                          </div>
                         </td>
                         <td className="py-2 pr-4">
                           <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
@@ -3262,11 +3310,16 @@ function AdminUnitDetailPage() {
                   unitTenancies != null
                     ? getRoomOccupancyStatus(room, unitTenancies)
                     : null;
+                const tnRoom =
+                  unitTenancies != null
+                    ? getActiveOrFutureTenancyForRoom(room, unitTenancies)
+                    : null;
                 const rn = roomDisplayTenantName(
                   room,
                   unitTenancies,
                   tenantNameMap
                 );
+                const secRoom = secondaryParticipantLabels(tnRoom, tenantNameMap);
                 const rmi = roomDisplayMoveIn(room, unitTenancies);
                 const futureSig = roomCompactFutureSignal(room, unitTenancies);
                 return (
@@ -3285,6 +3338,14 @@ function AdminUnitDetailPage() {
                         ? ` · Einzug ${rmi}`
                         : ` · Kein Einzug erfasst`}
                     </p>
+                    {secRoom.map((s) => (
+                      <p
+                        key={s.tenantId}
+                        className="text-xs text-[#6b7a9a] mt-1 pl-0"
+                      >
+                        + {s.label} ({s.roleDe})
+                      </p>
+                    ))}
                     {futureSig ? (
                       <p className="text-xs text-[#6b7a9a] mt-1">{futureSig}</p>
                     ) : null}
@@ -3380,11 +3441,16 @@ function AdminUnitDetailPage() {
                       unitTenancies != null
                         ? getRoomOccupancyStatus(room, unitTenancies)
                         : null;
+                    const tnRoom =
+                      unitTenancies != null
+                        ? getActiveOrFutureTenancyForRoom(room, unitTenancies)
+                        : null;
                     const rTenant = roomDisplayTenantName(
                       room,
                       unitTenancies,
                       tenantNameMap
                     );
+                    const secRoom = secondaryParticipantLabels(tnRoom, tenantNameMap);
                     const rIn = roomDisplayMoveIn(room, unitTenancies);
                     const rOut = roomDisplayMoveOut(room, unitTenancies);
                     const futureSig = roomCompactFutureSignal(
@@ -3414,7 +3480,19 @@ function AdminUnitDetailPage() {
                             : "—"}
                         </Badge>
                       </td>
-                      <td className="py-4 pr-4">{rTenant}</td>
+                      <td className="py-4 pr-4">
+                        <div className="space-y-0.5">
+                          <span>{rTenant}</span>
+                          {secRoom.map((s) => (
+                            <div
+                              key={s.tenantId}
+                              className="text-xs text-[#6b7a9a]"
+                            >
+                              + {s.label} ({s.roleDe})
+                            </div>
+                          ))}
+                        </div>
+                      </td>
                       <td className="py-4 pr-4">
                         {formatChfOrDash(room.priceMonthly)}
                       </td>
