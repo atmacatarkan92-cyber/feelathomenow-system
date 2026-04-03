@@ -121,7 +121,9 @@ function PlatformOrganizationDetailPage() {
                 <dt className="text-[10px] font-bold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
                   ID
                 </dt>
-                <dd className="mt-1 font-mono text-[13px] text-[#0f172a] dark:text-[#eef2ff]">{org.id}</dd>
+                <dd className="mt-1 break-all font-mono text-[11px] leading-snug text-[#64748b] dark:text-[#6b7a9a]">
+                  {org.id}
+                </dd>
               </div>
               <div>
                 <dt className="text-[10px] font-bold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">

@@ -177,6 +177,7 @@ function PlatformOrganizationsPage() {
                 <th className="px-3 py-3">Name</th>
                 <th className="px-3 py-3">Slug</th>
                 <th className="px-3 py-3">Erstellt</th>
+                <th className="px-3 py-3 text-right">Aktionen</th>
               </tr>
             </thead>
             <tbody>
@@ -192,7 +193,7 @@ function PlatformOrganizationsPage() {
                       navigate(`/platform/organizations/${encodeURIComponent(row.id)}`);
                     }
                   }}
-                  className="cursor-pointer border-b border-black/5 transition-colors hover:bg-black/[0.04] dark:border-white/[0.04] dark:hover:bg-white/[0.05]"
+                  className="cursor-pointer border-b border-black/5 transition-colors duration-150 hover:bg-black/[0.07] dark:border-white/[0.04] dark:hover:bg-white/[0.08]"
                 >
                   <td className="px-3 py-3 font-medium text-[#0f172a] dark:text-[#eef2ff]">
                     {row.name || "—"}
@@ -202,6 +203,18 @@ function PlatformOrganizationsPage() {
                   </td>
                   <td className="px-3 py-3 text-[#64748b] dark:text-[#94a3b8]">
                     {formatCreatedAt(row.created_at)}
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <button
+                      type="button"
+                      className="inline-flex h-8 cursor-pointer items-center justify-center rounded-[8px] border border-black/10 bg-white px-3 text-[12px] font-semibold text-[#0f172a] transition-colors hover:bg-black/[0.05] dark:border-white/[0.12] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.06]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/platform/organizations/${encodeURIComponent(row.id)}`);
+                      }}
+                    >
+                      Öffnen
+                    </button>
                   </td>
                 </tr>
               ))}
