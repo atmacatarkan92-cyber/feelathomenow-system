@@ -61,31 +61,16 @@ function parseAdminErrorBodyText(text) {
   return text || "Die Anfrage ist fehlgeschlagen.";
 }
 
-async function parseAdminErrorResponse(res) {
-  // Read a clone so the body stream is still intact if something else (e.g. tracing, devtools)
-  // already consumed `res`; Network tab still shows the wire body while JS sees bodyUsed / empty read.
-  let bodyRes = res;
-  try {
-    if (typeof res.clone === "function" && !res.bodyUsed) {
-      bodyRes = res.clone();
-    }
-  } catch (_) {
-    bodyRes = res;
-  }
-  let text;
-  try {
-    text = await bodyRes.text();
-  } catch (e) {
-    const m = e && e.message;
-    if (typeof m === "string" && m.includes("body stream already read")) {
-      return `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
-    }
-    throw new Error(String(e?.message ?? e));
-  }
-  // Normalize body: missing text, BOM, or odd types from proxies should not skip FastAPI detail.
+/**
+ * Parse FastAPI-style error JSON from response body text (already read once).
+ * @param {string} text
+ * @param {number} status
+ * @param {string} [statusText]
+ */
+function parseAdminErrorFromText(text, status, statusText = "") {
   const t = String(text ?? "").replace(/^\uFEFF/, "");
   if (!t.trim()) {
-    return `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    return `HTTP ${status}${statusText ? ` ${statusText}` : ""}`;
   }
 
   let msg = "";
@@ -111,9 +96,33 @@ async function parseAdminErrorResponse(res) {
     msg = parseAdminErrorBodyText(t).trim();
   }
   if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
-    msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    msg = `HTTP ${status}${statusText ? ` ${statusText}` : ""}`;
   }
   return msg;
+}
+
+async function parseAdminErrorResponse(res) {
+  // Read a clone so the body stream is still intact if something else (e.g. tracing, devtools)
+  // already consumed `res`; Network tab still shows the wire body while JS sees bodyUsed / empty read.
+  let bodyRes = res;
+  try {
+    if (typeof res.clone === "function" && !res.bodyUsed) {
+      bodyRes = res.clone();
+    }
+  } catch (_) {
+    bodyRes = res;
+  }
+  let text;
+  try {
+    text = await bodyRes.text();
+  } catch (e) {
+    const m = e && e.message;
+    if (typeof m === "string" && m.includes("body stream already read")) {
+      return `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    }
+    throw new Error(String(e?.message ?? e));
+  }
+  return parseAdminErrorFromText(text, res.status, res.statusText);
 }
 
 export function fetchAdminUnits() {
@@ -1418,10 +1427,28 @@ export async function createPlatformOrganization(body) {
     headers: getApiHeaders(),
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    throw new Error(await parseAdminErrorResponse(res));
+  // Read body once here: fetch tracing (e.g. Sentry browserTracingIntegration) may consume the
+  // Response before parseAdminErrorResponse can call res.text(), which caused "HTTP 422" fallbacks.
+  let text;
+  try {
+    text = await res.text();
+  } catch (e) {
+    const m = e && e.message;
+    if (typeof m === "string" && m.includes("body stream already read")) {
+      throw new Error(
+        `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`
+      );
+    }
+    throw new Error(String(e?.message ?? e));
   }
-  return res.json();
+  if (!res.ok) {
+    throw new Error(parseAdminErrorFromText(text, res.status, res.statusText));
+  }
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    throw new Error("Ungültige JSON-Antwort.");
+  }
 }
 
 /** POST /api/platform/impersonate/{organizationId} — platform_admin only; returns new access_token (support mode). */
