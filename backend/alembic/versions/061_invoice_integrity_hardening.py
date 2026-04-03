@@ -63,7 +63,22 @@ def upgrade() -> None:
             "groups exist. Resolve duplicates before upgrading."
         )
 
-    op.drop_constraint(UNIQUE_TENANCY_PERIOD, "invoices", type_="unique")
+    conn.execute(
+        text(
+            f"""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conname = '{UNIQUE_TENANCY_PERIOD}'
+                AND conrelid = 'invoices'::regclass
+            ) THEN
+                ALTER TABLE invoices DROP CONSTRAINT {UNIQUE_TENANCY_PERIOD};
+            END IF;
+        END $$;
+    """
+        )
+    )
 
     op.alter_column(
         "invoices",
@@ -92,7 +107,23 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(UNIQUE_TENANCY_PERIOD, "invoices", type_="unique")
+    conn = op.get_bind()
+    conn.execute(
+        text(
+            f"""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conname = '{UNIQUE_TENANCY_PERIOD}'
+                AND conrelid = 'invoices'::regclass
+            ) THEN
+                ALTER TABLE invoices DROP CONSTRAINT {UNIQUE_TENANCY_PERIOD};
+            END IF;
+        END $$;
+    """
+        )
+    )
 
     op.alter_column(
         "invoices",
