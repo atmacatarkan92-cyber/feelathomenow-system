@@ -32,6 +32,20 @@ def test_organization_slug_unique_on_model():
     assert Organization.__table__.c.slug.unique
 
 
+def test_organization_to_list_item_serializes_uuid_id_as_str():
+    """PostgreSQL may return UUID objects; OrganizationListItem.id must be str."""
+    import uuid
+    from types import SimpleNamespace
+
+    from app.api.v1.routes_platform import _organization_to_list_item
+
+    uid = uuid.uuid4()
+    org = SimpleNamespace(id=uid, name="N", slug="s", created_at=None)
+    item = _organization_to_list_item(org)  # type: ignore[arg-type]
+    assert item.id == str(uid)
+    assert isinstance(item.id, str)
+
+
 def test_onboarding_slug_helpers():
     from app.services.organization_onboarding_service import normalize_slug, validate_slug_format
 
@@ -176,6 +190,9 @@ class TestPlatformOrganizationsAccess:
             data = r.json()
             assert len(data) == 2
             assert {x["slug"] for x in data} == {"feelathomenow", "other"}
+            assert all(isinstance(x["id"], str) for x in data)
+            by_slug = {x["slug"]: x for x in data}
+            assert by_slug["feelathomenow"]["id"] == "o1"
         finally:
             app.dependency_overrides.pop(get_current_user, None)
 
@@ -191,7 +208,10 @@ class TestPlatformOrganizationsAccess:
         try:
             r = client.get("/api/platform/organizations/o1")
             assert r.status_code == 200
-            assert r.json()["name"] == "FeelAtHomeNow"
+            body = r.json()
+            assert body["name"] == "FeelAtHomeNow"
+            assert body["id"] == "o1"
+            assert isinstance(body["id"], str)
             r2 = client.get("/api/platform/organizations/missing-id")
             assert r2.status_code == 404
         finally:

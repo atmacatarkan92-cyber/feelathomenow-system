@@ -36,6 +36,16 @@ class OrganizationListItem(BaseModel):
     created_at: Optional[datetime] = None
 
 
+def _organization_to_list_item(org: Organization) -> OrganizationListItem:
+    """Build response model; DB/driver may expose UUID primary keys as non-str objects."""
+    return OrganizationListItem(
+        id=str(org.id),
+        name=org.name,
+        slug=org.slug,
+        created_at=getattr(org, "created_at", None),
+    )
+
+
 class PlatformCreateOrganizationBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -69,7 +79,7 @@ def list_organizations(
 ) -> list[OrganizationListItem]:
     # Intentionally lists all organizations (platform scope), not filtered by caller org.
     rows = session.exec(select(Organization).order_by(Organization.created_at)).all()
-    return [OrganizationListItem.model_validate(o) for o in rows]
+    return [_organization_to_list_item(o) for o in rows]
 
 
 @router.get("/organizations/{organization_id}", response_model=OrganizationListItem)
@@ -81,7 +91,7 @@ def get_organization(
     org = session.get(Organization, organization_id)
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
-    return OrganizationListItem.model_validate(org)
+    return _organization_to_list_item(org)
 
 
 @router.post(
@@ -129,7 +139,7 @@ def create_organization(
         ) from e
 
     return PlatformCreateOrganizationResponse(
-        organization=OrganizationListItem.model_validate(result.organization),
+        organization=_organization_to_list_item(result.organization),
         organization_created=result.organization_created,
         admin_created=result.admin_created,
         message=result.message,
