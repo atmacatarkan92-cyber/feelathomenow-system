@@ -1432,17 +1432,9 @@ export async function createPlatformOrganization(body) {
     body: JSON.stringify(body),
   });
 
-  let text;
-
-  try {
-    text = await res.clone().text();
-  } catch {
-    try {
-      text = await res.text();
-    } catch {
-      text = "";
-    }
-  }
+  // Single read on native fetch response; clone/catch chains could leave text "" and force
+  // parseAdminErrorFromText → "HTTP 422" (empty body branch at parseAdminErrorFromText).
+  const text = await res.text();
 
   if (!res.ok) {
     throw new Error(parseAdminErrorFromText(text, res.status, res.statusText));
