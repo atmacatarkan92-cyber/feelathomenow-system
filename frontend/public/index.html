@@ -151,6 +151,8 @@
                 session_recording: {
                     recordCrossOriginIframes: true,
                     capturePerformance: false,
+                    recordHeaders: false,
+                    recordBody: false,
                     maskCapturedNetworkRequestFn: function (request) {
                         var name = request && request.name;
                         if (
