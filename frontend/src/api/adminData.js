@@ -1427,11 +1427,19 @@ export async function createPlatformOrganization(body) {
     headers: getApiHeaders(),
     body: JSON.stringify(body),
   });
-  // Read body once here: fetch tracing (e.g. Sentry browserTracingIntegration) may consume the
-  // Response before parseAdminErrorResponse can call res.text(), which caused "HTTP 422" fallbacks.
+  // Read one branch of the body tee: Sentry's fetch instrumentation may read `res`; using a
+  // synchronous clone then reading only the clone avoids "body stream already read" on the same stream.
+  let bodyRes = res;
+  try {
+    if (typeof res.clone === "function" && !res.bodyUsed) {
+      bodyRes = res.clone();
+    }
+  } catch (_) {
+    bodyRes = res;
+  }
   let text;
   try {
-    text = await res.text();
+    text = await bodyRes.text();
   } catch (e) {
     const m = e && e.message;
     if (typeof m === "string" && m.includes("body stream already read")) {
