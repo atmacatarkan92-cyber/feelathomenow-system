@@ -478,3 +478,40 @@ class TestOrganizationOnboardingServiceDB:
         ).first()
         assert u is not None
         assert u.role == UserRole.admin
+
+    def test_platform_create_succeeds_when_session_already_in_transaction(
+        self, platform_db_session: Session
+    ):
+        """Regression: avoid nested session.begin() when the caller already owns the transaction."""
+        from app.services.organization_onboarding_service import (
+            organization_slug_column_exists,
+            platform_create_organization_with_optional_admin,
+        )
+
+        delete_org_scoped_auth_and_users(platform_db_session)
+        platform_db_session.exec(Organization.__table__.delete())  # type: ignore[attr-defined]
+        platform_db_session.commit()
+
+        slug_ok = organization_slug_column_exists(platform_db_session)
+        slug = "nested-tx-safe-slug"
+        name = "Nested Tx Safe Org"
+        email = "nestedadmin@test.example"
+
+        with platform_db_session.begin():
+            platform_create_organization_with_optional_admin(
+                platform_db_session,
+                organization_name=name,
+                organization_slug=slug if slug_ok else None,
+                create_admin=True,
+                admin_email=email,
+                admin_password="ValidPwd2ab",
+            )
+
+        org = (
+            platform_db_session.exec(select(Organization).where(Organization.slug == slug)).first()
+            if slug_ok
+            else platform_db_session.exec(
+                select(Organization).where(Organization.name == name)
+            ).first()
+        )
+        assert org is not None

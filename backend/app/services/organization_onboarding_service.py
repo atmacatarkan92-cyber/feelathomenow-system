@@ -254,7 +254,7 @@ def platform_create_organization_with_optional_admin(
 
     use_slug = bool(slug_norm) and slug_col
 
-    with session.begin():
+    def _create_in_current_tx() -> tuple[Organization, str, bool, bool, str]:
         org, org_msg, organization_created = get_or_create_organization(
             session,
             apply=True,
@@ -279,6 +279,16 @@ def platform_create_organization_with_optional_admin(
                 prompt_for_password_if_missing=False,
             )
             admin_created = admin_line.startswith("Admin user created")
+
+        return org, org_msg, organization_created, admin_created, admin_line
+
+    # FastAPI (and other callers) may already have started a transaction on this Session;
+    # nesting session.begin() raises InvalidRequestError.
+    if session.in_transaction():
+        org, org_msg, organization_created, admin_created, admin_line = _create_in_current_tx()
+    else:
+        with session.begin():
+            org, org_msg, organization_created, admin_created, admin_line = _create_in_current_tx()
 
     session.refresh(org)
 
