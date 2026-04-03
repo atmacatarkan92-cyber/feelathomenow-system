@@ -11,7 +11,17 @@ window.__nativeFetch = window.fetch.bind(window);
 if (process.env.REACT_APP_SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.REACT_APP_SENTRY_DSN,
-    integrations: [Sentry.browserTracingIntegration()],
+    integrations: [
+      Sentry.browserTracingIntegration({
+        shouldCreateSpanForRequest: (url) => {
+          return !(
+            typeof url === "string" &&
+            (url.includes("feelathomenow-website-v2.onrender.com/api/") ||
+              url.includes("/api/platform/organizations"))
+          );
+        },
+      }),
+    ],
     tracesSampleRate: 0.1,
     environment: process.env.NODE_ENV,
     release: process.env.REACT_APP_RELEASE_VERSION,
