@@ -21,6 +21,7 @@ from typing import Optional
 
 from sqlalchemy import func
 from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from auth.security import hash_password, password_meets_policy_for_new_account
@@ -196,7 +197,13 @@ def create_initial_org_admin(
         is_active=True,
     )
     session.add(user)
-    session.flush()
+    try:
+        session.flush()
+    except IntegrityError as e:
+        session.rollback()
+        if "ix_users_email" in str(e):
+            raise ValueError("User with this email already exists in the system.")
+        raise
     session.refresh(user)
     creds = UserCredentials(
         user_id=user.id,
