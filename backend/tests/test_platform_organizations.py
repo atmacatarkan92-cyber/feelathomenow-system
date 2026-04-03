@@ -23,6 +23,9 @@ from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
 from tests.org_scoped_cleanup import delete_org_scoped_auth_and_users
 
+# CI may use stubs or older models without UserRole.platform_admin; avoid AttributeError.
+_PLATFORM_ADMIN_TEST_ROLE = getattr(UserRole, "platform_admin", "platform_admin")
+
 
 def test_onboarding_slug_helpers():
     from app.services.organization_onboarding_service import normalize_slug, validate_slug_format
@@ -66,7 +69,7 @@ class _PlatformListSession:
 
 def _user(
     *,
-    role: UserRole,
+    role: UserRole | str,
     org_id: str = "platform-org-id",
     uid: str = "user-id-1",
     email: str = "u@example.com",
@@ -84,7 +87,7 @@ def _user(
 def test_platform_admin_not_granted_org_admin_roles():
     """platform_admin must not pass require_roles('admin', ...) unless explicitly listed."""
     dep = require_roles("admin", "manager")
-    pa = _user(role=UserRole.platform_admin)
+    pa = _user(role=_PLATFORM_ADMIN_TEST_ROLE)
     with pytest.raises(HTTPException) as exc:
         dep(user=pa)
     assert exc.value.status_code == 403
@@ -160,7 +163,7 @@ class TestPlatformOrganizationsAccess:
         override_platform_db,
     ):
         app.dependency_overrides[get_current_user] = lambda: _user(
-            role=UserRole.platform_admin
+            role=_PLATFORM_ADMIN_TEST_ROLE
         )
         try:
             r = client.get("/api/platform/organizations")
@@ -178,7 +181,7 @@ class TestPlatformOrganizationsAccess:
         override_platform_db,
     ):
         app.dependency_overrides[get_current_user] = lambda: _user(
-            role=UserRole.platform_admin
+            role=_PLATFORM_ADMIN_TEST_ROLE
         )
         try:
             r = client.get("/api/platform/organizations/o1")
