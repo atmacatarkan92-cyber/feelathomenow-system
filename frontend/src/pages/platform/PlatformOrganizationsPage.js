@@ -96,18 +96,16 @@ function PlatformOrganizationsPage() {
 
     createPlatformOrganization(body)
       .then((data) => {
+        console.log("CREATE RESPONSE:", data);
         setFormOpen(false);
         toast.success("Organisation erstellt.");
-        if (data?.organization?.id) {
-          const o = data.organization;
-          setItems((prev) => {
-            if (prev.some((row) => row.id === o.id)) {
-              return prev.map((row) => (row.id === o.id ? { ...row, ...o } : row));
-            }
-            return [o, ...prev];
-          });
-        }
-        load(false);
+        console.log("SET ITEMS INPUT:", data?.organization || data);
+        setItems((prev) => {
+          const next = [data?.organization || data, ...prev];
+          console.log("NEW STATE:", next);
+          return next;
+        });
+        // load(false);
       })
       .catch((err) => {
         // eslint-disable-next-line no-console -- temporary [ORG_PAGE] proof logs
