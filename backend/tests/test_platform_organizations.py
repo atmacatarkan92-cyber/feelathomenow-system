@@ -8,17 +8,19 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Generator
 
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlmodel import Session, create_engine, select
 
 from auth.dependencies import get_current_user, get_db_session, require_roles
-from auth.security import verify_password
+from auth.security import hash_password, verify_password
 from db.models import Organization, User, UserCredentials, UserRole
+from db.organization import PLATFORM_ORG_NAME, PLATFORM_ORG_SLUG
 from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
 from tests.org_scoped_cleanup import delete_org_scoped_auth_and_users
@@ -63,6 +65,20 @@ def test_user_to_platform_org_item_serializes_uuid_id_as_str():
     item = _user_to_platform_org_item(u)  # type: ignore[arg-type]
     assert item.id == str(uid)
     assert isinstance(item.id, str)
+
+
+def test_organization_slug_column_exists_uses_reflection_not_has_column():
+    """Regression: Inspector.has_column does not exist; slug detection must use get_columns."""
+    from sqlalchemy import create_engine
+    from sqlmodel import Session
+
+    from app.services.organization_onboarding_service import organization_slug_column_exists
+    from db.models import Organization
+
+    engine = create_engine("sqlite:///:memory:")
+    Organization.__table__.create(engine)
+    with Session(engine) as session:
+        assert organization_slug_column_exists(session) is True
 
 
 def test_onboarding_slug_helpers():
@@ -515,3 +531,268 @@ class TestOrganizationOnboardingServiceDB:
             ).first()
         )
         assert org is not None
+
+
+# ---------- PostgreSQL: schema + POST /api/platform/organizations (E2E) ----------
+
+
+@pytest.mark.skipif(
+    not os.getenv("TEST_DATABASE_URL"),
+    reason="TEST_DATABASE_URL not set",
+)
+def test_postgres_organization_slug_column_reflects_and_matches_helper(platform_db_session: Session):
+    """ORM/DB alignment: public.organization.slug must exist for slug onboarding (migration 062)."""
+    from sqlalchemy import inspect as sa_inspect
+
+    from app.services.organization_onboarding_service import organization_slug_column_exists
+
+    assert organization_slug_column_exists(platform_db_session)
+    cols = sa_inspect(platform_db_session.bind).get_columns("organization")
+    assert any(c.get("name") == "slug" for c in cols)
+
+
+@pytest.mark.skipif(
+    not os.getenv("TEST_DATABASE_URL"),
+    reason="TEST_DATABASE_URL not set",
+)
+def test_alembic_version_when_present_matches_script_head(platform_db_session: Session):
+    """
+    CI runs `alembic upgrade head`; local TEST_DATABASE_URL may use create_all only (no version table).
+    When alembic_version exists, it must match the repository head (includes 062_organization_slug).
+    """
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    try:
+        v = platform_db_session.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+    except Exception:
+        pytest.skip("alembic_version not available (schema likely from SQLModel.create_all)")
+
+    backend_root = Path(__file__).resolve().parent.parent
+    cfg = Config(str(backend_root / "alembic.ini"))
+    script = ScriptDirectory.from_config(cfg)
+    head = script.get_current_head()
+    assert v == head, f"DB revision {v!r} should match Alembic head {head!r}"
+
+
+@pytest.fixture
+def platform_http_operator(
+    platform_db_session: Session,
+    app,
+) -> Generator[dict, None, None]:
+    """
+    Empty DB, then platform shell org + platform_admin + credentials; get_db_session overridden.
+    """
+    from app.services.organization_onboarding_service import organization_slug_column_exists
+
+    delete_org_scoped_auth_and_users(platform_db_session)
+    platform_db_session.exec(Organization.__table__.delete())  # type: ignore[attr-defined]
+    platform_db_session.commit()
+
+    org_kwargs: dict = {"name": PLATFORM_ORG_NAME}
+    if organization_slug_column_exists(platform_db_session):
+        org_kwargs["slug"] = PLATFORM_ORG_SLUG
+    org = Organization(**org_kwargs)
+    platform_db_session.add(org)
+    platform_db_session.flush()
+    apply_pg_organization_context(platform_db_session, str(org.id))
+    email = "platform-e2e@test.example"
+    pwd = "PlatformHttp1!ab"
+    pa = User(
+        organization_id=str(org.id),
+        email=email,
+        full_name="Platform E2E",
+        role=UserRole.platform_admin,
+        is_active=True,
+    )
+    platform_db_session.add(pa)
+    platform_db_session.flush()
+    platform_db_session.add(
+        UserCredentials(
+            user_id=str(pa.id),
+            organization_id=str(org.id),
+            password_hash=hash_password(pwd),
+        )
+    )
+    platform_db_session.commit()
+
+    def _db_override() -> Generator[Session, None, None]:
+        try:
+            yield platform_db_session
+        finally:
+            pass
+
+    app.dependency_overrides[get_db_session] = _db_override
+    try:
+        yield {"email": email, "password": pwd, "session": platform_db_session}
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.skipif(
+    not os.getenv("TEST_DATABASE_URL"),
+    reason="TEST_DATABASE_URL not set",
+)
+@pytest.mark.usefixtures("app")
+class TestPlatformCreateOrganizationHTTP:
+    def test_post_with_organization_slug_returns_201(
+        self,
+        client: TestClient,
+        platform_http_operator: dict,
+    ):
+        from app.services.organization_onboarding_service import organization_slug_column_exists
+
+        if not organization_slug_column_exists(platform_http_operator["session"]):
+            pytest.skip("organization.slug not present; slug POST test requires migration 062")
+
+        ctx = platform_http_operator
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["email"], "password": ctx["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        rid = os.urandom(4).hex()
+        slug = f"e2e-slug-{rid}"
+        name = f"E2E Org Slug {rid}"
+        r = client.post(
+            "/api/platform/organizations",
+            json={
+                "organization_name": name,
+                "organization_slug": slug,
+                "create_admin": False,
+            },
+            headers=h,
+        )
+        assert r.status_code == 201, r.text
+        data = r.json()
+        assert data["organization"]["slug"] == slug
+        assert data["organization"]["name"] == name
+        assert data["organization_created"] is True
+        assert data["admin_created"] is False
+
+    def test_post_without_organization_slug_returns_201(
+        self,
+        client: TestClient,
+        platform_http_operator: dict,
+    ):
+        ctx = platform_http_operator
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["email"], "password": ctx["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        rid = os.urandom(4).hex()
+        name = f"E2E Org No Slug {rid}"
+        r = client.post(
+            "/api/platform/organizations",
+            json={"organization_name": name, "create_admin": False},
+            headers=h,
+        )
+        assert r.status_code == 201, r.text
+        data = r.json()
+        assert data["organization"]["name"] == name
+        assert data["organization_created"] is True
+
+    def test_post_duplicate_slug_returns_409(
+        self,
+        client: TestClient,
+        platform_http_operator: dict,
+    ):
+        from app.services.organization_onboarding_service import organization_slug_column_exists
+
+        if not organization_slug_column_exists(platform_http_operator["session"]):
+            pytest.skip("organization.slug not present")
+
+        ctx = platform_http_operator
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["email"], "password": ctx["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        rid = os.urandom(4).hex()
+        slug = f"e2e-dup-slug-{rid}"
+        body_base = {
+            "organization_slug": slug,
+            "create_admin": False,
+        }
+        r1 = client.post(
+            "/api/platform/organizations",
+            json={"organization_name": f"First {rid}", **body_base},
+            headers=h,
+        )
+        assert r1.status_code == 201, r1.text
+        r2 = client.post(
+            "/api/platform/organizations",
+            json={"organization_name": f"Second {rid}", **body_base},
+            headers=h,
+        )
+        assert r2.status_code == 409
+        assert "slug" in r2.json()["detail"].lower()
+
+    def test_post_duplicate_name_returns_409(
+        self,
+        client: TestClient,
+        platform_http_operator: dict,
+    ):
+        ctx = platform_http_operator
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["email"], "password": ctx["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        rid = os.urandom(4).hex()
+        name = f"Duplicate Name Co {rid}"
+        assert (
+            client.post(
+                "/api/platform/organizations",
+                json={"organization_name": name, "create_admin": False},
+                headers=h,
+            ).status_code
+            == 201
+        )
+        r2 = client.post(
+            "/api/platform/organizations",
+            json={"organization_name": name, "create_admin": False},
+            headers=h,
+        )
+        assert r2.status_code == 409
+        assert "name" in r2.json()["detail"].lower()
+
+    def test_post_two_orgs_same_admin_email_allowed(
+        self,
+        client: TestClient,
+        platform_http_operator: dict,
+    ):
+        """Same email in two different orgs is allowed; duplicate-admin-no-op is per-org (see service test)."""
+        ctx = platform_http_operator
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["email"], "password": ctx["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        rid = os.urandom(4).hex()
+        shared_email = f"shared-admin-{rid}@e2e.test"
+        pw = "ValidPwd1ab"
+        for i in range(2):
+            r = client.post(
+                "/api/platform/organizations",
+                json={
+                    "organization_name": f"Multi Org {rid} {i}",
+                    "create_admin": True,
+                    "admin_email": shared_email,
+                    "admin_password": pw,
+                },
+                headers=h,
+            )
+            assert r.status_code == 201, r.text
+            assert r.json()["admin_created"] is True

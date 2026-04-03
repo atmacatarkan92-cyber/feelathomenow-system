@@ -72,8 +72,10 @@ def validate_slug_format(slug: str) -> None:
 
 
 def organization_slug_column_exists(session: Session) -> bool:
+    # SQLAlchemy Inspector has no has_column(); AttributeError was swallowed and slug_col was always False.
     try:
-        return bool(sa_inspect(session.bind).has_column("organization", "slug"))
+        cols = sa_inspect(session.bind).get_columns("organization")
+        return any(c.get("name") == "slug" for c in cols)
     except Exception:
         return False
 
