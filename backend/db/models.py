@@ -583,6 +583,8 @@ class UserRole(str, Enum):
     landlord = "landlord"
     tenant = "tenant"
     support = "support"
+    # Vantio platform operators; not a customer org role. See migration 063_platform_admin_role.
+    platform_admin = "platform_admin"
 
 
 class User(SQLModel, table=True):

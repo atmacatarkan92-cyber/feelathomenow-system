@@ -14,47 +14,31 @@ Run from backend directory:
 
 Idempotency: by normalized --organization-slug when provided and the organization.slug column
 exists; otherwise by exact --organization-name match (see README / migration 062).
+
+Business rules live in app.services.organization_onboarding_service (shared with the platform API).
 """
 from __future__ import annotations
 
 import argparse
-import re
-import sys
-import uuid
-from getpass import getpass
-from typing import Optional
-
-from sqlalchemy import func, inspect as sa_inspect
-from sqlmodel import Session, select
-
 import os
+import sys
+from typing import Optional
 
 _backend_root = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 if _backend_root not in sys.path:
     sys.path.insert(0, _backend_root)
 
-from auth.security import hash_password  # noqa: E402
+from app.services.organization_onboarding_service import (  # noqa: E402
+    OrganizationNameAmbiguousError,
+    create_initial_org_admin,
+    get_or_create_organization,
+    normalize_slug,
+    organization_slug_column_exists,
+    resolve_existing_organization_by_id,
+    validate_slug_format,
+)
 from db.database import get_session  # noqa: E402
-from db.models import Organization, User, UserCredentials, UserRole  # noqa: E402
-from db.rls import apply_pg_organization_context  # noqa: E402
-
-
-def normalize_slug(raw: str) -> str:
-    s = raw.strip().lower()
-    s = re.sub(r"[^a-z0-9]+", "-", s)
-    s = re.sub(r"-+", "-", s).strip("-")
-    return s
-
-
-def validate_slug(slug: str) -> None:
-    if not slug:
-        sys.stderr.write("ERROR: --organization-slug is empty after normalization.\n")
-        raise SystemExit(2)
-    if not re.match(r"^[a-z0-9]+(-[a-z0-9]+)*$", slug):
-        sys.stderr.write(
-            "ERROR: --organization-slug must contain only lowercase letters, digits, and single hyphens.\n"
-        )
-        raise SystemExit(2)
+from db.models import Organization  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,106 +65,6 @@ def parse_args() -> argparse.Namespace:
         help="Perform database writes. Without this flag, only read checks and planned actions are printed.",
     )
     return p.parse_args()
-
-
-def organization_slug_column_exists(session: Session) -> bool:
-    try:
-        return bool(sa_inspect(session.bind).has_column("organization", "slug"))
-    except Exception:
-        return False
-
-
-def get_org_by_slug(session: Session, slug: str) -> Optional[Organization]:
-    return session.exec(select(Organization).where(Organization.slug == slug)).first()
-
-
-def get_orgs_by_exact_name(session: Session, name: str) -> list[Organization]:
-    return list(session.exec(select(Organization).where(Organization.name == name)).all())
-
-
-def get_or_create_organization(
-    session: Session,
-    *,
-    apply: bool,
-    organization_name: str,
-    slug: Optional[str],
-    use_slug: bool,
-) -> tuple[Optional[Organization], str]:
-    """Returns (org or None if dry-run new org, status line). use_slug requires slug non-empty."""
-    if use_slug and slug:
-        existing = get_org_by_slug(session, slug)
-        if existing:
-            return existing, "Organization already exists (same slug)."
-        if not apply:
-            return None, f"Would create organization: slug={slug!r} name={organization_name!r}"
-        org = Organization(name=organization_name, slug=slug)
-        session.add(org)
-        session.commit()
-        session.refresh(org)
-        return org, f"Organization created (id={org.id})."
-
-    rows = get_orgs_by_exact_name(session, organization_name)
-    if len(rows) > 1:
-        return None, (
-            "ERROR: Multiple organizations share the exact same name "
-            f"{organization_name!r}; resolve duplicates, pass --organization-slug, or use --organization-id."
-        )
-    if len(rows) == 1:
-        return rows[0], "Organization already exists (same name)."
-    if not apply:
-        return None, f"Would create organization: name={organization_name!r}"
-    org = Organization(name=organization_name)
-    session.add(org)
-    session.commit()
-    session.refresh(org)
-    return org, f"Organization created (id={org.id})."
-
-
-def create_admin_user(
-    session: Session,
-    *,
-    apply: bool,
-    org_id: str,
-    admin_email: str,
-    admin_password: Optional[str],
-) -> str:
-    """Returns a single status line. Never overwrites existing credentials."""
-    email_norm = admin_email.strip().lower()
-    apply_pg_organization_context(session, org_id)
-    existing_user = session.exec(
-        select(User).where(
-            User.organization_id == org_id,
-            func.lower(User.email) == email_norm,
-        )
-    ).first()
-    if existing_user:
-        return "User already exists (same email in this organization). No password changes."
-    if not apply:
-        return f"Would create admin user: {email_norm!r} for organization_id={org_id}"
-    pwd = admin_password
-    if not pwd or not str(pwd).strip():
-        pwd = getpass("Admin password: ")
-        if not pwd:
-            return "ERROR: Password is required for new admin user."
-    user = User(
-        organization_id=org_id,
-        email=email_norm,
-        full_name="Organization admin",
-        role=UserRole.admin,
-        is_active=True,
-    )
-    session.add(user)
-    session.flush()
-    session.refresh(user)
-    creds = UserCredentials(
-        user_id=user.id,
-        organization_id=org_id,
-        password_hash=hash_password(pwd),
-        password_algo="bcrypt",
-    )
-    session.add(creds)
-    session.commit()
-    return f"Admin user created (id={user.id})."
 
 
 def main() -> int:
@@ -219,55 +103,51 @@ def main() -> int:
         slug_norm: Optional[str] = None
         if slug_raw and slug_col:
             slug_norm = normalize_slug(slug_raw)
-            validate_slug(slug_norm)
+            try:
+                validate_slug_format(slug_norm)
+            except ValueError as e:
+                sys.stderr.write(f"ERROR: {e}\n")
+                return 2
         elif slug_raw and not slug_col:
             sys.stderr.write(
                 "WARNING: organization.slug column not found; ignoring --organization-slug "
                 "(use exact --organization-name for idempotency).\n"
             )
 
-        # --- Resolve organization ---
         org: Optional[Organization] = None
 
         if org_id_arg:
             try:
-                uuid.UUID(org_id_arg)
-            except ValueError:
-                sys.stderr.write("ERROR: --organization-id must be a valid UUID.\n")
+                org, lines = resolve_existing_organization_by_id(
+                    session,
+                    organization_id=org_id_arg,
+                    slug_norm=slug_norm,
+                    slug_col=slug_col,
+                    apply=apply,
+                )
+            except ValueError as e:
+                sys.stderr.write(f"ERROR: {e}\n")
                 return 1
-            org = session.get(Organization, org_id_arg)
-            if org is None:
-                sys.stderr.write(f"ERROR: No organization with id={org_id_arg}.\n")
-                return 1
-            if slug_norm is not None:
-                if org.slug and org.slug != slug_norm:
-                    sys.stderr.write(
-                        f"ERROR: Organization slug in DB ({org.slug!r}) does not match "
-                        f"--organization-slug ({slug_norm!r}).\n"
-                    )
-                    return 1
-                if apply and org.slug is None and slug_col:
-                    org.slug = slug_norm
-                    session.add(org)
-                    session.commit()
-                    session.refresh(org)
-                    print(f"✔ Slug set on organization (id={org.id}).")
+            for line in lines:
+                if line.startswith("Slug set"):
+                    print(f"✔ {line}")
                 else:
-                    print(f"ℹ Using existing organization (id={org.id}).")
-            else:
-                print(f"ℹ Using existing organization (id={org.id}).")
+                    print(f"ℹ {line}")
 
         else:
             use_slug = bool(slug_norm) and slug_col
-            org, org_msg = get_or_create_organization(
-                session,
-                apply=apply,
-                organization_name=name,
-                slug=slug_norm,
-                use_slug=use_slug,
-            )
-            if org_msg.startswith("ERROR"):
-                sys.stderr.write(org_msg + "\n")
+            try:
+                org, org_msg, _created = get_or_create_organization(
+                    session,
+                    apply=apply,
+                    organization_name=name,
+                    slug=slug_norm,
+                    use_slug=use_slug,
+                    commit_after_organization=True,
+                    reject_duplicate=False,
+                )
+            except OrganizationNameAmbiguousError as e:
+                sys.stderr.write(e.message + "\n")
                 return 1
             if "already exists" in org_msg:
                 print("ℹ", org_msg)
@@ -290,12 +170,14 @@ def main() -> int:
             return 0
 
         assert org_id is not None
-        admin_msg = create_admin_user(
+        admin_msg = create_initial_org_admin(
             session,
             apply=apply,
             org_id=org_id,
             admin_email=args.admin_email,
             admin_password=args.admin_password,
+            commit=True,
+            prompt_for_password_if_missing=True,
         )
         if admin_msg.startswith("ERROR"):
             sys.stderr.write(admin_msg + "\n")
