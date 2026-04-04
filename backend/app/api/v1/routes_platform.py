@@ -134,6 +134,8 @@ class PlatformAuditLogItem(BaseModel):
     organization_id: str
     organization_name: Optional[str] = None
     metadata: Optional[dict] = None
+    old_values: Optional[dict] = None
+    new_values: Optional[dict] = None
 
 
 def _audit_row_to_platform_item(row: AuditLog, org_names: dict[str, str]) -> PlatformAuditLogItem:
@@ -149,6 +151,8 @@ def _audit_row_to_platform_item(row: AuditLog, org_names: dict[str, str]) -> Pla
         organization_id=oid,
         organization_name=org_names.get(oid),
         metadata=row.extra_metadata,
+        old_values=row.old_values,
+        new_values=row.new_values,
     )
 
 
