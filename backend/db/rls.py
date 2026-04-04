@@ -220,3 +220,14 @@ def apply_pg_auth_unscoped_user_lookup(session: Session) -> None:
         session.execute(text("SET LOCAL app.auth_unscoped_user_lookup = 'true'"))
     else:
         session.execute(text("SELECT 1"))
+
+
+def apply_pg_platform_audit_full_read(session: Session) -> None:
+    """
+    Trusted server-only: allow SELECT on audit_logs across organizations (platform audit feed).
+    SET LOCAL only; must be called from platform_admin routes after auth.
+    """
+    if session.in_transaction():
+        session.execute(text("SET LOCAL app.platform_audit_full_read = 'true'"))
+    else:
+        session.execute(text("SELECT 1"))

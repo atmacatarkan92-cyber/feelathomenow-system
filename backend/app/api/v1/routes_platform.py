@@ -13,6 +13,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
@@ -24,8 +25,9 @@ from app.services.organization_onboarding_service import (
 from auth.dependencies import get_db_session, require_platform_admin
 from auth.schemas import Token
 from auth.security import create_access_token, password_version_ts
-from db.models import Organization, User, UserCredentials
-from db.rls import apply_pg_organization_context
+from db.models import AuditLog, Organization, User, UserCredentials
+from db.platform_audit_log import log_audit_event
+from db.rls import apply_pg_organization_context, apply_pg_platform_audit_full_read
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +119,39 @@ class PlatformCreateOrganizationResponse(BaseModel):
     message: str
 
 
+class PlatformAuditLogItem(BaseModel):
+    """Platform audit feed row (maps DB audit_logs + optional org name)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    created_at: Optional[datetime] = None
+    actor_user_id: Optional[str] = None
+    actor_email: Optional[str] = None
+    action: str
+    target_type: Optional[str] = None
+    target_id: Optional[str] = None
+    organization_id: str
+    organization_name: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+def _audit_row_to_platform_item(row: AuditLog, org_names: dict[str, str]) -> PlatformAuditLogItem:
+    oid = str(row.organization_id)
+    return PlatformAuditLogItem(
+        id=str(row.id),
+        created_at=getattr(row, "created_at", None),
+        actor_user_id=row.actor_user_id,
+        actor_email=row.actor_email,
+        action=row.action,
+        target_type=row.entity_type,
+        target_id=row.entity_id or None,
+        organization_id=oid,
+        organization_name=org_names.get(oid),
+        metadata=row.extra_metadata,
+    )
+
+
 @router.get("/organizations", response_model=list[OrganizationListItem])
 def list_organizations(
     _: User = Depends(require_platform_admin),
@@ -125,6 +160,22 @@ def list_organizations(
     # Intentionally lists all organizations (platform scope), not filtered by caller org.
     rows = session.exec(select(Organization).order_by(Organization.created_at)).all()
     return [_organization_to_list_item(o) for o in rows]
+
+
+@router.get("/audit-logs", response_model=list[PlatformAuditLogItem])
+def list_platform_audit_logs(
+    _: User = Depends(require_platform_admin),
+    session: Session = Depends(get_db_session),
+) -> list[PlatformAuditLogItem]:
+    apply_pg_platform_audit_full_read(session)
+    rows = session.exec(select(AuditLog).order_by(desc(AuditLog.created_at)).limit(50)).all()
+    org_ids = {str(r.organization_id) for r in rows}
+    org_names: dict[str, str] = {}
+    for oid in org_ids:
+        o = session.get(Organization, oid)
+        if o is not None:
+            org_names[oid] = o.name or ""
+    return [_audit_row_to_platform_item(r, org_names) for r in rows]
 
 
 @router.get("/organizations/{organization_id}", response_model=OrganizationDetailResponse)
@@ -179,6 +230,16 @@ def platform_impersonate(
         "event=platform_admin_impersonation_started actor_user_id=%s target_organization_id=%s",
         str(current_user.id),
         str(org.id),
+    )
+    apply_pg_organization_context(session, str(org.id))
+    log_audit_event(
+        session,
+        actor=current_user,
+        action="impersonation_started",
+        organization_id=org.id,
+        target_type="organization",
+        target_id=org.id,
+        metadata={"impersonation_started_at": datetime.utcnow().isoformat()},
     )
     access_token = create_access_token(
         {

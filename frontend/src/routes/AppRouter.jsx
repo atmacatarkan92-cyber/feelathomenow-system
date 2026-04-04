@@ -38,6 +38,7 @@ import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import PlatformDashboardPage from "../pages/platform/PlatformDashboardPage";
 import PlatformOrganizationsPage from "../pages/platform/PlatformOrganizationsPage";
 import PlatformOrganizationDetailPage from "../pages/platform/PlatformOrganizationDetailPage";
+import PlatformAuditLogsPage from "../pages/platform/PlatformAuditLogsPage";
 import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import TenantLayout from "../components/tenant/TenantLayout";
 import TenantLoginPage from "../pages/tenant/TenantLoginPage";
@@ -146,6 +147,7 @@ export default function AppRouter() {
 
             <Route path="/platform" element={<PlatformLayout />}>
               <Route index element={<PlatformDashboardPage />} />
+              <Route path="audit-logs" element={<PlatformAuditLogsPage />} />
               <Route
                 path="organizations/:organizationId"
                 element={<PlatformOrganizationDetailPage />}

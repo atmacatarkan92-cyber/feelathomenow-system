@@ -1,11 +1,11 @@
-from sqlmodel import SQLModel, Field
+import uuid
+from datetime import date, datetime
+from enum import Enum
+from typing import Optional
+
 from sqlalchemy import Column, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from datetime import datetime, date
-from enum import Enum
-from typing import Any, Optional
-import uuid
-
+from sqlmodel import Field, SQLModel
 
 # ---------------------------------------------------------------------------
 # Reference: cities (for listings and units)
@@ -668,7 +668,8 @@ class AuditLog(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     organization_id: str = Field(foreign_key="organization.id", index=True)
     actor_user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
-    action: str = Field(max_length=32, index=True)  # create | update | delete
+    actor_email: Optional[str] = Field(default=None, max_length=320)
+    action: str = Field(max_length=128, index=True)  # create | update | delete | platform actions
     entity_type: str = Field(max_length=64, index=True)  # unit | tenant | tenancy | ...
     entity_id: str = Field(max_length=64, index=True)
     old_values: Optional[dict] = Field(
@@ -678,5 +679,9 @@ class AuditLog(SQLModel, table=True):
     new_values: Optional[dict] = Field(
         default=None,
         sa_column=Column(JSONB, nullable=True),
+    )
+    extra_metadata: Optional[dict] = Field(
+        default=None,
+        sa_column=Column("metadata", JSONB, nullable=True),
     )
     created_at: datetime = Field(default_factory=datetime.utcnow)

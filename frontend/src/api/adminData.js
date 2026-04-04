@@ -1461,6 +1461,18 @@ export async function createPlatformOrganization(body) {
   return text ? JSON.parse(text) : null;
 }
 
+/** GET /api/platform/audit-logs — platform_admin only; latest 50 rows. */
+export async function fetchPlatformAuditLogs() {
+  const res = await fetch(`${API_BASE_URL}/api/platform/audit-logs`, {
+    headers: getApiHeaders(),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
 /** POST /api/platform/impersonate/{organizationId} — platform_admin only; returns new access_token (support mode). */
 export async function platformImpersonate(organizationId) {
   const id = encodeURIComponent(organizationId);

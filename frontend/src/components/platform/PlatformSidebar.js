@@ -103,6 +103,9 @@ function PlatformSidebar() {
         <NavLink to="/platform/organizations" className={navLinkClass}>
           🏢 Organisationen
         </NavLink>
+        <NavLink to="/platform/audit-logs" className={navLinkClass}>
+          📋 Audit-Protokoll
+        </NavLink>
       </nav>
 
       <div className={`mt-auto shrink-0 pt-4 ${footerBorder}`}>
