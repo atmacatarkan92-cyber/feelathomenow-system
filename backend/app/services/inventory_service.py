@@ -98,6 +98,8 @@ def _item_to_dict(
         "purchase_price_chf": item.purchase_price_chf,
         "purchase_date": item.purchase_date.isoformat() if item.purchase_date else None,
         "purchased_from": item.purchased_from,
+        "supplier_article_number": getattr(item, "supplier_article_number", None),
+        "product_url": getattr(item, "product_url", None),
         "notes": item.notes,
         "created_at": item.created_at.isoformat() if item.created_at else None,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
@@ -131,6 +133,9 @@ def _assignment_to_dict(
         "item_condition": (it.condition or "") if it else "",
         "item_status": (it.status or "") if it else "",
         "inventory_number": it.inventory_number if it else "",
+        "item_supplier_article_number": getattr(it, "supplier_article_number", None) if it else None,
+        "item_purchased_from": it.purchased_from if it else None,
+        "item_product_url": getattr(it, "product_url", None) if it else None,
         "room_name": room_name,
     }
 
@@ -157,6 +162,7 @@ def list_inventory_items(
                 col(InventoryItem.name).ilike(term),
                 col(InventoryItem.inventory_number).ilike(term),
                 col(InventoryItem.brand).ilike(term),
+                col(InventoryItem.supplier_article_number).ilike(term),
             )
         )
 
@@ -233,6 +239,16 @@ def create_inventory_item(session: Session, org_id: str, body: Any) -> dict:
             purchase_date=getattr(body, "purchase_date", None),
             purchased_from=(str(getattr(body, "purchased_from")).strip() if getattr(body, "purchased_from", None) else None)
             or None,
+            supplier_article_number=(
+                str(getattr(body, "supplier_article_number")).strip()
+                if getattr(body, "supplier_article_number", None)
+                else None
+            )
+            or None,
+            product_url=(
+                str(getattr(body, "product_url")).strip() if getattr(body, "product_url", None) else None
+            )
+            or None,
             notes=(str(getattr(body, "notes")).strip() if getattr(body, "notes", None) else None) or None,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -294,6 +310,12 @@ def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any
     if "purchased_from" in data:
         pv = data["purchased_from"]
         row.purchased_from = str(pv).strip() if pv not in (None, "") else None
+    if "supplier_article_number" in data:
+        sv = data["supplier_article_number"]
+        row.supplier_article_number = str(sv).strip() if sv not in (None, "") else None
+    if "product_url" in data:
+        pv = data["product_url"]
+        row.product_url = str(pv).strip() if pv not in (None, "") else None
     if "notes" in data:
         nv = data["notes"]
         row.notes = str(nv).strip() if nv not in (None, "") else None

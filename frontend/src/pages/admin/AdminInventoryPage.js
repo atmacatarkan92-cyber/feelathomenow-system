@@ -12,6 +12,38 @@ function formatChf(value) {
   return `CHF ${Number(value).toLocaleString("de-CH", { maximumFractionDigits: 2 })}`;
 }
 
+/** Optional http(s) URL; empty → null. Returns { value } or { error }. */
+function parseOptionalProductUrl(raw) {
+  if (raw == null || String(raw).trim() === "") return { value: null };
+  const s = String(raw).trim();
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      return { error: "Produkt-URL muss mit http:// oder https:// beginnen." };
+    }
+    return { value: s };
+  } catch {
+    return { error: "Ungültige Produkt-URL." };
+  }
+}
+
+function ProductUrlLink({ url, className = "" }) {
+  if (!url || !String(url).trim()) {
+    return <span className="text-[#93a4bf]">—</span>;
+  }
+  const href = String(url).trim();
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex rounded-md border border-[#5b8cff]/40 bg-[#5b8cff]/10 px-2 py-0.5 text-[11px] font-semibold text-[#5b8cff] hover:bg-[#5b8cff]/20 ${className}`}
+    >
+      Produkt öffnen
+    </a>
+  );
+}
+
 const emptyItemForm = () => ({
   name: "",
   category: "",
@@ -21,7 +53,9 @@ const emptyItemForm = () => ({
   status: "active",
   purchase_price_chf: "",
   purchase_date: "",
+  supplier_article_number: "",
   purchased_from: "",
+  product_url: "",
   notes: "",
 });
 
@@ -86,7 +120,9 @@ export default function AdminInventoryPage() {
       purchase_price_chf:
         row.purchase_price_chf != null ? String(row.purchase_price_chf) : "",
       purchase_date: row.purchase_date ? String(row.purchase_date).slice(0, 10) : "",
+      supplier_article_number: row.supplier_article_number || "",
       purchased_from: row.purchased_from || "",
+      product_url: row.product_url || "",
       notes: row.notes || "",
     });
     setFormErr("");
@@ -95,6 +131,10 @@ export default function AdminInventoryPage() {
 
   function bodyFromForm() {
     const tq = Math.max(1, parseInt(form.total_quantity, 10) || 1);
+    const pu = parseOptionalProductUrl(form.product_url);
+    if (pu.error) {
+      return { _error: pu.error };
+    }
     return {
       name: String(form.name || "").trim(),
       category: String(form.category || "").trim(),
@@ -107,7 +147,9 @@ export default function AdminInventoryPage() {
           ? null
           : Number(form.purchase_price_chf),
       purchase_date: form.purchase_date ? form.purchase_date : null,
+      supplier_article_number: String(form.supplier_article_number || "").trim() || null,
       purchased_from: String(form.purchased_from || "").trim() || null,
+      product_url: pu.value,
       notes: String(form.notes || "").trim() || null,
     };
   }
@@ -115,6 +157,10 @@ export default function AdminInventoryPage() {
   async function submitCreate(e) {
     e.preventDefault();
     const b = bodyFromForm();
+    if (b._error) {
+      setFormErr(b._error);
+      return;
+    }
     if (!b.name) {
       setFormErr("Name erforderlich.");
       return;
@@ -136,6 +182,10 @@ export default function AdminInventoryPage() {
     e.preventDefault();
     if (!editingItem) return;
     const b = bodyFromForm();
+    if (b._error) {
+      setFormErr(b._error);
+      return;
+    }
     if (!b.name) {
       setFormErr("Name erforderlich.");
       return;
@@ -214,6 +264,9 @@ export default function AdminInventoryPage() {
                       <th className="py-2 pr-3">Nr.</th>
                       <th className="py-2 pr-3">Name</th>
                       <th className="py-2 pr-3">Kategorie</th>
+                      <th className="py-2 pr-3 max-w-[100px]">Lief.-Nr.</th>
+                      <th className="py-2 pr-3 max-w-[120px]">Bezug</th>
+                      <th className="py-2 pr-3">Produkt</th>
                       <th className="py-2 pr-3 text-right">Gesamt</th>
                       <th className="py-2 pr-3 text-right">Zugeordnet</th>
                       <th className="py-2 pr-3 text-right">Frei</th>
@@ -229,6 +282,21 @@ export default function AdminInventoryPage() {
                         </td>
                         <td className="py-2 pr-3 font-medium">{row.name}</td>
                         <td className="py-2 pr-3 text-[#93a4bf]">{row.category || "—"}</td>
+                        <td
+                          className="py-2 pr-3 max-w-[100px] truncate text-[11px] text-[#93a4bf]"
+                          title={row.supplier_article_number || ""}
+                        >
+                          {row.supplier_article_number || "—"}
+                        </td>
+                        <td
+                          className="py-2 pr-3 max-w-[120px] truncate text-[11px] text-[#93a4bf]"
+                          title={row.purchased_from || ""}
+                        >
+                          {row.purchased_from || "—"}
+                        </td>
+                        <td className="py-2 pr-3 whitespace-nowrap">
+                          <ProductUrlLink url={row.product_url} />
+                        </td>
                         <td className="py-2 pr-3 text-right tabular-nums">{row.total_quantity ?? 1}</td>
                         <td className="py-2 pr-3 text-right tabular-nums text-amber-200/90">
                           {row.assigned_total ?? 0}
@@ -381,14 +449,44 @@ export default function AdminInventoryPage() {
                   />
                 </label>
               </div>
-              <label className="text-[11px] text-[#93a4bf]">
-                Gekauft bei
-                <input
-                  value={form.purchased_from}
-                  onChange={(e) => setForm((f) => ({ ...f, purchased_from: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
-                />
-              </label>
+              <div className="rounded-lg border border-white/[0.06] bg-[#060b14]/50 p-3">
+                <p className="m-0 text-[10px] font-bold uppercase tracking-[0.9px] text-[#93a4bf]">
+                  Purchase / Supplier Info
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-3">
+                  <label className="text-[11px] text-[#93a4bf]">
+                    Lieferanten-Artikelnr.
+                    <input
+                      value={form.supplier_article_number}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, supplier_article_number: e.target.value }))
+                      }
+                      placeholder="z. B. Hersteller-SKU"
+                      className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-[11px] text-[#93a4bf]">
+                    Gekauft bei
+                    <input
+                      value={form.purchased_from}
+                      onChange={(e) => setForm((f) => ({ ...f, purchased_from: e.target.value }))}
+                      placeholder="Händler / Lieferant"
+                      className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-[11px] text-[#93a4bf]">
+                    Produkt-URL
+                    <input
+                      type="url"
+                      inputMode="url"
+                      value={form.product_url}
+                      onChange={(e) => setForm((f) => ({ ...f, product_url: e.target.value }))}
+                      placeholder="https://…"
+                      className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+              </div>
               <label className="text-[11px] text-[#93a4bf]">
                 Notizen
                 <textarea

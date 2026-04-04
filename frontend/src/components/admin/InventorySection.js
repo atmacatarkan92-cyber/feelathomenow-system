@@ -8,6 +8,23 @@ import {
   deleteInventoryAssignment,
 } from "../../api/adminData";
 
+function ItemProductLink({ url }) {
+  if (!url || !String(url).trim()) {
+    return <span className="text-[#64748b] dark:text-[#93a4bf]">—</span>;
+  }
+  const href = String(url).trim();
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex rounded-md border border-[#5b8cff]/40 bg-[#5b8cff]/10 px-2 py-0.5 text-[10px] font-semibold text-[#5b8cff] hover:bg-[#5b8cff]/20"
+    >
+      Produkt öffnen
+    </a>
+  );
+}
+
 export default function InventorySection({ unitId, rooms = [] }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -185,6 +202,9 @@ export default function InventorySection({ unitId, rooms = [] }) {
               <tr className="bg-slate-100 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:bg-[#111520] dark:text-[#6b7a9a]">
                 <th className="py-2 pr-3">Artikel</th>
                 <th className="py-2 pr-3">Kategorie</th>
+                <th className="py-2 pr-3 max-w-[90px]">Lief.-Nr.</th>
+                <th className="py-2 pr-3 max-w-[100px]">Bezug</th>
+                <th className="py-2 pr-3">Produkt</th>
                 <th className="py-2 pr-3">Room</th>
                 <th className="py-2 pr-3 text-right">Menge</th>
                 <th className="py-2 pr-3">Zustand</th>
@@ -205,6 +225,21 @@ export default function InventorySection({ unitId, rooms = [] }) {
                   </td>
                   <td className="py-2 pr-3 text-[#64748b] dark:text-[#93a4bf]">
                     {row.item_category || "—"}
+                  </td>
+                  <td
+                    className="py-2 pr-3 max-w-[90px] truncate text-[11px] text-[#64748b] dark:text-[#93a4bf]"
+                    title={row.item_supplier_article_number || ""}
+                  >
+                    {row.item_supplier_article_number || "—"}
+                  </td>
+                  <td
+                    className="py-2 pr-3 max-w-[100px] truncate text-[11px] text-[#64748b] dark:text-[#93a4bf]"
+                    title={row.item_purchased_from || ""}
+                  >
+                    {row.item_purchased_from || "—"}
+                  </td>
+                  <td className="py-2 pr-3 whitespace-nowrap">
+                    <ItemProductLink url={row.item_product_url} />
                   </td>
                   <td className="py-2 pr-3">{row.room_name || "—"}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{row.quantity}</td>

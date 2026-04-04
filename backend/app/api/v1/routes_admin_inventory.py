@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
 from db.models import User
@@ -14,6 +14,27 @@ from app.core.rate_limit import limiter
 from app.services import inventory_service as invsvc
 
 router = APIRouter(prefix="/api/admin", tags=["admin-inventory"])
+
+
+def _normalize_supplier_article(v: object) -> Optional[str]:
+    if v is None:
+        return None
+    s = str(v).strip()
+    return s or None
+
+
+def _normalize_product_url(v: object) -> Optional[str]:
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    from urllib.parse import urlparse
+
+    p = urlparse(s)
+    if p.scheme not in ("http", "https") or not p.netloc:
+        raise ValueError("product_url must be a valid http(s) URL with a host")
+    return s
 
 
 class InventoryItemCreateBody(BaseModel):
@@ -26,7 +47,19 @@ class InventoryItemCreateBody(BaseModel):
     purchase_price_chf: Optional[float] = None
     purchase_date: Optional[date] = None
     purchased_from: Optional[str] = None
+    supplier_article_number: Optional[str] = None
+    product_url: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("supplier_article_number", mode="before")
+    @classmethod
+    def _v_supplier_article(cls, v: object) -> Optional[str]:
+        return _normalize_supplier_article(v)
+
+    @field_validator("product_url", mode="before")
+    @classmethod
+    def _v_product_url(cls, v: object) -> Optional[str]:
+        return _normalize_product_url(v)
 
 
 class InventoryItemPatchBody(BaseModel):
@@ -39,7 +72,19 @@ class InventoryItemPatchBody(BaseModel):
     purchase_price_chf: Optional[float] = None
     purchase_date: Optional[date] = None
     purchased_from: Optional[str] = None
+    supplier_article_number: Optional[str] = None
+    product_url: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("supplier_article_number", mode="before")
+    @classmethod
+    def _v_supplier_article_patch(cls, v: object) -> Optional[str]:
+        return _normalize_supplier_article(v)
+
+    @field_validator("product_url", mode="before")
+    @classmethod
+    def _v_product_url_patch(cls, v: object) -> Optional[str]:
+        return _normalize_product_url(v)
 
 
 class AssignmentCreateBody(BaseModel):

@@ -605,6 +605,8 @@ class InventoryItem(SQLModel, table=True):
     purchase_price_chf: Optional[float] = Field(default=None)
     purchase_date: Optional[date] = Field(default=None)
     purchased_from: Optional[str] = Field(default=None, max_length=500)
+    supplier_article_number: Optional[str] = Field(default=None, max_length=500)
+    product_url: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
