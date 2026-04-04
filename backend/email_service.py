@@ -225,3 +225,36 @@ def send_password_reset_email(recipient_email: str, reset_link: str) -> bool:
     send_email(recipient_email, subject, html_content)
     logger.info("Password reset email sent")
     return True
+
+
+def send_email_verification_email(recipient_email: str, verification_link: str) -> bool:
+    """
+    Send email address verification link (org admin onboarding, etc.).
+
+    Caller builds verification_link with the raw token; this function does not log the URL.
+    """
+    subject = "E-Mail bestätigen – Vantio"
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+      </head>
+      <body style="font-family: Helvetica Neue, Arial, sans-serif; line-height: 1.6; color: #2C3E50;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="margin: 0 0 12px 0;">Confirm your email</h2>
+          <p style="margin: 0 0 16px 0;">Please confirm your email address by using the link below. This link will expire.</p>
+          <p style="margin: 0 0 16px 0;">
+            <a href="{verification_link}" style="color: #FF7A3D; text-decoration: none;">Verify email</a>
+          </p>
+          <p style="font-size: 12px; color: #888;">
+            If you did not expect this message, you can ignore it.
+          </p>
+        </div>
+      </body>
+    </html>
+    """.strip()
+
+    send_email(recipient_email, subject, html_content)
+    logger.info("Email verification message sent")
+    return True

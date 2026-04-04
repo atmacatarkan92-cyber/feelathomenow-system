@@ -1,0 +1,82 @@
+"""
+Email verification tokens for org onboarding (and future flows).
+
+Creates a hashed token row after the org+admin transaction has committed, then sends email.
+Email send failures are logged only — org/admin creation remains successful.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import func
+from sqlmodel import Session, select
+
+from auth.security import hash_password_reset_token
+from db.models import EmailVerificationToken, User
+from db.rls import apply_pg_organization_context
+from email_service import EmailServiceError, send_email_verification_email
+
+logger = logging.getLogger(__name__)
+
+
+def _ttl_minutes() -> int:
+    try:
+        v = int(os.environ.get("EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES", "1440"))
+        return max(1, v)
+    except ValueError:
+        return 1440
+
+
+def try_create_and_send_email_verification_for_org_admin(
+    session: Session,
+    *,
+    organization_id: str,
+    admin_email: str,
+) -> None:
+    """
+    Call only after org + initial admin have committed successfully.
+    Inserts a verification token and commits, then sends the verification email.
+    """
+    email_norm = admin_email.strip().lower()
+    apply_pg_organization_context(session, organization_id)
+    user = session.exec(
+        select(User).where(
+            User.organization_id == organization_id,
+            func.lower(User.email) == email_norm,
+        )
+    ).first()
+    if user is None:
+        logger.warning(
+            "email_verification_skip_user_missing org=%s email=%s",
+            organization_id,
+            email_norm,
+        )
+        return
+    if user.email_verified_at is not None:
+        return
+
+    raw = secrets.token_urlsafe(48)
+    token_hash = hash_password_reset_token(raw)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(minutes=_ttl_minutes())
+    session.add(
+        EmailVerificationToken(
+            user_id=str(user.id),
+            token_hash=token_hash,
+            expires_at=expires_at,
+            used_at=None,
+        )
+    )
+    session.commit()
+
+    frontend_url = (os.environ.get("FRONTEND_URL") or "").strip() or "http://localhost:3000"
+    base = frontend_url.rstrip("/")
+    link = f"{base}/verify-email?token={raw}"
+    try:
+        send_email_verification_email(user.email, link)
+    except EmailServiceError as e:
+        logger.warning("email_verification_send_failed user_id=%s: %s", user.id, e)

@@ -17,6 +17,9 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
+from app.services.email_verification_helpers import (
+    try_create_and_send_email_verification_for_org_admin,
+)
 from app.services.organization_onboarding_service import (
     OrganizationDuplicateError,
     OrganizationNameAmbiguousError,
@@ -298,9 +301,16 @@ def create_organization(
             detail=str(e),
         ) from e
 
-    return PlatformCreateOrganizationResponse(
+    response = PlatformCreateOrganizationResponse(
         organization=_organization_to_list_item(result.organization),
         organization_created=result.organization_created,
         admin_created=result.admin_created,
         message=result.message,
     )
+    if result.admin_created:
+        try_create_and_send_email_verification_for_org_admin(
+            session,
+            organization_id=str(result.organization.id),
+            admin_email=body.admin_email,
+        )
+    return response

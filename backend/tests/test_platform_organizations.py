@@ -707,6 +707,64 @@ class TestPlatformCreateOrganizationHTTP:
         assert data["organization_created"] is True
         assert data["admin_created"] is True
 
+    def test_post_creates_email_verification_token_for_new_admin(
+        self,
+        client: TestClient,
+        platform_http_operator: dict,
+        monkeypatch,
+    ):
+        from sqlalchemy import func
+        from sqlmodel import select
+
+        from db.models import EmailVerificationToken, User
+
+        sends = {"n": 0}
+
+        def _fake_send(_email: str, _link: str) -> bool:
+            sends["n"] += 1
+            return True
+
+        monkeypatch.setattr(
+            "app.services.email_verification_helpers.send_email_verification_email",
+            _fake_send,
+        )
+        ctx = platform_http_operator
+        sess = ctx["session"]
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["email"], "password": ctx["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        rid = os.urandom(4).hex()
+        admin_email = f"ev-token-{rid}@e2e.test"
+        r = client.post(
+            "/api/platform/organizations",
+            json={
+                "organization_name": f"EV Org {rid}",
+                "admin_email": admin_email,
+                "admin_password": "ValidPwd1ab",
+            },
+            headers=h,
+        )
+        assert r.status_code == 201, r.text
+        assert sends["n"] == 1
+        org_id = r.json()["organization"]["id"]
+        sess.expire_all()
+        u = sess.exec(
+            select(User).where(
+                User.organization_id == org_id,
+                func.lower(User.email) == admin_email.lower(),
+            )
+        ).first()
+        assert u is not None
+        rows = sess.exec(
+            select(EmailVerificationToken).where(EmailVerificationToken.user_id == str(u.id))
+        ).all()
+        assert len(rows) == 1
+        assert rows[0].used_at is None
+
     def test_post_missing_initial_admin_returns_422(
         self,
         client: TestClient,

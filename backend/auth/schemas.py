@@ -78,3 +78,15 @@ class ResetPasswordRequest(BaseModel):
             raise ValueError("new_password must not be empty")
         return self
 
+
+class VerifyEmailRequest(BaseModel):
+    """Body for POST /auth/verify-email."""
+
+    token: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def _token_not_blank(self):
+        if not self.token or not self.token.strip():
+            raise ValueError("token must not be empty")
+        return self
+

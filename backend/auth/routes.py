@@ -18,6 +18,7 @@ from auth.schemas import (
     ResetPasswordRequest,
     Token,
     UserMe,
+    VerifyEmailRequest,
 )
 from auth.security import (
     create_access_token,
@@ -34,10 +35,17 @@ from auth.security import (
     password_version_ts,
     verify_password,
 )
-from db.models import PasswordResetToken, RefreshToken, User, UserCredentials
+from db.models import (
+    EmailVerificationToken,
+    PasswordResetToken,
+    RefreshToken,
+    User,
+    UserCredentials,
+)
 from db.platform_audit_log import log_audit_event
 from db.rls import (
     apply_pg_auth_unscoped_user_lookup,
+    apply_pg_email_verification_token_hash_lookup,
     apply_pg_organization_context,
     apply_pg_password_reset_token_hash_lookup,
     apply_pg_refresh_token_hash_lookup,
@@ -409,6 +417,82 @@ def forgot_password(
             continue
 
     return GenericSuccessResponse(detail=generic_detail)
+
+
+@router.post(
+    "/verify-email",
+    response_model=GenericSuccessResponse,
+)
+@limiter.limit("20/minute")
+def verify_email(
+    request: Request,
+    body: VerifyEmailRequest,
+    session=Depends(get_db_session),
+):
+    """
+    Confirm email using a one-time token (hash stored in DB). Idempotent if already verified.
+    Does not gate login — see future phase.
+    """
+    now = datetime.now(timezone.utc)
+    raw = body.token.strip()
+    token_hash = hash_password_reset_token(raw)
+
+    apply_pg_email_verification_token_hash_lookup(session, token_hash)
+    try:
+        row = session.exec(
+            select(EmailVerificationToken).where(
+                EmailVerificationToken.token_hash == token_hash,
+            )
+        ).first()
+    finally:
+        apply_pg_email_verification_token_hash_lookup(session, None)
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    if row.used_at is not None:
+        apply_pg_user_context(session, str(row.user_id))
+        user = session.get(User, row.user_id)
+        if user is not None and user.email_verified_at is not None:
+            return GenericSuccessResponse(detail="Email already verified")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    exp = row.expires_at
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    if exp <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    apply_pg_user_context(session, str(row.user_id))
+    user = session.get(User, row.user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+    apply_pg_organization_context(session, str(user.organization_id))
+
+    if user.email_verified_at is not None:
+        row.used_at = now
+        session.add(row)
+        session.commit()
+        return GenericSuccessResponse(detail="Email already verified")
+
+    user.email_verified_at = now
+    session.add(user)
+    row.used_at = now
+    session.add(row)
+    session.commit()
+    return GenericSuccessResponse(detail="Email verified")
 
 
 @router.post(
