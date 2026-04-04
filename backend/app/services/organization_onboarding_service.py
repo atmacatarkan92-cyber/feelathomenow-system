@@ -2,7 +2,8 @@
 Shared organization onboarding for the CLI script and platform-admin API.
 
 Single source of truth for slug normalization, idempotency, org creation,
-and optional first org admin (no credential overwrite).
+and first org admin for the platform API (no credential overwrite). The CLI
+may still skip admin creation via its own flags.
 
 RLS note: create_initial_org_admin applies org GUC for the new org. Platform API
 create uses one transaction (org + admin + credentials) so partial writes roll back
@@ -219,19 +220,18 @@ def create_initial_org_admin(
     return f"Admin user created (id={user.id})."
 
 
-def platform_create_organization_with_optional_admin(
+def platform_create_organization_with_admin(
     session: Session,
     *,
     organization_name: str,
     organization_slug: Optional[str],
-    create_admin: bool,
     admin_email: Optional[str],
     admin_password: Optional[str],
     actor_user_id: Optional[str] = None,
     actor_role: Optional[str] = None,
 ) -> PlatformCreateOrganizationResult:
     """
-    Platform API path: one logical transaction — new organization row plus optional org
+    Platform API path: one logical transaction — new organization row plus org
     admin + credentials commit together, or nothing persists (duplicate org still raises
     before commit). Duplicate email in-org: no password overwrite (existing user path).
 
@@ -242,6 +242,13 @@ def platform_create_organization_with_optional_admin(
     if not name:
         raise ValueError("organization_name is required.")
 
+    email_norm = (admin_email or "").strip()
+    if not email_norm or admin_password is None or not str(admin_password).strip():
+        raise ValueError("Initial admin is required")
+    pwd = str(admin_password).strip()
+    if not password_meets_policy_for_new_account(pwd):
+        raise ValueError("admin_password does not meet password policy.")
+
     slug_col = organization_slug_column_exists(session)
     slug_norm: Optional[str] = None
     if organization_slug and organization_slug.strip():
@@ -251,15 +258,6 @@ def platform_create_organization_with_optional_admin(
             )
         slug_norm = normalize_slug(organization_slug)
         validate_slug_format(slug_norm)
-
-    if create_admin:
-        if not admin_email or not str(admin_email).strip():
-            raise ValueError("admin_email is required when create_admin is true.")
-        pwd = admin_password if admin_password is not None else ""
-        if not str(pwd).strip():
-            raise ValueError("admin_password is required when create_admin is true.")
-        if not password_meets_policy_for_new_account(str(pwd).strip()):
-            raise ValueError("admin_password does not meet password policy.")
 
     use_slug = bool(slug_norm) and slug_col
 
@@ -274,20 +272,16 @@ def platform_create_organization_with_optional_admin(
             reject_duplicate=True,
         )
 
-        admin_created = False
-        admin_line = ""
-        if create_admin:
-            assert admin_email is not None
-            admin_line = create_initial_org_admin(
-                session,
-                apply=True,
-                org_id=str(org.id),
-                admin_email=admin_email,
-                admin_password=admin_password,
-                commit=False,
-                prompt_for_password_if_missing=False,
-            )
-            admin_created = admin_line.startswith("Admin user created")
+        admin_line = create_initial_org_admin(
+            session,
+            apply=True,
+            org_id=str(org.id),
+            admin_email=email_norm,
+            admin_password=pwd,
+            commit=False,
+            prompt_for_password_if_missing=False,
+        )
+        admin_created = admin_line.startswith("Admin user created")
 
         return org, org_msg, organization_created, admin_created, admin_line
 

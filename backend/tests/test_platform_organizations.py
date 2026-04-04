@@ -431,7 +431,7 @@ class TestOrganizationOnboardingServiceDB:
         from app.services.organization_onboarding_service import (
             OrganizationDuplicateError,
             organization_slug_column_exists,
-            platform_create_organization_with_optional_admin,
+            platform_create_organization_with_admin,
         )
 
         if not organization_slug_column_exists(platform_db_session):
@@ -442,30 +442,28 @@ class TestOrganizationOnboardingServiceDB:
         platform_db_session.commit()
 
         slug = "dup-slug-abc"
-        platform_create_organization_with_optional_admin(
+        platform_create_organization_with_admin(
             platform_db_session,
             organization_name="One",
             organization_slug=slug,
-            create_admin=False,
-            admin_email=None,
-            admin_password=None,
+            admin_email="dup-slug-one@test.example",
+            admin_password="ValidPwd1ab",
         )
         with pytest.raises(OrganizationDuplicateError):
-            platform_create_organization_with_optional_admin(
+            platform_create_organization_with_admin(
                 platform_db_session,
                 organization_name="Two",
                 organization_slug=slug,
-                create_admin=False,
-                admin_email=None,
-                admin_password=None,
+                admin_email="dup-slug-two@test.example",
+                admin_password="ValidPwd1ab",
             )
 
-    def test_platform_create_org_and_optional_admin_committed_together(
+    def test_platform_create_org_and_admin_committed_together(
         self, platform_db_session: Session
     ):
         from app.services.organization_onboarding_service import (
             organization_slug_column_exists,
-            platform_create_organization_with_optional_admin,
+            platform_create_organization_with_admin,
         )
 
         delete_org_scoped_auth_and_users(platform_db_session)
@@ -476,11 +474,10 @@ class TestOrganizationOnboardingServiceDB:
         org_name = "Atomic Org CI Test"
         slug = "atomic-org-slug-xyz"
         slug_ok = organization_slug_column_exists(platform_db_session)
-        platform_create_organization_with_optional_admin(
+        platform_create_organization_with_admin(
             platform_db_session,
             organization_name=org_name,
             organization_slug=slug if slug_ok else None,
-            create_admin=True,
             admin_email=email,
             admin_password="ValidPwd1ab",
         )
@@ -509,7 +506,7 @@ class TestOrganizationOnboardingServiceDB:
         """Regression: avoid nested session.begin() when the caller already owns the transaction."""
         from app.services.organization_onboarding_service import (
             organization_slug_column_exists,
-            platform_create_organization_with_optional_admin,
+            platform_create_organization_with_admin,
         )
 
         delete_org_scoped_auth_and_users(platform_db_session)
@@ -522,11 +519,10 @@ class TestOrganizationOnboardingServiceDB:
         email = "nestedadmin@test.example"
 
         with platform_db_session.begin():
-            platform_create_organization_with_optional_admin(
+            platform_create_organization_with_admin(
                 platform_db_session,
                 organization_name=name,
                 organization_slug=slug if slug_ok else None,
-                create_admin=True,
                 admin_email=email,
                 admin_password="ValidPwd2ab",
             )
@@ -669,7 +665,8 @@ class TestPlatformCreateOrganizationHTTP:
             json={
                 "organization_name": name,
                 "organization_slug": slug,
-                "create_admin": False,
+                "admin_email": f"e2e-slug-admin-{rid}@e2e.test",
+                "admin_password": "ValidPwd1ab",
             },
             headers=h,
         )
@@ -678,7 +675,7 @@ class TestPlatformCreateOrganizationHTTP:
         assert data["organization"]["slug"] == slug
         assert data["organization"]["name"] == name
         assert data["organization_created"] is True
-        assert data["admin_created"] is False
+        assert data["admin_created"] is True
 
     def test_post_without_organization_slug_returns_201(
         self,
@@ -697,13 +694,39 @@ class TestPlatformCreateOrganizationHTTP:
         name = f"E2E Org No Slug {rid}"
         r = client.post(
             "/api/platform/organizations",
-            json={"organization_name": name, "create_admin": False},
+            json={
+                "organization_name": name,
+                "admin_email": f"e2e-noslug-admin-{rid}@e2e.test",
+                "admin_password": "ValidPwd1ab",
+            },
             headers=h,
         )
         assert r.status_code == 201, r.text
         data = r.json()
         assert data["organization"]["name"] == name
         assert data["organization_created"] is True
+        assert data["admin_created"] is True
+
+    def test_post_missing_initial_admin_returns_422(
+        self,
+        client: TestClient,
+        platform_http_operator: dict,
+    ):
+        ctx = platform_http_operator
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["email"], "password": ctx["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        r = client.post(
+            "/api/platform/organizations",
+            json={"organization_name": "Org Without Admin"},
+            headers=h,
+        )
+        assert r.status_code == 422
+        assert "Initial admin is required" in r.text
 
     def test_post_duplicate_slug_returns_409(
         self,
@@ -727,17 +750,25 @@ class TestPlatformCreateOrganizationHTTP:
         slug = f"e2e-dup-slug-{rid}"
         body_base = {
             "organization_slug": slug,
-            "create_admin": False,
+            "admin_password": "ValidPwd1ab",
         }
         r1 = client.post(
             "/api/platform/organizations",
-            json={"organization_name": f"First {rid}", **body_base},
+            json={
+                "organization_name": f"First {rid}",
+                "admin_email": f"e2e-dup1-{rid}@e2e.test",
+                **body_base,
+            },
             headers=h,
         )
         assert r1.status_code == 201, r1.text
         r2 = client.post(
             "/api/platform/organizations",
-            json={"organization_name": f"Second {rid}", **body_base},
+            json={
+                "organization_name": f"Second {rid}",
+                "admin_email": f"e2e-dup2-{rid}@e2e.test",
+                **body_base,
+            },
             headers=h,
         )
         assert r2.status_code == 409
@@ -761,14 +792,22 @@ class TestPlatformCreateOrganizationHTTP:
         assert (
             client.post(
                 "/api/platform/organizations",
-                json={"organization_name": name, "create_admin": False},
+                json={
+                    "organization_name": name,
+                    "admin_email": f"e2e-dupname1-{rid}@e2e.test",
+                    "admin_password": "ValidPwd1ab",
+                },
                 headers=h,
             ).status_code
             == 201
         )
         r2 = client.post(
             "/api/platform/organizations",
-            json={"organization_name": name, "create_admin": False},
+            json={
+                "organization_name": name,
+                "admin_email": f"e2e-dupname2-{rid}@e2e.test",
+                "admin_password": "ValidPwd1ab",
+            },
             headers=h,
         )
         assert r2.status_code == 409
@@ -796,7 +835,6 @@ class TestPlatformCreateOrganizationHTTP:
                 "/api/platform/organizations",
                 json={
                     "organization_name": f"Multi Org {rid} {i}",
-                    "create_admin": True,
                     "admin_email": shared_email,
                     "admin_password": pw,
                 },

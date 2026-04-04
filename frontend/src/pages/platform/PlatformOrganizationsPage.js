@@ -19,7 +19,6 @@ function PlatformOrganizationsPage() {
   const [form, setForm] = useState({
     organization_name: "",
     organization_slug: "",
-    create_admin: false,
     admin_email: "",
     admin_password: "",
   });
@@ -47,7 +46,6 @@ function PlatformOrganizationsPage() {
     setForm({
       organization_name: "",
       organization_slug: "",
-      create_admin: false,
       admin_email: "",
       admin_password: "",
     });
@@ -60,17 +58,15 @@ function PlatformOrganizationsPage() {
       setError("Organisationsname ist erforderlich.");
       return;
     }
-    if (form.create_admin) {
-      const em = form.admin_email.trim();
-      const pw = form.admin_password;
-      if (!em) {
-        setError("Admin-E-Mail ist erforderlich wenn Admin angelegt wird.");
-        return;
-      }
-      if (!pw || !String(pw).trim()) {
-        setError("Admin-Passwort ist erforderlich wenn Admin angelegt wird.");
-        return;
-      }
+    const em = form.admin_email.trim();
+    const pw = form.admin_password;
+    if (!em) {
+      setError("Admin-E-Mail ist erforderlich.");
+      return;
+    }
+    if (!pw || !String(pw).trim()) {
+      setError("Admin-Passwort ist erforderlich.");
+      return;
     }
 
     setSaving(true);
@@ -78,9 +74,8 @@ function PlatformOrganizationsPage() {
     const body = {
       organization_name: form.organization_name.trim(),
       organization_slug: form.organization_slug.trim() || null,
-      create_admin: !!form.create_admin,
-      admin_email: form.create_admin ? form.admin_email.trim() : null,
-      admin_password: form.create_admin ? String(form.admin_password) : null,
+      admin_email: em,
+      admin_password: String(pw),
     };
 
     createPlatformOrganization(body)
@@ -261,53 +256,32 @@ function PlatformOrganizationsPage() {
                   placeholder="z. B. acme-corp"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="org-create-admin"
-                  type="checkbox"
-                  checked={form.create_admin}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      create_admin: e.target.checked,
-                      admin_email: e.target.checked ? f.admin_email : "",
-                      admin_password: e.target.checked ? f.admin_password : "",
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-black/20 dark:border-white/20"
-                />
-                <label htmlFor="org-create-admin" className="text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
-                  Ersten Org-Admin anlegen
+              <div>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                  Admin-E-Mail *
                 </label>
+                <input
+                  type="email"
+                  autoComplete="off"
+                  value={form.admin_email}
+                  onChange={(e) => setForm((f) => ({ ...f, admin_email: e.target.value }))}
+                  required
+                  className={inputClass}
+                />
               </div>
-              {form.create_admin ? (
-                <>
-                  <div>
-                    <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
-                      Admin-E-Mail *
-                    </label>
-                    <input
-                      type="email"
-                      autoComplete="off"
-                      value={form.admin_email}
-                      onChange={(e) => setForm((f) => ({ ...f, admin_email: e.target.value }))}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
-                      Admin-Passwort *
-                    </label>
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      value={form.admin_password}
-                      onChange={(e) => setForm((f) => ({ ...f, admin_password: e.target.value }))}
-                      className={inputClass}
-                    />
-                  </div>
-                </>
-              ) : null}
+              <div>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                  Admin-Passwort *
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.admin_password}
+                  onChange={(e) => setForm((f) => ({ ...f, admin_password: e.target.value }))}
+                  required
+                  className={inputClass}
+                />
+              </div>
               <div className="mt-2 flex gap-2.5">
                 <button
                   type="submit"

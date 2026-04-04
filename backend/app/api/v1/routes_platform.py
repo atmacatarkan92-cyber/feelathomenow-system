@@ -20,7 +20,7 @@ from sqlmodel import select
 from app.services.organization_onboarding_service import (
     OrganizationDuplicateError,
     OrganizationNameAmbiguousError,
-    platform_create_organization_with_optional_admin,
+    platform_create_organization_with_admin,
 )
 from auth.dependencies import get_db_session, require_platform_admin
 from auth.schemas import Token
@@ -98,17 +98,19 @@ class PlatformCreateOrganizationBody(BaseModel):
 
     organization_name: str = Field(min_length=1, max_length=500)
     organization_slug: Optional[str] = Field(default=None, max_length=128)
-    create_admin: bool = False
     admin_email: Optional[str] = Field(default=None, max_length=320)
     admin_password: Optional[str] = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
-    def admin_when_create(self) -> "PlatformCreateOrganizationBody":
-        if self.create_admin:
-            if not self.admin_email or not str(self.admin_email).strip():
-                raise ValueError("admin_email is required when create_admin is true")
-            if self.admin_password is None or not str(self.admin_password).strip():
-                raise ValueError("admin_password is required when create_admin is true")
+    def require_initial_admin(self) -> "PlatformCreateOrganizationBody":
+        if (
+            self.admin_email is None
+            or not str(self.admin_email).strip()
+            or self.admin_password is None
+            or not str(self.admin_password).strip()
+        ):
+            raise ValueError("Initial admin is required")
+        self.admin_email = str(self.admin_email).strip()
         return self
 
 
@@ -271,11 +273,10 @@ def create_organization(
     session: Session = Depends(get_db_session),
 ) -> PlatformCreateOrganizationResponse:
     try:
-        result = platform_create_organization_with_optional_admin(
+        result = platform_create_organization_with_admin(
             session,
             organization_name=body.organization_name,
             organization_slug=body.organization_slug,
-            create_admin=body.create_admin,
             admin_email=body.admin_email,
             admin_password=body.admin_password,
             actor_user_id=str(current_user.id),
