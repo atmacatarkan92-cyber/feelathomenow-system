@@ -54,16 +54,16 @@ function formatJsonField(value) {
 
 function loginDeviceBadgeClass(status) {
   if (status === "new") {
-    return "inline-flex w-fit shrink-0 items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/12 dark:text-amber-100";
+    return "inline-flex w-fit shrink-0 items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-900 dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-200";
   }
   if (status === "known") {
-    return "inline-flex w-fit shrink-0 items-center rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[9px] font-semibold text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/12 dark:text-emerald-300";
+    return "inline-flex w-fit shrink-0 items-center rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[9px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200";
   }
   return "inline-flex w-fit shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-400";
 }
 
 const suspiciousBadgeClass =
-  "inline-flex w-fit shrink-0 items-center rounded-full border border-rose-400/80 bg-rose-100 px-2 py-0.5 text-[9px] font-semibold text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100";
+  "inline-flex w-fit shrink-0 items-center rounded-full border border-rose-400/80 bg-rose-100 px-2 py-0.5 text-[9px] font-semibold text-rose-900 dark:border-rose-400/35 dark:bg-rose-500/15 dark:text-rose-200";
 
 /**
  * Platform admin: last 50 audit log rows (cross-tenant).
