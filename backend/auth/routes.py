@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel import select
 
 from app.core.rate_limit import limiter
+from app.services.email_verification_helpers import process_resend_verification_email
 from auth.dependencies import get_current_user, get_db_session
 from auth.schemas import (
     ChangePasswordRequest,
@@ -15,6 +16,7 @@ from auth.schemas import (
     ForgotPasswordRequest,
     GenericSuccessResponse,
     LoginRequest,
+    ResendVerificationRequest,
     ResetPasswordRequest,
     Token,
     UserMe,
@@ -423,6 +425,30 @@ def forgot_password(
             # Intentionally do not leak details to the client.
             continue
 
+    return GenericSuccessResponse(detail=generic_detail)
+
+
+@router.post(
+    "/resend-verification",
+    response_model=GenericSuccessResponse,
+)
+@limiter.limit("5/minute")
+def resend_verification(
+    request: Request,
+    body: ResendVerificationRequest,
+    session=Depends(get_db_session),
+):
+    """
+    Request a new email verification link. Always returns generic success (no enumeration).
+    """
+    generic_detail = "If the account exists, a verification email has been sent."
+    email_norm = str(body.email).strip().lower()
+    if not email_norm:
+        return GenericSuccessResponse(detail=generic_detail)
+    try:
+        process_resend_verification_email(session, email_norm=email_norm)
+    except Exception:
+        logger.exception("resend_verification_failed")
     return GenericSuccessResponse(detail=generic_detail)
 
 

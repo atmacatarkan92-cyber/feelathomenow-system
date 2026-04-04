@@ -62,6 +62,12 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
+class ResendVerificationRequest(BaseModel):
+    """Body for POST /auth/resend-verification."""
+
+    email: EmailStr
+
+
 class GenericSuccessResponse(BaseModel):
     detail: str
 
