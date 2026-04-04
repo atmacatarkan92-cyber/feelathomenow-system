@@ -14,8 +14,7 @@ import {
   normalizeRoom,
   patchAdminPropertyManager,
 } from "../../api/adminData";
-import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
-import { resolveAuditFkDisplay } from "../../utils/auditFkDisplay";
+import { formatAuditLog } from "../../utils/auditDisplay";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
@@ -88,24 +87,6 @@ function formatDateTime(iso) {
     minute: "2-digit",
     second: "2-digit",
   });
-}
-
-const PM_FIELD_LABELS = {
-  ...COMMON_AUDIT_FIELD_LABELS,
-  landlord_id: "Verwaltung",
-};
-
-function formatPmAuditDisplayValue(field, value, landlordNameById) {
-  if (field === "status") {
-    if (value == null || value === "") return "—";
-    const s = String(value).toLowerCase();
-    return s === "inactive" ? "Inaktiv" : "Aktiv";
-  }
-  if (field === "landlord_id") {
-    return resolveAuditFkDisplay(value, landlordNameById);
-  }
-  if (value == null || value === "") return "—";
-  return String(value);
 }
 
 function AdminPropertyManagerDetailPage() {
@@ -680,45 +661,27 @@ function AdminPropertyManagerDetailPage() {
                 (log.actor_email && String(log.actor_email).trim()) ||
                 null;
               const actorSuffix = actor ? ` · ${actor}` : "";
+              const { summary, changes } = formatAuditLog(log, {
+                entityType: "property_manager",
+                landlordNameById,
+              });
+              const isCreate = String(log.action || "").toLowerCase() === "create";
 
-              if (log.action === "create") {
-                return (
-                  <li key={log.id}>
-                    <p className={`text-sm font-medium ${pmTh.body}`}>Bewirtschafter angelegt</p>
-                    <p className={pmTh.auditMeta}>
-                      {formatDateTime(log.created_at)}
-                      {actorSuffix}
-                    </p>
-                  </li>
-                );
-              }
-
-              const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
-              const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
-              const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])];
-              const field = keys[0];
-              if (!field) {
-                return (
-                  <li key={log.id}>
-                    <p className={`text-sm ${pmTh.body}`}>Eintrag</p>
-                    <p className={pmTh.auditMeta}>
-                      {formatDateTime(log.created_at)}
-                      {actorSuffix}
-                    </p>
-                  </li>
-                );
-              }
-              const label = PM_FIELD_LABELS[field] || field;
-              const oldD = formatPmAuditDisplayValue(field, ov[field], landlordNameById);
-              const newD = formatPmAuditDisplayValue(field, nv[field], landlordNameById);
               return (
                 <li key={log.id}>
-                  <p className={`text-sm ${pmTh.body}`}>
-                    <span className="font-semibold">{label} geändert:</span>{" "}
-                    <span className="font-medium tabular-nums">{oldD}</span>
-                    <span className={`mx-1 ${pmTh.mutedInline}`}>→</span>
-                    <span className="font-medium tabular-nums">{newD}</span>
-                  </p>
+                  <p className={`text-sm ${isCreate ? "font-medium " : ""}${pmTh.body}`}>{summary}</p>
+                  {changes.length > 0 ? (
+                    <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[13px]">
+                      {changes.map((c, idx) => (
+                        <li key={idx} className={pmTh.body}>
+                          <span className="font-semibold">{c.label}:</span>{" "}
+                          <span className="tabular-nums">{c.old}</span>
+                          <span className={`mx-1 ${pmTh.mutedInline}`}>→</span>
+                          <span className="tabular-nums">{c.new}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   <p className={pmTh.auditMeta}>
                     {formatDateTime(log.created_at)}
                     {actorSuffix}

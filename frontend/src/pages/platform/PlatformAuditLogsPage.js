@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchPlatformAuditLogs } from "../../api/adminData";
+import { auditActionLabel, formatAuditLog } from "../../utils/auditDisplay";
 import { buildLoginDeviceStatusMap, loginDeviceStatusLabel } from "../../utils/loginDeviceAuditStatus";
 import { buildSuspiciousLoginAuditMap } from "../../utils/suspiciousLoginAudit";
 import { getDeviceLabelFromUserAgent } from "../../utils/userAgentLabel";
@@ -96,6 +97,11 @@ function PlatformAuditLogsPage() {
   const loginDeviceStatusById = useMemo(() => buildLoginDeviceStatusMap(rows), [rows]);
   const suspiciousLoginById = useMemo(() => buildSuspiciousLoginAuditMap(rows), [rows]);
 
+  const selectedLogFormatted = useMemo(() => {
+    if (!selectedLog || selectedLog.action === "login") return null;
+    return formatAuditLog(selectedLog, { entityType: selectedLog.target_type });
+  }, [selectedLog]);
+
   const detailTextClass = "mt-1 text-[13px] text-[#0f172a] dark:text-[#e2e8f0]";
   const detailJsonClass =
     "mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-[8px] border border-black/[0.08] bg-[#f8fafc] p-2 font-mono text-[11px] leading-relaxed text-[#0f172a] dark:border-white/[0.08] dark:bg-[#0c1018] dark:text-[#e2e8f0]";
@@ -149,8 +155,34 @@ function PlatformAuditLogsPage() {
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
                   Aktion
                 </dt>
-                <dd className={detailTextClass}>{selectedLog.action || "—"}</dd>
+                <dd className={detailTextClass}>{auditActionLabel(selectedLog.action)}</dd>
               </div>
+              {selectedLogFormatted ? (
+                <>
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      Zusammenfassung
+                    </dt>
+                    <dd className={detailTextClass}>{selectedLogFormatted.summary}</dd>
+                  </div>
+                  {selectedLogFormatted.changes.length > 0 ? (
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                        Änderungen
+                      </dt>
+                      <dd className={detailTextClass}>
+                        <ul className="mt-1 list-inside list-disc space-y-1 text-[12px]">
+                          {selectedLogFormatted.changes.map((c, idx) => (
+                            <li key={idx}>
+                              <span className="font-semibold">{c.label}:</span> {c.old} → {c.new}
+                            </li>
+                          ))}
+                        </ul>
+                      </dd>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
               {selectedLog.action === "login" &&
               (suspiciousLoginById.get(String(selectedLog.id))?.suspicious ? (
                 <div>
@@ -244,24 +276,31 @@ function PlatformAuditLogsPage() {
                   </div>
                 </>
               ) : null}
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                  metadata
-                </dt>
-                <dd className={detailJsonClass}>{formatJsonField(selectedLog.metadata)}</dd>
-              </div>
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                  old_values
-                </dt>
-                <dd className={detailJsonClass}>{formatJsonField(selectedLog.old_values)}</dd>
-              </div>
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                  new_values
-                </dt>
-                <dd className={detailJsonClass}>{formatJsonField(selectedLog.new_values)}</dd>
-              </div>
+              <details className="rounded-[8px] border border-black/10 bg-[#f8fafc] p-2 dark:border-white/[0.08] dark:bg-[#0c1018]">
+                <summary className="cursor-pointer text-[12px] font-semibold text-[#0f172a] dark:text-[#e2e8f0]">
+                  Rohdaten (JSON)
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <div>
+                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      metadata
+                    </dt>
+                    <dd className={detailJsonClass}>{formatJsonField(selectedLog.metadata)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      old_values
+                    </dt>
+                    <dd className={detailJsonClass}>{formatJsonField(selectedLog.old_values)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      new_values
+                    </dt>
+                    <dd className={detailJsonClass}>{formatJsonField(selectedLog.new_values)}</dd>
+                  </div>
+                </div>
+              </details>
             </dl>
           </div>
         </div>

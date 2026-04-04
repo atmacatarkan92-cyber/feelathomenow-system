@@ -13,6 +13,7 @@ import {
   deleteInventoryAssignment,
   normalizeUnit,
 } from "../../api/adminData";
+import { formatAuditLog } from "../../utils/auditDisplay";
 
 function formatChf(value) {
   if (value == null || value === "") return "—";
@@ -59,84 +60,11 @@ function unitLabel(u) {
   return line || nu.id || "—";
 }
 
-const INVENTORY_AUDIT_LABELS = {
-  name: "Name",
-  category: "Kategorie",
-  brand: "Marke",
-  total_quantity: "Gesamtmenge",
-  condition: "Zustand",
-  status: "Status",
-  purchase_price_chf: "Anschaffung CHF",
-  purchase_date: "Kaufdatum",
-  purchased_from: "Gekauft bei",
-  supplier_article_number: "Lieferanten-Artikelnr.",
-  product_url: "Produkt-URL",
-  notes: "Notizen",
-};
-
 function formatAuditTimestamp(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return String(iso);
   return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
-}
-
-function formatAuditScalar(v) {
-  if (v == null || v === "") return "—";
-  if (typeof v === "number" && Number.isFinite(v)) return String(v);
-  const s = String(v);
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  return s.length > 120 ? `${s.slice(0, 117)}…` : s;
-}
-
-/**
- * Human-readable primary line for inventory_item audit rows (matches admin audit_log shapes).
- */
-function inventoryAuditPrimaryLine(log, unitById) {
-  const a = String(log.action || "").toLowerCase();
-  const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
-  const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
-
-  if (a === "create" && nv.inventory_assignment) {
-    const asg = nv.inventory_assignment;
-    const u = unitById.get(String(asg.unit_id));
-    const ul = u ? unitLabel(u) : String(asg.unit_id || "").slice(0, 12);
-    return `Zuordnung hinzugefügt · ${ul} · Menge ${asg.quantity ?? "—"}`;
-  }
-  if (a === "delete" && ov.inventory_assignment && !ov.name && !ov.inventory_number) {
-    const asg = ov.inventory_assignment;
-    const u = unitById.get(String(asg.unit_id));
-    const ul = u ? unitLabel(u) : String(asg.unit_id || "").slice(0, 12);
-    return `Zuordnung entfernt · ${ul}`;
-  }
-  if (a === "update" && ov.inventory_assignment && nv.inventory_assignment) {
-    return "Zuordnung bearbeitet";
-  }
-  if (a === "create" && (nv.inventory_number != null || nv.name != null) && !nv.inventory_assignment) {
-    return `Artikel erstellt · ${nv.inventory_number || nv.name || ""}`.trim();
-  }
-  if (a === "delete" && (ov.inventory_number != null || ov.name != null) && !ov.inventory_assignment) {
-    return "Artikel gelöscht";
-  }
-  if (a === "update") {
-    const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])].filter(
-      (k) =>
-        k !== "inventory_assignment" &&
-        k !== "created_at" &&
-        k !== "updated_at" &&
-        k !== "id" &&
-        k !== "organization_id"
-    );
-    if (keys.length === 1) {
-      const k = keys[0];
-      const lbl = INVENTORY_AUDIT_LABELS[k] || k;
-      return `${lbl}: ${formatAuditScalar(ov[k])} → ${formatAuditScalar(nv[k])}`;
-    }
-    if (keys.length > 1) {
-      return "Artikel bearbeitet";
-    }
-  }
-  return a === "create" ? "Artikel erstellt" : a === "delete" ? "Eintrag gelöscht" : a === "update" ? "Bearbeitet" : String(log.action || "—");
 }
 
 const emptyItemForm = () => ({
@@ -750,15 +678,26 @@ export default function AdminInventoryDetailPage() {
                     (log.actor_name && String(log.actor_name).trim()) ||
                     (log.actor_email && String(log.actor_email).trim()) ||
                     null;
+                  const { summary, changes } = formatAuditLog(log, {
+                    entityType: "inventory_item",
+                    unitById,
+                  });
                   return (
                     <li key={log.id} className="relative">
                       <span
                         className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-[#5b8cff]"
                         aria-hidden
                       />
-                      <p className="text-sm font-medium text-[#0f172a] dark:text-[#f8fafc]">
-                        {inventoryAuditPrimaryLine(log, unitById)}
-                      </p>
+                      <p className="text-sm font-medium text-[#0f172a] dark:text-[#f8fafc]">{summary}</p>
+                      {changes.length > 0 ? (
+                        <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[12px] text-[#0f172a] dark:text-[#eef2ff]">
+                          {changes.map((c, idx) => (
+                            <li key={idx}>
+                              <span className="font-semibold">{c.label}:</span> {c.old} → {c.new}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                       <p className="mt-1 text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                         {formatAuditTimestamp(log.created_at)}
                         {actor ? ` · ${actor}` : ""}

@@ -26,6 +26,7 @@ import {
   normalizeRoom,
 } from "../../api/adminData";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
+import { formatAuditLog } from "../../utils/auditDisplay";
 import { getDisplayUnitId } from "../../utils/unitDisplayId";
 import {
   UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE,
@@ -158,123 +159,27 @@ function formatTenantAuditChf(n) {
 }
 
 function auditLogToTenantHistoryEvent(log) {
-  const action = String(log.action || "").toLowerCase();
   const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
   const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
   const author = log.actor_name || log.actor_email || "—";
-
+  const { summary } = formatAuditLog(log, { entityType: "tenant" });
+  let action_type = "audit_tenant";
   if (nv.document_uploaded != null && String(nv.document_uploaded).trim() !== "") {
-    return {
-      id: `audit-${log.id}`,
-      summary: `Dokument hochgeladen: ${String(nv.document_uploaded)}`,
-      created_at: log.created_at,
-      author_name: author,
-      action_type: "audit_document",
-    };
+    action_type = "audit_document";
+  } else if (ov.document_deleted != null && String(ov.document_deleted).trim() !== "") {
+    action_type = "audit_document";
+  } else if (nv.tenancy || ov.tenancy) {
+    action_type = "audit_tenancy";
+  } else if (nv.tenancy_revenue || ov.tenancy_revenue) {
+    action_type = "audit_revenue";
   }
-  if (ov.document_deleted != null && String(ov.document_deleted).trim() !== "") {
-    return {
-      id: `audit-${log.id}`,
-      summary: `Dokument gelöscht: ${String(ov.document_deleted)}`,
-      created_at: log.created_at,
-      author_name: author,
-      action_type: "audit_document",
-    };
-  }
-
-  if (nv.tenancy || ov.tenancy) {
-    if (action === "create" && nv.tenancy && typeof nv.tenancy === "object") {
-      const t = nv.tenancy;
-      const end = t.display_end_date || t.move_out_date;
-      return {
-        id: `audit-${log.id}`,
-        summary: `Mietverhältnis erstellt · Einzug ${formatTenantAuditDateDe(t.move_in_date)} · Ende ${formatTenantAuditDateDe(end)} · ${formatTenantAuditChf(t.monthly_rent)}/Monat`,
-        created_at: log.created_at,
-        author_name: author,
-        action_type: "audit_tenancy",
-      };
-    }
-    if (action === "delete" && ov.tenancy && typeof ov.tenancy === "object") {
-      const t = ov.tenancy;
-      return {
-        id: `audit-${log.id}`,
-        summary: `Mietverhältnis gelöscht · Einzug ${formatTenantAuditDateDe(t.move_in_date)}`,
-        created_at: log.created_at,
-        author_name: author,
-        action_type: "audit_tenancy",
-      };
-    }
-    if (action === "update" && ov.tenancy && nv.tenancy) {
-      const o = ov.tenancy;
-      const n = nv.tenancy;
-      const parts = [];
-      if (String(o.termination_effective_date || "") !== String(n.termination_effective_date || "")) {
-        if (n.termination_effective_date) {
-          parts.push(`Kündigung wirksam per ${formatTenantAuditDateDe(n.termination_effective_date)}`);
-        }
-      }
-      if (String(o.notice_given_at || "") !== String(n.notice_given_at || "") && n.notice_given_at) {
-        parts.push(`Kündigung erfasst · eingegangen am ${formatTenantAuditDateDe(n.notice_given_at)}`);
-      }
-      if (String(o.actual_move_out_date || "") !== String(n.actual_move_out_date || "") && n.actual_move_out_date) {
-        parts.push(`Rückgabe erfolgt am ${formatTenantAuditDateDe(n.actual_move_out_date)}`);
-      }
-      if (String(o.display_end_date || "") !== String(n.display_end_date || "")) {
-        parts.push(
-          `Mietende geändert: ${formatTenantAuditDateDe(o.display_end_date) || "—"} → ${formatTenantAuditDateDe(n.display_end_date) || "—"}`
-        );
-      }
-      if (String(o.display_status || "") !== String(n.display_status || "")) {
-        parts.push(
-          `Status: ${tenancyDisplayStatusLabelDe(o.display_status)} → ${tenancyDisplayStatusLabelDe(n.display_status)}`
-        );
-      }
-      return {
-        id: `audit-${log.id}`,
-        summary:
-          parts.length > 0
-            ? `Mietverhältnis bearbeitet: ${parts.join(", ")}`
-            : "Mietverhältnis bearbeitet",
-        created_at: log.created_at,
-        author_name: author,
-        action_type: "audit_tenancy",
-      };
-    }
-  }
-
-  const rN = nv.tenancy_revenue;
-  const rO = ov.tenancy_revenue;
-  if (rN || rO) {
-    if (action === "create" && rN) {
-      return {
-        id: `audit-${log.id}`,
-        summary: `Einnahme hinzugefügt: ${revenueTypeLabelForDisplay(rN.type)}, ${formatTenantAuditChf(rN.amount_chf)}, ${revenueFrequencyLabel(rN.frequency).toLowerCase()}`,
-        created_at: log.created_at,
-        author_name: author,
-        action_type: "audit_revenue",
-      };
-    }
-    if (action === "delete" && rO) {
-      return {
-        id: `audit-${log.id}`,
-        summary: `Einnahme gelöscht: ${revenueTypeLabelForDisplay(rO.type)}, ${formatTenantAuditChf(rO.amount_chf)}, ${revenueFrequencyLabel(rO.frequency).toLowerCase()}`,
-        created_at: log.created_at,
-        author_name: author,
-        action_type: "audit_revenue",
-      };
-    }
-    if (action === "update" && rO && rN) {
-      return {
-        id: `audit-${log.id}`,
-        summary: `Einnahme bearbeitet: ${revenueTypeLabelForDisplay(rN.type)}, ${formatTenantAuditChf(rN.amount_chf)}, ${revenueFrequencyLabel(rN.frequency).toLowerCase()}`,
-        created_at: log.created_at,
-        author_name: author,
-        action_type: "audit_revenue",
-      };
-    }
-  }
-
-  return null;
+  return {
+    id: `audit-${log.id}`,
+    summary,
+    created_at: log.created_at,
+    author_name: author,
+    action_type,
+  };
 }
 
 function formatInvoiceAmount(amount, currency) {

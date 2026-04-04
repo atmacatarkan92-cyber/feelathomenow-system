@@ -15,7 +15,7 @@ import {
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
-import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
+import { formatAuditLog } from "../../utils/auditDisplay";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 function formatChfMonthly(value) {
@@ -59,10 +59,6 @@ function formatDateTime(iso) {
     second: "2-digit",
   });
 }
-
-const OWNER_FIELD_LABELS = {
-  ...COMMON_AUDIT_FIELD_LABELS,
-};
 
 function formatOwnerDocumentDate(iso) {
   if (!iso) return "—";
@@ -132,15 +128,6 @@ const sectionCardClass =
 
 const sectionTitleClass =
   "mb-2.5 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]";
-
-function formatOwnerAuditDisplayValue(field, value) {
-  if (value == null || value === "") return "—";
-  if (field === "status") {
-    const s = String(value).toLowerCase();
-    return s === "inactive" ? "Inaktiv" : "Aktiv";
-  }
-  return String(value);
-}
 
 function AdminOwnerDetailPage() {
   const { id } = useParams();
@@ -800,77 +787,28 @@ function AdminOwnerDetailPage() {
                 (log.actor_email && String(log.actor_email).trim()) ||
                 null;
               const actorSuffix = actor ? ` · ${actor}` : "";
+              const { summary, changes } = formatAuditLog(log, { entityType: "owner" });
+              const isCreate = String(log.action || "").toLowerCase() === "create";
 
-              if (log.action === "create") {
-                return (
-                  <li key={log.id}>
-                    <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">Eigentümer angelegt</p>
-                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                      {formatDateTime(log.created_at)}
-                      {actorSuffix}
-                    </p>
-                  </li>
-                );
-              }
-
-              const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
-              const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
-              if (
-                nv.document_uploaded != null &&
-                String(nv.document_uploaded).trim() !== ""
-              ) {
-                return (
-                  <li key={log.id}>
-                    <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                      Dokument hochgeladen: {String(nv.document_uploaded)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                      {formatDateTime(log.created_at)}
-                      {actorSuffix}
-                    </p>
-                  </li>
-                );
-              }
-              if (
-                ov.document_deleted != null &&
-                String(ov.document_deleted).trim() !== ""
-              ) {
-                return (
-                  <li key={log.id}>
-                    <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                      Dokument gelöscht: {String(ov.document_deleted)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                      {formatDateTime(log.created_at)}
-                      {actorSuffix}
-                    </p>
-                  </li>
-                );
-              }
-              const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])];
-              const field = keys[0];
-              if (!field) {
-                return (
-                  <li key={log.id}>
-                    <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">Eintrag</p>
-                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                      {formatDateTime(log.created_at)}
-                      {actorSuffix}
-                    </p>
-                  </li>
-                );
-              }
-              const label = OWNER_FIELD_LABELS[field] || field;
-              const oldD = formatOwnerAuditDisplayValue(field, ov[field]);
-              const newD = formatOwnerAuditDisplayValue(field, nv[field]);
               return (
                 <li key={log.id}>
-                  <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">
-                    <span className="font-semibold">{label} geändert:</span>{" "}
-                    <span className="font-medium tabular-nums">{oldD}</span>
-                    <span className="mx-1 text-[#64748b] dark:text-[#6b7a9a]">→</span>
-                    <span className="font-medium tabular-nums">{newD}</span>
+                  <p
+                    className={`text-sm text-[#0f172a] dark:text-[#eef2ff] ${isCreate ? "font-medium" : ""}`}
+                  >
+                    {summary}
                   </p>
+                  {changes.length > 0 ? (
+                    <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
+                      {changes.map((c, idx) => (
+                        <li key={idx}>
+                          <span className="font-semibold">{c.label}:</span>{" "}
+                          <span className="tabular-nums">{c.old}</span>
+                          <span className="mx-1 text-[#64748b] dark:text-[#6b7a9a]">→</span>
+                          <span className="tabular-nums">{c.new}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                     {formatDateTime(log.created_at)}
                     {actorSuffix}

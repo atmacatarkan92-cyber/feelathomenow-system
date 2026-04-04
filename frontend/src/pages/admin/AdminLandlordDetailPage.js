@@ -25,8 +25,7 @@ import {
 } from "../../api/adminData";
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
-import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
-import { resolveAuditFkDisplay } from "../../utils/auditFkDisplay";
+import { formatAuditLog } from "../../utils/auditDisplay";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 import {
@@ -125,15 +124,6 @@ function formatLandlordDocumentCategoryLabel(category) {
   return LANDLORD_DOCUMENT_CATEGORY_LABELS[k] || k;
 }
 
-const LANDLORD_FIELD_LABELS = {
-  ...COMMON_AUDIT_FIELD_LABELS,
-  user_id: "Portal-Benutzer",
-  company_name: "Firmenname",
-  contact_name: "Kontaktperson",
-  website: "Website",
-  deleted_at: "Archivierung",
-};
-
 /** Display label for a landlord row (matches list/get shape). */
 function landlordRowLabelForUser(ll) {
   if (!ll) return "";
@@ -141,22 +131,6 @@ function landlordRowLabelForUser(ll) {
   const n = String(ll.contact_name || "").trim();
   if (c && n) return `${c} — ${n}`;
   return c || n || String(ll.email || "").trim() || ll.id;
-}
-
-function formatLandlordAuditDisplayValue(field, value, userNameById) {
-  if (field === "deleted_at") {
-    return value == null || value === "" ? "Aktiv" : "Archiviert";
-  }
-  if (field === "status") {
-    if (value == null || value === "") return "—";
-    const s = String(value).toLowerCase();
-    return s === "inactive" ? "Inaktiv" : "Aktiv";
-  }
-  if (field === "user_id") {
-    return resolveAuditFkDisplay(value, userNameById);
-  }
-  if (value == null || value === "") return "—";
-  return String(value);
 }
 
 function AdminLandlordDetailPage() {
@@ -1153,45 +1127,31 @@ function AdminLandlordDetailPage() {
                   (log.actor_email && String(log.actor_email).trim()) ||
                   null;
                 const actorSuffix = actor ? ` · ${actor}` : "";
+                const { summary, changes } = formatAuditLog(log, {
+                  entityType: "landlord",
+                  userNameById,
+                });
+                const isCreate = String(log.action || "").toLowerCase() === "create";
 
-                if (log.action === "create") {
-                  return (
-                    <li key={log.id}>
-                      <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">Verwaltung angelegt</p>
-                      <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                        {formatDateTime(log.created_at)}
-                        {actorSuffix}
-                      </p>
-                    </li>
-                  );
-                }
-
-                const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
-                const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
-                const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])];
-                const field = keys[0];
-                if (!field) {
-                  return (
-                    <li key={log.id}>
-                      <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">Eintrag</p>
-                      <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                        {formatDateTime(log.created_at)}
-                        {actorSuffix}
-                      </p>
-                    </li>
-                  );
-                }
-                const label = LANDLORD_FIELD_LABELS[field] || field;
-                const oldD = formatLandlordAuditDisplayValue(field, ov[field], userNameById);
-                const newD = formatLandlordAuditDisplayValue(field, nv[field], userNameById);
                 return (
                   <li key={log.id}>
-                    <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">
-                      <span className="font-semibold">{label} geändert:</span>{" "}
-                      <span className="font-medium tabular-nums">{oldD}</span>
-                      <span className="mx-1 text-[#64748b] dark:text-[#6b7a9a]">→</span>
-                      <span className="font-medium tabular-nums">{newD}</span>
+                    <p
+                      className={`text-sm text-[#0f172a] dark:text-[#eef2ff] ${isCreate ? "font-medium" : ""}`}
+                    >
+                      {summary}
                     </p>
+                    {changes.length > 0 ? (
+                      <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
+                        {changes.map((c, idx) => (
+                          <li key={idx}>
+                            <span className="font-semibold">{c.label}:</span>{" "}
+                            <span className="tabular-nums">{c.old}</span>
+                            <span className="mx-1 text-[#64748b] dark:text-[#6b7a9a]">→</span>
+                            <span className="tabular-nums">{c.new}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                     <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                       {formatDateTime(log.created_at)}
                       {actorSuffix}
