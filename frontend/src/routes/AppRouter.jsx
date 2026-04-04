@@ -47,6 +47,7 @@ import TenantTenanciesPage from "../pages/tenant/TenantTenanciesPage";
 import TenantInvoicesPage from "../pages/tenant/TenantInvoicesPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import VerifyEmailPage from "../pages/VerifyEmailPage";
 import LandlordLayout from "../components/landlord/LandlordLayout";
 import LandlordLoginPage from "../pages/landlord/LandlordLoginPage";
 import LandlordOverviewPage from "../pages/landlord/LandlordOverviewPage";
@@ -91,6 +92,7 @@ export default function AppRouter() {
             <Route path="/" element={<HomePage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/apartments" element={<ApartmentsPage />} />
             <Route path="/wohnungen/:city" element={<ApartmentsPage />} />
             <Route path="/apartments/:id" element={<ApartmentDetailPage />} />

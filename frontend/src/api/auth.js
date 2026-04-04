@@ -40,6 +40,37 @@ export async function login(email, password) {
 }
 
 /**
+ * POST /auth/verify-email — confirm email with one-time token from the verification link.
+ */
+export async function verifyEmail(token) {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: String(token).trim() }),
+    credentials: CREDENTIALS,
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+  if (response.status === 429) {
+    throw new Error("Zu viele Anfragen. Bitte versuche es später erneut.");
+  }
+  if (!response.ok) {
+    const message =
+      data.detail != null
+        ? typeof data.detail === "string"
+          ? data.detail
+          : JSON.stringify(data.detail)
+        : `Fehler ${response.status}`;
+    throw new Error(message);
+  }
+  return data;
+}
+
+/**
  * POST /auth/resend-verification — generic success body (no account enumeration).
  */
 export async function resendVerificationEmail(email) {
