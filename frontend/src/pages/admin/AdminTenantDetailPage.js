@@ -26,7 +26,8 @@ import {
   normalizeRoom,
 } from "../../api/adminData";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
-import { formatAuditLog } from "../../utils/auditDisplay";
+import { formatAuditLog, auditActionLabel, auditActorDisplay } from "../../utils/auditDisplay";
+import { AuditChangeRows } from "../../components/admin/AuditLogVisual";
 import { getDisplayUnitId } from "../../utils/unitDisplayId";
 import {
   UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE,
@@ -161,8 +162,8 @@ function formatTenantAuditChf(n) {
 function auditLogToTenantHistoryEvent(log) {
   const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
   const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
-  const author = log.actor_name || log.actor_email || "—";
-  const { summary } = formatAuditLog(log, { entityType: "tenant" });
+  const author = auditActorDisplay(log) || "—";
+  const { summary, changes } = formatAuditLog(log, { entityType: "tenant" });
   let action_type = "audit_tenant";
   if (nv.document_uploaded != null && String(nv.document_uploaded).trim() !== "") {
     action_type = "audit_document";
@@ -176,6 +177,8 @@ function auditLogToTenantHistoryEvent(log) {
   return {
     id: `audit-${log.id}`,
     summary,
+    audit_changes: changes,
+    audit_action: log.action,
     created_at: log.created_at,
     author_name: author,
     action_type,
@@ -676,19 +679,43 @@ function TenantHistoryBlock({ events }) {
               ev.action_type === "tenant_updated" &&
               ev.field_name &&
               (ev.old_value != null || ev.new_value != null);
+            const isAudit = String(ev.id || "").startsWith("audit-");
+            const auditChanges = isAudit && Array.isArray(ev.audit_changes) ? ev.audit_changes : [];
             return (
               <li
                 key={ev.id}
                 className="border-b border-black/10 py-3 last:border-b-0 dark:border-white/[0.05]"
               >
                 <div className="text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">{ev.summary}</div>
-                {showDiff ? (
-                  <div className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                    {ev.old_value ?? "—"} → {ev.new_value ?? "—"}
+                {auditChanges.length > 0 ? (
+                  <AuditChangeRows changes={auditChanges} listClassName="!mt-2" />
+                ) : null}
+                {!auditChanges.length && showDiff ? (
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div>
+                      <div className="text-[9px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
+                        Alt
+                      </div>
+                      <div className="mt-0.5 rounded-md border border-amber-200/80 bg-amber-50/90 px-2 py-1.5 text-[12px] text-amber-950 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-100">
+                        {ev.old_value ?? "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
+                        Neu
+                      </div>
+                      <div className="mt-0.5 rounded-md border border-emerald-200/80 bg-emerald-50/90 px-2 py-1.5 text-[12px] text-emerald-950 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-100">
+                        {ev.new_value ?? "—"}
+                      </div>
+                    </div>
                   </div>
                 ) : null}
-                <div className="mt-1.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                  {formatDateTime(ev.created_at)} · {ev.author_name || "—"}
+                <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
+                  {formatDateTime(ev.created_at)}
+                  {isAudit && ev.audit_action != null && String(ev.audit_action) !== ""
+                    ? ` · ${auditActionLabel(ev.audit_action)}`
+                    : ""}
+                  {` · ${ev.author_name || "—"}`}
                 </div>
               </li>
             );

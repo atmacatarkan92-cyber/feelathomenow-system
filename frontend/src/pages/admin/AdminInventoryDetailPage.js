@@ -13,7 +13,8 @@ import {
   deleteInventoryAssignment,
   normalizeUnit,
 } from "../../api/adminData";
-import { formatAuditLog } from "../../utils/auditDisplay";
+import { formatAuditLog, auditActorDisplay } from "../../utils/auditDisplay";
+import { AdminAuditTimeline, AdminAuditTimelineEntry } from "../../components/admin/AuditLogVisual";
 
 function formatChf(value) {
   if (value == null || value === "") return "—";
@@ -58,13 +59,6 @@ function unitLabel(u) {
   const place = nu.place || [nu.postal_code, nu.city].filter(Boolean).join(" ");
   const line = [t, place].filter(Boolean).join(" · ");
   return line || nu.id || "—";
-}
-
-function formatAuditTimestamp(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return String(iso);
-  return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
 }
 
 const emptyItemForm = () => ({
@@ -672,40 +666,24 @@ export default function AdminInventoryDetailPage() {
             ) : auditLogs.length === 0 ? (
               <p className="mt-3 text-sm text-[#64748b] dark:text-[#93a4bf]">Keine Einträge im Verlauf.</p>
             ) : (
-              <ul className="ml-1 mt-4 space-y-4 border-l border-black/10 pl-4 dark:border-white/[0.08]">
+              <AdminAuditTimeline className="mt-4">
                 {auditLogs.map((log) => {
-                  const actor =
-                    (log.actor_name && String(log.actor_name).trim()) ||
-                    (log.actor_email && String(log.actor_email).trim()) ||
-                    null;
                   const { summary, changes } = formatAuditLog(log, {
                     entityType: "inventory_item",
                     unitById,
                   });
                   return (
-                    <li key={log.id} className="relative">
-                      <span
-                        className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-[#5b8cff]"
-                        aria-hidden
-                      />
-                      <p className="text-sm font-medium text-[#0f172a] dark:text-[#f8fafc]">{summary}</p>
-                      {changes.length > 0 ? (
-                        <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[12px] text-[#0f172a] dark:text-[#eef2ff]">
-                          {changes.map((c, idx) => (
-                            <li key={idx}>
-                              <span className="font-semibold">{c.label}:</span> {c.old} → {c.new}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                      <p className="mt-1 text-[11px] text-[#64748b] dark:text-[#93a4bf]">
-                        {formatAuditTimestamp(log.created_at)}
-                        {actor ? ` · ${actor}` : ""}
-                      </p>
-                    </li>
+                    <AdminAuditTimelineEntry
+                      key={log.id}
+                      summary={summary}
+                      changes={changes}
+                      createdAt={log.created_at}
+                      actor={auditActorDisplay(log)}
+                      action={log.action}
+                    />
                   );
                 })}
-              </ul>
+              </AdminAuditTimeline>
             )}
           </section>
         </div>

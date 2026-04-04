@@ -14,7 +14,8 @@ import {
   normalizeRoom,
   patchAdminPropertyManager,
 } from "../../api/adminData";
-import { formatAuditLog } from "../../utils/auditDisplay";
+import { formatAuditLog, auditActorDisplay } from "../../utils/auditDisplay";
+import { AdminAuditTimeline, AdminAuditTimelineEntry } from "../../components/admin/AuditLogVisual";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
@@ -654,42 +655,25 @@ function AdminPropertyManagerDetailPage() {
         ) : auditLogs.length === 0 ? (
           <p className={pmTh.pMuted}>Noch keine Einträge im Audit-Protokoll.</p>
         ) : (
-          <ul className={pmTh.auditBorder}>
+          <AdminAuditTimeline>
             {auditLogs.map((log) => {
-              const actor =
-                (log.actor_name && String(log.actor_name).trim()) ||
-                (log.actor_email && String(log.actor_email).trim()) ||
-                null;
-              const actorSuffix = actor ? ` · ${actor}` : "";
               const { summary, changes } = formatAuditLog(log, {
                 entityType: "property_manager",
                 landlordNameById,
               });
-              const isCreate = String(log.action || "").toLowerCase() === "create";
-
               return (
-                <li key={log.id}>
-                  <p className={`text-sm ${isCreate ? "font-medium " : ""}${pmTh.body}`}>{summary}</p>
-                  {changes.length > 0 ? (
-                    <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[13px]">
-                      {changes.map((c, idx) => (
-                        <li key={idx} className={pmTh.body}>
-                          <span className="font-semibold">{c.label}:</span>{" "}
-                          <span className="tabular-nums">{c.old}</span>
-                          <span className={`mx-1 ${pmTh.mutedInline}`}>→</span>
-                          <span className="tabular-nums">{c.new}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  <p className={pmTh.auditMeta}>
-                    {formatDateTime(log.created_at)}
-                    {actorSuffix}
-                  </p>
-                </li>
+                <AdminAuditTimelineEntry
+                  key={log.id}
+                  summary={summary}
+                  changes={changes}
+                  createdAt={log.created_at}
+                  actor={auditActorDisplay(log)}
+                  action={log.action}
+                  metaClassName={isDark ? "text-xs text-[#6b7a9a]" : "text-xs text-[#64748b]"}
+                />
               );
             })}
-          </ul>
+          </AdminAuditTimeline>
         )}
       </section>
 

@@ -85,6 +85,19 @@ export function formatAuditTimestamp(iso) {
   });
 }
 
+/** Display-only: best-effort actor line for audit UIs (no API changes). */
+export function auditActorDisplay(log) {
+  if (!log) return null;
+  const n = log.actor_name && String(log.actor_name).trim();
+  if (n) return n;
+  const e = log.actor_email && String(log.actor_email).trim();
+  if (e) return e;
+  if (log.actor_user_id != null && String(log.actor_user_id).trim() !== "") {
+    return String(log.actor_user_id).trim();
+  }
+  return null;
+}
+
 function auditFallbackIdDisplay(value) {
   if (value === null || value === undefined || value === "") return "—";
   const s = String(value);
@@ -547,7 +560,7 @@ export function formatInventoryAuditResult(log, unitById) {
       ch.push({ label: "Menge", old: formatAuditScalar(o.quantity), new: formatAuditScalar(n.quantity) });
     }
     if (!auditValuesEqual(o.room_id, n.room_id)) {
-      ch.push({ label: "Room", old: formatAuditScalar(o.room_id), new: formatAuditScalar(n.room_id) });
+      ch.push({ label: "Zimmer (ID)", old: formatAuditScalar(o.room_id), new: formatAuditScalar(n.room_id) });
     }
     return {
       summary: ch.length ? "Zuordnung bearbeitet" : "Zuordnung bearbeitet",

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchPlatformAuditLogs } from "../../api/adminData";
-import { auditActionLabel, formatAuditLog } from "../../utils/auditDisplay";
+import { auditActionLabel, formatAuditLog, formatAuditTimestamp } from "../../utils/auditDisplay";
+import { AuditChangeRows } from "../../components/admin/AuditLogVisual";
 import { buildLoginDeviceStatusMap, loginDeviceStatusLabel } from "../../utils/loginDeviceAuditStatus";
 import { buildSuspiciousLoginAuditMap } from "../../utils/suspiciousLoginAudit";
 import { getDeviceLabelFromUserAgent } from "../../utils/userAgentLabel";
@@ -132,15 +133,24 @@ function PlatformAuditLogsPage() {
                 Schliessen
               </button>
             </div>
+            {selectedLogFormatted ? (
+              <div className="mb-4 rounded-[10px] border border-black/[0.08] bg-[#f8fafc] p-3 dark:border-white/[0.1] dark:bg-[#0c1018]">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                  Inhalt
+                </div>
+                <p className={`mt-1 ${detailTextClass}`}>{selectedLogFormatted.summary}</p>
+                {selectedLogFormatted.changes.length > 0 ? (
+                  <AuditChangeRows changes={selectedLogFormatted.changes} listClassName="mt-3" />
+                ) : null}
+              </div>
+            ) : null}
             <dl className="space-y-3 text-[13px]">
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
                   Zeit
                 </dt>
                 <dd className={detailTextClass}>
-                  {selectedLog.created_at
-                    ? new Date(selectedLog.created_at).toLocaleString()
-                    : "—"}
+                  {formatAuditTimestamp(selectedLog.created_at)}
                 </dd>
               </div>
               <div>
@@ -157,32 +167,6 @@ function PlatformAuditLogsPage() {
                 </dt>
                 <dd className={detailTextClass}>{auditActionLabel(selectedLog.action)}</dd>
               </div>
-              {selectedLogFormatted ? (
-                <>
-                  <div>
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                      Zusammenfassung
-                    </dt>
-                    <dd className={detailTextClass}>{selectedLogFormatted.summary}</dd>
-                  </div>
-                  {selectedLogFormatted.changes.length > 0 ? (
-                    <div>
-                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                        Änderungen
-                      </dt>
-                      <dd className={detailTextClass}>
-                        <ul className="mt-1 list-inside list-disc space-y-1 text-[12px]">
-                          {selectedLogFormatted.changes.map((c, idx) => (
-                            <li key={idx}>
-                              <span className="font-semibold">{c.label}:</span> {c.old} → {c.new}
-                            </li>
-                          ))}
-                        </ul>
-                      </dd>
-                    </div>
-                  ) : null}
-                </>
-              ) : null}
               {selectedLog.action === "login" &&
               (suspiciousLoginById.get(String(selectedLog.id))?.suspicious ? (
                 <div>
@@ -208,7 +192,7 @@ function PlatformAuditLogsPage() {
               </div>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                  entity_type
+                  Entitätstyp
                 </dt>
                 <dd className={detailTextClass}>
                   {selectedLog.target_type != null && selectedLog.target_type !== ""
@@ -218,7 +202,7 @@ function PlatformAuditLogsPage() {
               </div>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                  entity_id
+                  Entitäts-ID
                 </dt>
                 <dd className={detailTextClass}>
                   {selectedLog.target_id != null && selectedLog.target_id !== ""
@@ -278,7 +262,7 @@ function PlatformAuditLogsPage() {
               ) : null}
               <details className="rounded-[8px] border border-black/10 bg-[#f8fafc] p-2 dark:border-white/[0.08] dark:bg-[#0c1018]">
                 <summary className="cursor-pointer text-[12px] font-semibold text-[#0f172a] dark:text-[#e2e8f0]">
-                  Rohdaten (JSON)
+                  Rohdaten / technische Details
                 </summary>
                 <div className="mt-2 space-y-2">
                   <div>
@@ -369,12 +353,14 @@ function PlatformAuditLogsPage() {
                     className="cursor-pointer border-b border-black/[0.06] hover:bg-black/[0.03] dark:border-white/[0.05] dark:hover:bg-white/[0.04]"
                   >
                     <td className="whitespace-nowrap px-3 py-2 align-top text-[11px] text-[#64748b] dark:text-[#94a3b8]">
-                      {row.created_at ? new Date(row.created_at).toLocaleString() : "—"}
+                      {formatAuditTimestamp(row.created_at)}
                     </td>
                     <td className="max-w-[180px] px-3 py-2 align-top break-all">
                       {row.actor_email || row.actor_user_id || "—"}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 align-top font-medium">{row.action}</td>
+                    <td className="whitespace-nowrap px-3 py-2 align-top font-medium">
+                      {auditActionLabel(row.action)}
+                    </td>
                     <td className="max-w-[200px] px-3 py-2 align-top break-all">
                       {row.organization_name || row.organization_id || "—"}
                     </td>

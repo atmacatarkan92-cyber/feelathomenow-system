@@ -25,7 +25,8 @@ import {
 } from "../../api/adminData";
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
-import { formatAuditLog } from "../../utils/auditDisplay";
+import { formatAuditLog, auditActorDisplay } from "../../utils/auditDisplay";
+import { AdminAuditTimeline, AdminAuditTimelineEntry } from "../../components/admin/AuditLogVisual";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 import {
@@ -1120,46 +1121,25 @@ function AdminLandlordDetailPage() {
           ) : auditLogs.length === 0 ? (
             <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch keine Einträge im Audit-Protokoll.</p>
           ) : (
-            <ul className="ml-1 space-y-4 border-l-2 border-black/10 pl-4 dark:border-white/[0.08]">
+            <AdminAuditTimeline>
               {auditLogs.map((log) => {
-                const actor =
-                  (log.actor_name && String(log.actor_name).trim()) ||
-                  (log.actor_email && String(log.actor_email).trim()) ||
-                  null;
-                const actorSuffix = actor ? ` · ${actor}` : "";
                 const { summary, changes } = formatAuditLog(log, {
                   entityType: "landlord",
                   userNameById,
                 });
-                const isCreate = String(log.action || "").toLowerCase() === "create";
-
                 return (
-                  <li key={log.id}>
-                    <p
-                      className={`text-sm text-[#0f172a] dark:text-[#eef2ff] ${isCreate ? "font-medium" : ""}`}
-                    >
-                      {summary}
-                    </p>
-                    {changes.length > 0 ? (
-                      <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
-                        {changes.map((c, idx) => (
-                          <li key={idx}>
-                            <span className="font-semibold">{c.label}:</span>{" "}
-                            <span className="tabular-nums">{c.old}</span>
-                            <span className="mx-1 text-[#64748b] dark:text-[#6b7a9a]">→</span>
-                            <span className="tabular-nums">{c.new}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                      {formatDateTime(log.created_at)}
-                      {actorSuffix}
-                    </p>
-                  </li>
+                  <AdminAuditTimelineEntry
+                    key={log.id}
+                    summary={summary}
+                    changes={changes}
+                    createdAt={log.created_at}
+                    actor={auditActorDisplay(log)}
+                    action={log.action}
+                    metaClassName="text-[11px] text-[#64748b] dark:text-[#6b7a9a]"
+                  />
                 );
               })}
-            </ul>
+            </AdminAuditTimeline>
           )}
         </section>
       </div>

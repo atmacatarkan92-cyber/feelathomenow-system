@@ -65,7 +65,8 @@ import {
   aggregateOneTimeTotalFromRowArrays,
 } from "../../utils/tenancyRevenueBreakdown";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
-import { formatAuditTimestamp, auditActionLabel, getAuditEntryDisplayLines } from "../../utils/auditDisplay";
+import { formatAuditLog, auditActorDisplay } from "../../utils/auditDisplay";
+import { AdminAuditTimeline, AdminAuditTimelineEntry } from "../../components/admin/AuditLogVisual";
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -3208,35 +3209,24 @@ function AdminUnitDetailPage() {
           ) : auditLogs.length === 0 ? (
             <p className="text-[10px] text-slate-600 dark:text-[#6b7a9a]">Keine Aktivitäten vorhanden</p>
           ) : (
-            <ul className="space-y-0 border-l border-slate-200 dark:border-white/[0.07] pl-4 ml-1">
-              {auditLogs.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="relative pb-4 last:pb-0 pl-2 -ml-px border-l border-transparent"
-                >
-                  <span
-                    className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#fb923c]"
-                    aria-hidden
+            <AdminAuditTimeline>
+              {auditLogs.map((entry) => {
+                const { summary, changes } = formatAuditLog(entry, {
+                  entityType: "unit",
+                  resolvers: auditResolvers,
+                });
+                return (
+                  <AdminAuditTimelineEntry
+                    key={entry.id}
+                    summary={summary}
+                    changes={changes}
+                    createdAt={entry.created_at}
+                    actor={auditActorDisplay(entry)}
+                    action={entry.action}
                   />
-                  <p className="text-xs text-slate-600 dark:text-[#6b7a9a]">
-                    {formatAuditTimestamp(entry.created_at)}
-                  </p>
-                  <div className="mt-0.5 space-y-1 font-medium text-slate-800 dark:text-[#eef2ff]">
-                    {getAuditEntryDisplayLines(entry, auditResolvers).map((line, idx) => (
-                      <p key={idx}>{line}</p>
-                    ))}
-                  </div>
-                  <p className="text-sm text-slate-600 dark:text-[#6b7a9a] mt-1">
-                    {auditActionLabel(entry.action)}
-                    {" · "}
-                    {entry.actor_name ||
-                      entry.actor_email ||
-                      entry.actor_user_id ||
-                      "—"}
-                  </p>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </AdminAuditTimeline>
           )}
         </SectionCard>
 
