@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { login as apiLogin, getMe } from "../../api/auth";
+import LoginEmailVerificationBlock from "../../components/auth/LoginEmailVerificationBlock";
+import { LOGIN_DETAIL_EMAIL_NOT_VERIFIED, login as apiLogin, getMe } from "../../api/auth";
 
 const cardStyle = {
   maxWidth: "400px",
@@ -36,11 +37,13 @@ function TenantLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
+    setEmailNotVerified(false);
     setSubmitting(true);
 
     apiLogin(email, password)
@@ -66,7 +69,13 @@ function TenantLoginPage() {
         }
       })
       .catch((err) => {
-        setError(err.message || "Anmeldung fehlgeschlagen.");
+        if (err.message === LOGIN_DETAIL_EMAIL_NOT_VERIFIED) {
+          setEmailNotVerified(true);
+          setError("");
+        } else {
+          setEmailNotVerified(false);
+          setError(err.message || "Anmeldung fehlgeschlagen.");
+        }
       })
       .finally(() => setSubmitting(false));
   };
@@ -86,7 +95,10 @@ function TenantLoginPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailNotVerified(false);
+              }}
               required
               autoComplete="email"
               placeholder="ihre@email.ch"
@@ -108,6 +120,7 @@ function TenantLoginPage() {
           {error && (
             <p style={{ color: "#B91C1C", margin: 0, fontSize: "14px" }}>{error}</p>
           )}
+          <LoginEmailVerificationBlock email={email} visible={emailNotVerified} />
           <button
             type="submit"
             disabled={submitting}

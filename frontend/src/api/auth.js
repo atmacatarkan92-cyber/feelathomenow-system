@@ -8,6 +8,9 @@ import { setAccessToken, clearAccessToken } from "../authStore";
 
 const CREDENTIALS = "include";
 
+/** Backend `detail` when login is blocked until email is verified (POST /auth/login 403). */
+export const LOGIN_DETAIL_EMAIL_NOT_VERIFIED = "email_not_verified";
+
 export async function login(email, password) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -32,6 +35,37 @@ export async function login(email, password) {
   }
   if (data.access_token) {
     setAccessToken(data.access_token);
+  }
+  return data;
+}
+
+/**
+ * POST /auth/resend-verification — generic success body (no account enumeration).
+ */
+export async function resendVerificationEmail(email) {
+  const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email.trim() }),
+    credentials: CREDENTIALS,
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+  if (response.status === 429) {
+    throw new Error("Zu viele Anfragen. Bitte versuche es später erneut.");
+  }
+  if (!response.ok) {
+    const message =
+      data.detail != null
+        ? typeof data.detail === "string"
+          ? data.detail
+          : JSON.stringify(data.detail)
+        : `Fehler ${response.status}`;
+    throw new Error(message);
   }
   return data;
 }
