@@ -6,8 +6,8 @@ Revises: 066_inventory
 
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import text
 
 revision: str = "067_inventory_supplier_fields"
 down_revision: Union[str, None] = "066_inventory"
@@ -16,16 +16,24 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "inventory_items",
-        sa.Column("supplier_article_number", sa.String(length=500), nullable=True),
+    op.execute(
+        text(
+            """
+            ALTER TABLE inventory_items
+            ADD COLUMN IF NOT EXISTS supplier_article_number VARCHAR(200) NULL
+            """
+        )
     )
-    op.add_column(
-        "inventory_items",
-        sa.Column("product_url", sa.Text(), nullable=True),
+    op.execute(
+        text(
+            """
+            ALTER TABLE inventory_items
+            ADD COLUMN IF NOT EXISTS product_url VARCHAR(500) NULL
+            """
+        )
     )
 
 
 def downgrade() -> None:
-    op.drop_column("inventory_items", "product_url")
-    op.drop_column("inventory_items", "supplier_article_number")
+    op.execute(text("ALTER TABLE inventory_items DROP COLUMN IF EXISTS product_url"))
+    op.execute(text("ALTER TABLE inventory_items DROP COLUMN IF EXISTS supplier_article_number"))
