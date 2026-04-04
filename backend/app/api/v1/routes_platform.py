@@ -11,7 +11,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -271,6 +271,7 @@ def platform_impersonate(
     status_code=status.HTTP_201_CREATED,
 )
 def create_organization(
+    request: Request,
     body: PlatformCreateOrganizationBody,
     current_user: User = Depends(require_platform_admin),
     session: Session = Depends(get_db_session),
@@ -312,5 +313,6 @@ def create_organization(
             session,
             organization_id=str(result.organization.id),
             admin_email=body.admin_email,
+            request_id=getattr(request.state, "request_id", None),
         )
     return response

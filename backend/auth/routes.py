@@ -8,7 +8,10 @@ from fastapi.responses import JSONResponse
 from sqlmodel import select
 
 from app.core.rate_limit import limiter
-from app.services.email_verification_helpers import process_resend_verification_email
+from app.services.email_verification_helpers import (
+    process_resend_verification_email,
+    safe_log,
+)
 from auth.dependencies import get_current_user, get_db_session
 from auth.schemas import (
     ChangePasswordRequest,
@@ -445,9 +448,26 @@ def resend_verification(
     email_norm = str(body.email).strip().lower()
     if not email_norm:
         return GenericSuccessResponse(detail=generic_detail)
+    rid = getattr(request.state, "request_id", None)
+    safe_log(
+        logger.info,
+        "event=email_verification_resend_requested email=%s request_id=%s",
+        email_norm,
+        rid or "-",
+    )
     try:
-        process_resend_verification_email(session, email_norm=email_norm)
-    except Exception:
+        process_resend_verification_email(
+            session,
+            email_norm=email_norm,
+            request_id=rid,
+        )
+    except Exception as e:
+        safe_log(
+            logger.warning,
+            "event=email_verification_resend_failed error_type=%s user_id=%s",
+            type(e).__name__,
+            "-",
+        )
         logger.exception("resend_verification_failed")
     return GenericSuccessResponse(detail=generic_detail)
 
@@ -469,6 +489,7 @@ def verify_email(
     now = datetime.now(timezone.utc)
     raw = body.token.strip()
     token_hash = hash_password_reset_token(raw)
+    rid = getattr(request.state, "request_id", None)
 
     apply_pg_email_verification_token_hash_lookup(session, token_hash)
     try:
@@ -481,6 +502,11 @@ def verify_email(
         apply_pg_email_verification_token_hash_lookup(session, None)
 
     if row is None:
+        safe_log(
+            logger.info,
+            "event=email_verification_failed reason=invalid request_id=%s",
+            rid or "-",
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired token",
@@ -490,7 +516,18 @@ def verify_email(
         apply_pg_user_context(session, str(row.user_id))
         user = session.get(User, row.user_id)
         if user is not None and user.email_verified_at is not None:
+            safe_log(
+                logger.info,
+                "event=email_verified user_id=%s organization_id=%s",
+                str(user.id),
+                str(user.organization_id),
+            )
             return GenericSuccessResponse(detail="Email already verified")
+        safe_log(
+            logger.info,
+            "event=email_verification_failed reason=used request_id=%s",
+            rid or "-",
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired token",
@@ -500,6 +537,11 @@ def verify_email(
     if exp.tzinfo is None:
         exp = exp.replace(tzinfo=timezone.utc)
     if exp <= now:
+        safe_log(
+            logger.info,
+            "event=email_verification_failed reason=expired request_id=%s",
+            rid or "-",
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired token",
@@ -508,6 +550,11 @@ def verify_email(
     apply_pg_user_context(session, str(row.user_id))
     user = session.get(User, row.user_id)
     if user is None:
+        safe_log(
+            logger.info,
+            "event=email_verification_failed reason=invalid request_id=%s",
+            rid or "-",
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired token",
@@ -518,6 +565,12 @@ def verify_email(
         row.used_at = now
         session.add(row)
         session.commit()
+        safe_log(
+            logger.info,
+            "event=email_verified user_id=%s organization_id=%s",
+            str(user.id),
+            str(user.organization_id),
+        )
         return GenericSuccessResponse(detail="Email already verified")
 
     user.email_verified_at = now
@@ -525,6 +578,12 @@ def verify_email(
     row.used_at = now
     session.add(row)
     session.commit()
+    safe_log(
+        logger.info,
+        "event=email_verified user_id=%s organization_id=%s",
+        str(user.id),
+        str(user.organization_id),
+    )
     return GenericSuccessResponse(detail="Email verified")
 
 

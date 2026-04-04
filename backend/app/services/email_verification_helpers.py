@@ -23,6 +23,14 @@ from email_service import EmailServiceError, send_email_verification_email
 logger = logging.getLogger(__name__)
 
 
+def safe_log(logger_fn, *args, **kwargs) -> None:
+    """Never raise from logging (observability must not break request flow)."""
+    try:
+        logger_fn(*args, **kwargs)
+    except Exception:
+        pass
+
+
 def _ttl_minutes() -> int:
     try:
         v = int(os.environ.get("EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES", "1440"))
@@ -36,6 +44,7 @@ def try_create_and_send_email_verification_for_org_admin(
     *,
     organization_id: str,
     admin_email: str,
+    request_id: str | None = None,
 ) -> None:
     """
     Call only after org + initial admin have committed successfully.
@@ -73,16 +82,35 @@ def try_create_and_send_email_verification_for_org_admin(
     )
     session.commit()
 
+    safe_log(
+        logger.info,
+        "event=email_verification_token_created user_id=%s organization_id=%s token_expires_at=%s request_id=%s",
+        str(user.id),
+        organization_id,
+        expires_at.isoformat(),
+        request_id or "-",
+    )
+
     frontend_url = (os.environ.get("FRONTEND_URL") or "").strip() or "http://localhost:3000"
     base = frontend_url.rstrip("/")
     link = f"{base}/verify-email?token={raw}"
     try:
         send_email_verification_email(user.email, link)
     except EmailServiceError as e:
-        logger.warning("email_verification_send_failed user_id=%s: %s", user.id, e)
+        safe_log(
+            logger.warning,
+            "email_verification_send_failed user_id=%s: %s",
+            user.id,
+            e,
+        )
 
 
-def process_resend_verification_email(session: Session, *, email_norm: str) -> None:
+def process_resend_verification_email(
+    session: Session,
+    *,
+    email_norm: str,
+    request_id: str | None = None,
+) -> None:
     """
     For each active user with this email (case-insensitive) and email_verified_at IS NULL:
     remove pending verification tokens, insert a single new token, commit, then send email(s).
@@ -102,7 +130,7 @@ def process_resend_verification_email(session: Session, *, email_norm: str) -> N
     session.info.pop("rls_auth_unscoped", None)
     session.commit()
 
-    tokens_to_send: list[tuple[str, str]] = []
+    tokens_to_send: list[tuple[str, str, str, str]] = []
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(minutes=_ttl_minutes())
     frontend_url = (os.environ.get("FRONTEND_URL") or "").strip() or "http://localhost:3000"
@@ -112,12 +140,22 @@ def process_resend_verification_email(session: Session, *, email_norm: str) -> N
         if verified_at is not None:
             continue
         apply_pg_organization_context(session, org_id)
-        session.execute(
+        del_result = session.execute(
             delete(EmailVerificationToken).where(
                 EmailVerificationToken.user_id == user_id,
                 EmailVerificationToken.used_at.is_(None),
             )
         )
+        deleted_count = int(getattr(del_result, "rowcount", None) or 0)
+        if deleted_count > 0:
+            safe_log(
+                logger.info,
+                "event=email_verification_tokens_invalidated user_id=%s organization_id=%s deleted_count=%s request_id=%s",
+                user_id,
+                org_id,
+                deleted_count,
+                request_id or "-",
+            )
         raw = secrets.token_urlsafe(48)
         token_hash = hash_password_reset_token(raw)
         session.add(
@@ -129,13 +167,32 @@ def process_resend_verification_email(session: Session, *, email_norm: str) -> N
             )
         )
         session.flush()
-        tokens_to_send.append((user_email, raw))
+        safe_log(
+            logger.info,
+            "event=email_verification_token_created user_id=%s organization_id=%s token_expires_at=%s request_id=%s",
+            user_id,
+            org_id,
+            expires_at.isoformat(),
+            request_id or "-",
+        )
+        tokens_to_send.append((user_email, raw, user_id, org_id))
 
     session.commit()
 
-    for user_email, raw in tokens_to_send:
+    for user_email, raw, user_id, org_id in tokens_to_send:
         link = f"{base}/verify-email?token={raw}"
         try:
             send_email_verification_email(user_email, link)
+            safe_log(
+                logger.info,
+                "event=email_verification_resend_sent user_id=%s organization_id=%s",
+                user_id,
+                org_id,
+            )
         except EmailServiceError as e:
-            logger.warning("resend_verification_email_send_failed email=%s: %s", user_email, e)
+            safe_log(
+                logger.warning,
+                "event=email_verification_resend_failed error_type=%s user_id=%s",
+                type(e).__name__,
+                user_id,
+            )
