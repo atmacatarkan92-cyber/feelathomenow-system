@@ -7,20 +7,19 @@ Covers:
 - GET /api/admin/units with admin auth
 """
 
-from typing import Generator
 import os
+from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, create_engine, select
 
 from auth.dependencies import get_current_user, get_db_session
 from auth.security import hash_password
-from db.models import Organization, User, UserCredentials, UserRole
+from db.models import AuditLog, Organization, User, UserCredentials, UserRole
 from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
 from tests.org_scoped_cleanup import delete_org_scoped_auth_and_users
-
 
 # ---------- Test database setup for /auth/login ----------
 
@@ -125,6 +124,36 @@ class TestAuthLogin:
         # Refresh token is sent in HttpOnly cookie (default name fah_refresh_token)
         cookies = response.cookies
         assert cookies.get("fah_refresh_token") is not None
+
+    def test_login_success_creates_audit_log_with_request_context(
+        self,
+        client: TestClient,
+        override_auth_db,
+        admin_user: User,
+        auth_db_session: Session,
+    ):
+        ua = "pytest-login-audit/1.0"
+        response = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "test-password"},
+            headers={"User-Agent": ua},
+        )
+        assert response.status_code == 200
+        assert response.json().get("access_token")
+
+        apply_pg_organization_context(auth_db_session, str(admin_user.organization_id))
+        row = auth_db_session.exec(
+            select(AuditLog)
+            .where(AuditLog.actor_user_id == str(admin_user.id))
+            .where(AuditLog.action == "login")
+            .order_by(AuditLog.created_at.desc())
+        ).first()
+        assert row is not None
+        assert row.actor_email == admin_user.email
+        assert str(row.organization_id) == str(admin_user.organization_id)
+        meta = row.extra_metadata or {}
+        assert meta.get("user_agent") == ua
+        assert "ip_address" in meta
 
     def test_login_wrong_password_returns_401(
         self,

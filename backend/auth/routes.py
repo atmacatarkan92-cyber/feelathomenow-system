@@ -1,3 +1,4 @@
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -6,33 +7,35 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlmodel import select
 
-from db.models import User, UserCredentials, RefreshToken, PasswordResetToken
+from app.core.rate_limit import limiter
+from auth.dependencies import get_current_user, get_db_session
 from auth.schemas import (
     ChangePasswordRequest,
     ChangePasswordResponse,
     ForgotPasswordRequest,
     GenericSuccessResponse,
     LoginRequest,
-    Token,
     ResetPasswordRequest,
+    Token,
     UserMe,
 )
 from auth.security import (
-    verify_password,
-    hash_password,
     create_access_token,
     create_refresh_token_value,
-    hash_refresh_token,
-    hash_password_reset_token,
+    get_cookie_samesite,
+    get_cookie_secure,
     get_refresh_cookie_name,
     get_refresh_token_expire_days,
-    get_cookie_secure,
-    get_cookie_samesite,
+    hash_password,
+    hash_password_reset_token,
+    hash_refresh_token,
     new_password_is_acceptable,
-    password_version_ts,
     password_meets_policy_for_new_account,
+    password_version_ts,
+    verify_password,
 )
-from auth.dependencies import get_current_user, get_db_session
+from db.models import PasswordResetToken, RefreshToken, User, UserCredentials
+from db.platform_audit_log import log_audit_event
 from db.rls import (
     apply_pg_auth_unscoped_user_lookup,
     apply_pg_organization_context,
@@ -40,11 +43,11 @@ from db.rls import (
     apply_pg_refresh_token_hash_lookup,
     apply_pg_user_context,
 )
-from app.core.rate_limit import limiter
-from email_service import send_password_reset_email, EmailServiceError
-
+from email_service import EmailServiceError, send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
 
 COOKIE_PATH = "/"
 COOKIE_HTTPONLY = True
@@ -145,6 +148,26 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
 
     user.last_login_at = datetime.now(timezone.utc)
     session.add(user)
+
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    try:
+        log_audit_event(
+            session,
+            actor=user,
+            action="login",
+            organization_id=user.organization_id,
+            metadata={
+                "ip_address": ip_address,
+                "user_agent": user_agent,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "event=login_audit_log_failed user_id=%s",
+            str(user.id),
+        )
+
     session.commit()
 
     role_str = getattr(user.role, "value", user.role) if getattr(user, "role", None) is not None else ""
