@@ -3,6 +3,7 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { getTokenPayload } from "../../authStore";
 
 function AdminLayout() {
   const location = useLocation();
@@ -24,6 +25,9 @@ function AdminLayout() {
     : { scrollbarColor: "rgba(15,23,42,0.2) #f8fafc" };
   const loadingTextClass = isDark ? "text-[#6b7a9a]" : "text-[#64748b]";
 
+  const payload = getTokenPayload();
+  const isImpersonatingFromToken = !!payload?.impersonated_by;
+
   const supportBanner =
     isImpersonating && !isLoginPage ? (
       <div
@@ -34,9 +38,20 @@ function AdminLayout() {
         }
       >
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <span>
-            Du befindest dich im Support-Modus (Organisation:{" "}
-            <strong>{impersonatedOrganizationName || "—"}</strong>)
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span>
+              🛠 Support-Modus
+              {isImpersonatingFromToken && payload?.impersonator_email
+                ? ` — von ${payload.impersonator_email}`
+                : null}
+            </span>
+            <span
+              className={
+                isDark ? "text-[11px] text-[#fde68a]/80" : "text-[11px] text-amber-950/80"
+              }
+            >
+              Organisation: <strong>{impersonatedOrganizationName || "—"}</strong>
+            </span>
           </span>
           <button
             type="button"

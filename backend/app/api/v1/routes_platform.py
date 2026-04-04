@@ -186,6 +186,10 @@ def platform_impersonate(
             "imp": True,
             "imp_org": str(org.id),
             "pv": password_version_ts(creds.password_changed_at),
+            "impersonated_by": str(current_user.id),
+            "impersonator_email": current_user.email,
+            "is_impersonation": True,
+            "impersonation_started_at": datetime.utcnow().isoformat(),
         }
     )
     return Token(access_token=access_token)

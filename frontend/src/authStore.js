@@ -16,3 +16,20 @@ export function setAccessToken(token) {
 export function clearAccessToken() {
   _accessToken = null;
 }
+
+/** Decode JWT payload (middle segment). Tries localStorage `vantio_token`, then in-memory token. */
+export function getTokenPayload() {
+  let token = null;
+  if (typeof localStorage !== "undefined") {
+    token = localStorage.getItem("vantio_token");
+  }
+  if (!token) {
+    token = getAccessToken();
+  }
+  if (!token) return null;
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
+  }
+}
