@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   fetchAdminInventoryItem,
   fetchInventoryItemAssignments,
   fetchAdminUnits,
   fetchAdminRooms,
+  fetchAdminAuditLogs,
   updateInventoryItem,
   deleteInventoryItem,
   createInventoryAssignment,
@@ -50,6 +51,86 @@ function unitLabel(u) {
   return line || nu.id || "—";
 }
 
+const INVENTORY_AUDIT_LABELS = {
+  name: "Name",
+  category: "Kategorie",
+  brand: "Marke",
+  total_quantity: "Gesamtmenge",
+  condition: "Zustand",
+  status: "Status",
+  purchase_price_chf: "Anschaffung CHF",
+  purchase_date: "Kaufdatum",
+  purchased_from: "Gekauft bei",
+  supplier_article_number: "Lieferanten-Artikelnr.",
+  product_url: "Produkt-URL",
+  notes: "Notizen",
+};
+
+function formatAuditTimestamp(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
+}
+
+function formatAuditScalar(v) {
+  if (v == null || v === "") return "—";
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s.length > 120 ? `${s.slice(0, 117)}…` : s;
+}
+
+/**
+ * Human-readable primary line for inventory_item audit rows (matches admin audit_log shapes).
+ */
+function inventoryAuditPrimaryLine(log, unitById) {
+  const a = String(log.action || "").toLowerCase();
+  const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
+  const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
+
+  if (a === "create" && nv.inventory_assignment) {
+    const asg = nv.inventory_assignment;
+    const u = unitById.get(String(asg.unit_id));
+    const ul = u ? unitLabel(u) : String(asg.unit_id || "").slice(0, 12);
+    return `Zuordnung hinzugefügt · ${ul} · Menge ${asg.quantity ?? "—"}`;
+  }
+  if (a === "delete" && ov.inventory_assignment && !ov.name && !ov.inventory_number) {
+    const asg = ov.inventory_assignment;
+    const u = unitById.get(String(asg.unit_id));
+    const ul = u ? unitLabel(u) : String(asg.unit_id || "").slice(0, 12);
+    return `Zuordnung entfernt · ${ul}`;
+  }
+  if (a === "update" && ov.inventory_assignment && nv.inventory_assignment) {
+    return "Zuordnung bearbeitet";
+  }
+  if (a === "create" && (nv.inventory_number != null || nv.name != null) && !nv.inventory_assignment) {
+    return `Artikel erstellt · ${nv.inventory_number || nv.name || ""}`.trim();
+  }
+  if (a === "delete" && (ov.inventory_number != null || ov.name != null) && !ov.inventory_assignment) {
+    return "Artikel gelöscht";
+  }
+  if (a === "update") {
+    const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])].filter(
+      (k) =>
+        k !== "inventory_assignment" &&
+        k !== "created_at" &&
+        k !== "updated_at" &&
+        k !== "id" &&
+        k !== "organization_id"
+    );
+    if (keys.length === 1) {
+      const k = keys[0];
+      const lbl = INVENTORY_AUDIT_LABELS[k] || k;
+      return `${lbl}: ${formatAuditScalar(ov[k])} → ${formatAuditScalar(nv[k])}`;
+    }
+    if (keys.length > 1) {
+      return "Artikel bearbeitet";
+    }
+  }
+  return a === "create" ? "Artikel erstellt" : a === "delete" ? "Eintrag gelöscht" : a === "update" ? "Bearbeitet" : String(log.action || "—");
+}
+
 const emptyItemForm = () => ({
   name: "",
   category: "",
@@ -86,6 +167,7 @@ function itemToForm(row) {
 export default function AdminInventoryDetailPage() {
   const { itemId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [item, setItem] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [units, setUnits] = useState([]);
@@ -122,6 +204,25 @@ export default function AdminInventoryDetailPage() {
   });
   const [editAssignRooms, setEditAssignRooms] = useState([]);
 
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogLoading, setAuditLogLoading] = useState(true);
+  const [auditLogError, setAuditLogError] = useState("");
+
+  const reloadAuditLogs = useCallback(() => {
+    if (!itemId) return Promise.resolve();
+    setAuditLogLoading(true);
+    setAuditLogError("");
+    return fetchAdminAuditLogs({ entity_type: "inventory_item", entity_id: itemId })
+      .then((data) => {
+        setAuditLogs(Array.isArray(data.items) ? data.items : []);
+      })
+      .catch((e) => {
+        setAuditLogError(e?.message || "Verlauf konnte nicht geladen werden.");
+        setAuditLogs([]);
+      })
+      .finally(() => setAuditLogLoading(false));
+  }, [itemId]);
+
   const load = useCallback(() => {
     if (!itemId) return;
     setLoading(true);
@@ -147,12 +248,15 @@ export default function AdminInventoryDetailPage() {
         setError(e?.message || "Laden fehlgeschlagen.");
         setItem(null);
       })
-      .finally(() => setLoading(false));
-  }, [itemId]);
+      .finally(() => {
+        setLoading(false);
+        reloadAuditLogs();
+      });
+  }, [itemId, reloadAuditLogs]);
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, location.key]);
 
   useEffect(() => {
     if (!assignOpen) {
@@ -233,6 +337,7 @@ export default function AdminInventoryDetailPage() {
       setItem(updated);
       setNotesDraft(updated.notes || "");
       setEditOpen(false);
+      void reloadAuditLogs();
     } catch (err) {
       setFormErr(err?.message || "Fehler.");
     } finally {
@@ -261,6 +366,7 @@ export default function AdminInventoryDetailPage() {
       });
       setItem(updated);
       setNotesDraft(updated.notes || "");
+      void reloadAuditLogs();
     } catch (err) {
       setNotesErr(err?.message || "Speichern fehlgeschlagen.");
     } finally {
@@ -364,7 +470,7 @@ export default function AdminInventoryDetailPage() {
     }
   }
 
-  const unitById = React.useMemo(() => {
+  const unitById = useMemo(() => {
     const m = new Map();
     for (const u of units) {
       const nu = normalizeUnit(u);
@@ -608,6 +714,46 @@ export default function AdminInventoryDetailPage() {
                 {notesSaving ? "…" : "Notizen speichern"}
               </button>
             </div>
+          </section>
+
+          <section className="rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-5">
+            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#93a4bf]">
+              Verlauf
+            </h2>
+            <p className="mt-2 text-[11px] text-[#93a4bf]">
+              Änderungen an diesem Artikel (Audit-Log, neueste zuerst).
+            </p>
+            {auditLogLoading ? (
+              <p className="mt-3 text-sm text-[#93a4bf]">Lade Verlauf …</p>
+            ) : auditLogError ? (
+              <p className="mt-3 text-sm text-[#f87171]">{auditLogError}</p>
+            ) : auditLogs.length === 0 ? (
+              <p className="mt-3 text-sm text-[#93a4bf]">Keine Einträge im Verlauf.</p>
+            ) : (
+              <ul className="ml-1 mt-4 space-y-4 border-l border-white/[0.08] pl-4">
+                {auditLogs.map((log) => {
+                  const actor =
+                    (log.actor_name && String(log.actor_name).trim()) ||
+                    (log.actor_email && String(log.actor_email).trim()) ||
+                    null;
+                  return (
+                    <li key={log.id} className="relative">
+                      <span
+                        className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-[#5b8cff]"
+                        aria-hidden
+                      />
+                      <p className="text-sm font-medium text-[#f8fafc]">
+                        {inventoryAuditPrimaryLine(log, unitById)}
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#93a4bf]">
+                        {formatAuditTimestamp(log.created_at)}
+                        {actor ? ` · ${actor}` : ""}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
         </div>
       </div>

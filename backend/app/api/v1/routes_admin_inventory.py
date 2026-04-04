@@ -145,8 +145,7 @@ def admin_create_inventory_item(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    _ = current_user
-    return invsvc.create_inventory_item(session, org_id, body)
+    return invsvc.create_inventory_item(session, org_id, body, str(current_user.id))
 
 
 @router.patch("/inventory/assignments/{assignment_id}", response_model=dict)
@@ -159,8 +158,7 @@ def admin_patch_inventory_assignment(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    _ = current_user
-    return invsvc.update_assignment(session, org_id, assignment_id, body)
+    return invsvc.update_assignment(session, org_id, assignment_id, body, str(current_user.id))
 
 
 @router.delete("/inventory/assignments/{assignment_id}")
@@ -172,8 +170,7 @@ def admin_delete_inventory_assignment(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    _ = current_user
-    return invsvc.delete_assignment(session, org_id, assignment_id)
+    return invsvc.delete_assignment(session, org_id, assignment_id, str(current_user.id))
 
 
 @router.get("/units/{unit_id}/inventory-assignments", response_model=List[Dict[str, Any]])
@@ -206,8 +203,7 @@ def admin_create_assignment(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    _ = current_user
-    return invsvc.create_assignment(session, org_id, item_id, body)
+    return invsvc.create_assignment(session, org_id, item_id, body, str(current_user.id))
 
 
 @router.patch("/inventory/{item_id}", response_model=dict)
@@ -220,8 +216,7 @@ def admin_patch_inventory_item(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    _ = current_user
-    return invsvc.update_inventory_item(session, org_id, item_id, body)
+    return invsvc.update_inventory_item(session, org_id, item_id, body, str(current_user.id))
 
 
 @router.delete("/inventory/{item_id}")
@@ -233,5 +228,4 @@ def admin_delete_inventory_item(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    _ = current_user
-    return invsvc.delete_inventory_item(session, org_id, item_id)
+    return invsvc.delete_inventory_item(session, org_id, item_id, str(current_user.id))

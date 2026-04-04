@@ -14,9 +14,38 @@ from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
+from db.audit import create_audit_log, model_snapshot
 from db.models import InventoryAssignment, InventoryItem, Room, Unit
 
 logger = logging.getLogger(__name__)
+
+# Fields to audit on PATCH (per-field rows, same pattern as landlord put).
+INVENTORY_ITEM_AUDIT_FIELDS = frozenset(
+    {
+        "name",
+        "category",
+        "brand",
+        "total_quantity",
+        "condition",
+        "status",
+        "purchase_price_chf",
+        "purchase_date",
+        "purchased_from",
+        "supplier_article_number",
+        "product_url",
+        "notes",
+    }
+)
+
+
+def _inventory_assignment_audit_payload(a: InventoryAssignment) -> dict:
+    return {
+        "id": str(a.id),
+        "unit_id": str(a.unit_id),
+        "room_id": str(a.room_id) if a.room_id else None,
+        "quantity": int(a.quantity or 0),
+        "notes": a.notes,
+    }
 
 
 def _assert_org_item(session: Session, org_id: str, item_id: str) -> InventoryItem:
@@ -219,7 +248,7 @@ def get_inventory_summary(session: Session, org_id: str) -> dict:
     }
 
 
-def create_inventory_item(session: Session, org_id: str, body: Any) -> dict:
+def create_inventory_item(session: Session, org_id: str, body: Any, actor_user_id: str) -> dict:
     name = str(getattr(body, "name", "") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
@@ -262,6 +291,17 @@ def create_inventory_item(session: Session, org_id: str, body: Any) -> dict:
         )
         session.add(row)
         try:
+            session.flush()
+            create_audit_log(
+                session,
+                str(actor_user_id),
+                "create",
+                "inventory_item",
+                str(row.id),
+                old_values=None,
+                new_values=model_snapshot(row),
+                organization_id=org_id,
+            )
             session.commit()
             session.refresh(row)
             at = _assigned_sum(session, str(row.id))
@@ -274,13 +314,15 @@ def create_inventory_item(session: Session, org_id: str, body: Any) -> dict:
     raise HTTPException(status_code=500, detail="Could not allocate inventory number")
 
 
-def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any) -> dict:
+def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any, actor_user_id: str) -> dict:
     row = _assert_org_item(session, org_id, item_id)
     data = body.model_dump(exclude_unset=True) if hasattr(body, "model_dump") else {}
     if not data:
         at = _assigned_sum(session, item_id)
         tot = int(row.total_quantity or 1)
         return _item_to_dict(row, assigned_total=at, available=max(0, tot - at))
+
+    old_snapshot = model_snapshot(row)
 
     if "total_quantity" in data and data["total_quantity"] is not None:
         nq = int(data["total_quantity"])
@@ -329,6 +371,24 @@ def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any
 
     row.updated_at = datetime.utcnow()
     session.add(row)
+    session.flush()
+    new_snapshot = model_snapshot(row)
+    for key in data:
+        if key not in INVENTORY_ITEM_AUDIT_FIELDS:
+            continue
+        ov = old_snapshot.get(key) if old_snapshot else None
+        nv = new_snapshot.get(key) if new_snapshot else None
+        if ov != nv:
+            create_audit_log(
+                session,
+                str(actor_user_id),
+                "update",
+                "inventory_item",
+                item_id,
+                old_values={key: ov},
+                new_values={key: nv},
+                organization_id=org_id,
+            )
     session.commit()
     session.refresh(row)
     at = _assigned_sum(session, item_id)
@@ -336,9 +396,20 @@ def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any
     return _item_to_dict(row, assigned_total=at, available=max(0, tot - at))
 
 
-def delete_inventory_item(session: Session, org_id: str, item_id: str) -> dict:
+def delete_inventory_item(session: Session, org_id: str, item_id: str, actor_user_id: str) -> dict:
     row = _assert_org_item(session, org_id, item_id)
+    old_snapshot = model_snapshot(row)
     session.delete(row)
+    create_audit_log(
+        session,
+        str(actor_user_id),
+        "delete",
+        "inventory_item",
+        item_id,
+        old_values=old_snapshot,
+        new_values=None,
+        organization_id=org_id,
+    )
     session.commit()
     return {"status": "ok"}
 
@@ -396,7 +467,7 @@ def list_assignments_for_unit(session: Session, org_id: str, unit_id: str) -> Li
     return out
 
 
-def create_assignment(session: Session, org_id: str, item_id: str, body: Any) -> dict:
+def create_assignment(session: Session, org_id: str, item_id: str, body: Any, actor_user_id: str) -> dict:
     item = _assert_org_item(session, org_id, item_id)
     uid = str(getattr(body, "unit_id", "") or "").strip()
     if not uid:
@@ -435,6 +506,17 @@ def create_assignment(session: Session, org_id: str, item_id: str, body: Any) ->
     )
     session.add(row)
     try:
+        session.flush()
+        create_audit_log(
+            session,
+            str(actor_user_id),
+            "create",
+            "inventory_item",
+            str(item.id),
+            old_values=None,
+            new_values={"inventory_assignment": _inventory_assignment_audit_payload(row)},
+            organization_id=org_id,
+        )
         session.commit()
         session.refresh(row)
     except IntegrityError as e:
@@ -459,7 +541,7 @@ def _get_assignment_org(session: Session, org_id: str, assignment_id: str) -> In
     return row
 
 
-def update_assignment(session: Session, org_id: str, assignment_id: str, body: Any) -> dict:
+def update_assignment(session: Session, org_id: str, assignment_id: str, body: Any, actor_user_id: str) -> dict:
     a = _get_assignment_org(session, org_id, assignment_id)
     item = _assert_org_item(session, org_id, str(a.inventory_item_id))
     data = body.model_dump(exclude_unset=True) if hasattr(body, "model_dump") else {}
@@ -469,6 +551,8 @@ def update_assignment(session: Session, org_id: str, assignment_id: str, body: A
             r = session.get(Room, a.room_id)
             rn = r.name if r else ""
         return _assignment_to_dict(a, item=item, room_name=rn)
+
+    old_asg_payload = _inventory_assignment_audit_payload(a)
 
     new_unit_id = str(a.unit_id)
     new_room_id = a.room_id
@@ -519,6 +603,21 @@ def update_assignment(session: Session, org_id: str, assignment_id: str, body: A
     a.updated_at = datetime.utcnow()
     session.add(a)
     try:
+        session.flush()
+        new_asg_payload = _inventory_assignment_audit_payload(a)
+        old_wrap = {"inventory_assignment": old_asg_payload}
+        new_wrap = {"inventory_assignment": new_asg_payload}
+        if old_wrap != new_wrap:
+            create_audit_log(
+                session,
+                str(actor_user_id),
+                "update",
+                "inventory_item",
+                str(item.id),
+                old_values=old_wrap,
+                new_values=new_wrap,
+                organization_id=org_id,
+            )
         session.commit()
         session.refresh(a)
     except IntegrityError:
@@ -536,8 +635,20 @@ def update_assignment(session: Session, org_id: str, assignment_id: str, body: A
     return _assignment_to_dict(a, item=item, room_name=rn)
 
 
-def delete_assignment(session: Session, org_id: str, assignment_id: str) -> dict:
+def delete_assignment(session: Session, org_id: str, assignment_id: str, actor_user_id: str) -> dict:
     a = _get_assignment_org(session, org_id, assignment_id)
+    item_id = str(a.inventory_item_id)
+    old_wrap = {"inventory_assignment": _inventory_assignment_audit_payload(a)}
     session.delete(a)
+    create_audit_log(
+        session,
+        str(actor_user_id),
+        "delete",
+        "inventory_item",
+        item_id,
+        old_values=old_wrap,
+        new_values=None,
+        organization_id=org_id,
+    )
     session.commit()
     return {"status": "ok"}
