@@ -10,13 +10,15 @@ Tenant isolation policies compare rows to transaction-local GUCs:
     before app.current_organization_id is known (refresh / logout; see apply_pg_refresh_token_hash_lookup)
   app.current_password_reset_token_hash — trusted auth-only: SELECT password_reset_tokens by token_hash
     before org context (see apply_pg_password_reset_token_hash_lookup)
+  app.current_email_verification_token_hash — trusted auth-only: SELECT email_verification_tokens by token_hash
+    before org context (see apply_pg_email_verification_token_hash_lookup)
   app.current_inquiry_id — trusted server-only: SELECT/UPDATE one inquiry row (e.g. background email task)
 
 SET LOCAL is transaction-scoped: when a pooled connection returns to the pool and the
 next transaction begins, the previous SET LOCAL is gone — no cross-request leakage.
 
 We store context on session.info (rls_org_id, rls_user_id, rls_auth_unscoped, rls_refresh_token_hash,
-rls_password_reset_token_hash, rls_inquiry_id) and:
+rls_password_reset_token_hash, rls_email_verification_token_hash, rls_inquiry_id) and:
 - On a new transaction (after_begin): apply SET LOCAL on the connection before other
   statements in that transaction.
 - When apply_pg_organization_context() / apply_pg_user_context() is called while a
@@ -95,6 +97,12 @@ def _rls_after_begin(session: Session, transaction, connection) -> None:
         connection.execute(
             text("SET LOCAL app.current_password_reset_token_hash = :v"),
             {"v": str(prth)},
+        )
+    evth = session.info.get("rls_email_verification_token_hash")
+    if evth is not None:
+        connection.execute(
+            text("SET LOCAL app.current_email_verification_token_hash = :v"),
+            {"v": str(evth)},
         )
     iid = session.info.get("rls_inquiry_id")
     if iid is not None:
@@ -183,6 +191,29 @@ def apply_pg_password_reset_token_hash_lookup(session: Session, token_hash: str 
     if session.in_transaction():
         session.execute(
             text("SET LOCAL app.current_password_reset_token_hash = :v"),
+            {"v": s},
+        )
+    else:
+        session.execute(text("SELECT 1"))
+
+
+def apply_pg_email_verification_token_hash_lookup(session: Session, token_hash: str | None) -> None:
+    """
+    Trusted server-only: allow SELECT/UPDATE email_verification_tokens by token_hash before org GUC is set.
+    Pass None to clear.
+    """
+    if not token_hash or not str(token_hash).strip():
+        session.info.pop("rls_email_verification_token_hash", None)
+        if session.in_transaction():
+            session.execute(text("SET LOCAL app.current_email_verification_token_hash = ''"))
+        else:
+            session.execute(text("SELECT 1"))
+        return
+    s = str(token_hash).strip()
+    session.info["rls_email_verification_token_hash"] = s
+    if session.in_transaction():
+        session.execute(
+            text("SET LOCAL app.current_email_verification_token_hash = :v"),
             {"v": s},
         )
     else:

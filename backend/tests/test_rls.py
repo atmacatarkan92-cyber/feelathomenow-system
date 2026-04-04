@@ -8,14 +8,13 @@ row visibility, rowcount, and PostgreSQL RLS error messages.
 from __future__ import annotations
 
 import uuid
-
-import pytest
 from datetime import date, datetime, timedelta, timezone
 
-from auth.security import hash_password
+import pytest
 from sqlalchemy import text, update
 from sqlmodel import Session, select
 
+from auth.security import hash_password
 from db.models import (
     AuditLog,
     City,
@@ -83,6 +82,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ("listing_amenities", "listing_amenities_org_or_published"),
         ("inquiries", "inquiries_access"),
         ("password_reset_tokens", "org_isolation_password_reset_tokens"),
+        ("email_verification_tokens", "org_isolation_email_verification_tokens"),
     }
     with Session(engine) as session:
         cu, su = session.execute(text("SELECT current_user, session_user")).one()
@@ -118,11 +118,11 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
                   AND c.relname IN (
-                    'audit_logs', 'inquiries', 'invoices', 'landlords', 'listing_amenities',
-                    'listing_images', 'listings', 'password_reset_tokens', 'properties',
-                    'refresh_tokens', 'room', 'tenancies', 'tenancy_participants', 'tenant',
-                    'tenant_events', 'tenant_notes', 'unit', 'unit_costs', 'user_credentials',
-                    'users'
+                    'audit_logs', 'email_verification_tokens', 'inquiries', 'invoices', 'landlords',
+                    'listing_amenities', 'listing_images', 'listings', 'password_reset_tokens',
+                    'properties', 'refresh_tokens', 'room', 'tenancies', 'tenancy_participants',
+                    'tenant', 'tenant_events', 'tenant_notes', 'unit', 'unit_costs',
+                    'user_credentials', 'users'
                   )
                 ORDER BY c.relname
                 """
@@ -131,6 +131,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         names = [r[0] for r in rls_rows]
         assert names == [
             "audit_logs",
+            "email_verification_tokens",
             "inquiries",
             "invoices",
             "landlords",
@@ -151,7 +152,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "user_credentials",
             "users",
         ], (
-            f"expected RLS tables from migrations 023/025/030/042/044/045; got {names}"
+            f"expected RLS tables from migrations 023/025/030/042/044/045/065; got {names}"
         )
         for relname, relrowsecurity, relforcerowsecurity in rls_rows:
             assert relrowsecurity is True, f"RLS not enabled on {relname}"
@@ -165,6 +166,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 "listing_amenities",
                 "inquiries",
                 "password_reset_tokens",
+                "email_verification_tokens",
             ):
                 assert relforcerowsecurity is True, (
                     f"FORCE ROW LEVEL SECURITY expected on {relname}"
@@ -182,7 +184,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                     'tenant_notes', 'tenant_events', 'users',
                     'user_credentials', 'refresh_tokens',
                     'listings', 'listing_images', 'listing_amenities',
-                    'inquiries', 'password_reset_tokens'
+                    'inquiries', 'password_reset_tokens', 'email_verification_tokens'
                 )
                 """
             )

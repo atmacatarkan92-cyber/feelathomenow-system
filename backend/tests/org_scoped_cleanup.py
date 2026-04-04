@@ -1,7 +1,8 @@
 """
 RLS-safe deletion for test DB fixtures.
 
-Global DELETE FROM refresh_tokens / user_credentials / password_reset_tokens without org GUC
+Global DELETE FROM refresh_tokens / user_credentials / password_reset_tokens /
+email_verification_tokens without org GUC
 deletes zero rows under org isolation policies, leaving FK children and causing user DELETE to fail.
 """
 from __future__ import annotations
@@ -11,6 +12,7 @@ from sqlmodel import Session, select
 
 from db.models import (
     AuditLog,
+    EmailVerificationToken,
     Organization,
     PasswordResetToken,
     RefreshToken,
@@ -22,8 +24,9 @@ from db.rls import apply_pg_organization_context
 
 def delete_org_scoped_auth_and_users(session: Session) -> None:
     """
-    For each organization: set org GUC, then delete password_reset_tokens (by user in org),
-    refresh_tokens, user_credentials, and users scoped to that org. Caller commits after.
+    For each organization: set org GUC, then delete password_reset_tokens and
+    email_verification_tokens (by user in org), refresh_tokens, user_credentials, and users
+    scoped to that org. Caller commits after.
     Does not delete Organization rows.
     """
     for oid in session.scalars(select(Organization.id)).all():
@@ -32,6 +35,13 @@ def delete_org_scoped_auth_and_users(session: Session) -> None:
         session.execute(
             delete(PasswordResetToken).where(
                 PasswordResetToken.user_id.in_(
+                    select(User.id).where(User.organization_id == oid_s)
+                )
+            )
+        )
+        session.execute(
+            delete(EmailVerificationToken).where(
+                EmailVerificationToken.user_id.in_(
                     select(User.id).where(User.organization_id == oid_s)
                 )
             )

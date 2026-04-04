@@ -605,6 +605,7 @@ class User(SQLModel, table=True):
         description="Application role (must match users_role_allowed CHECK).",
     )
     is_active: bool = Field(default=True)
+    email_verified_at: datetime | None = None
     last_login_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -647,6 +648,26 @@ class PasswordResetToken(SQLModel, table=True):
     """
 
     __tablename__ = "password_reset_tokens"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(foreign_key="users.id", index=True)
+    token_hash: str = Field(index=True, unique=True)
+    expires_at: datetime = Field(index=True)
+    used_at: datetime | None = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class EmailVerificationToken(SQLModel, table=True):
+    """
+    Email verification tokens (hashed; single-use; expiring).
+
+    Security:
+    - only store token_hash in DB
+    - single-use enforced via used_at
+    - expiration enforced via expires_at (checked in application code)
+    """
+
+    __tablename__ = "email_verification_tokens"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     user_id: str = Field(foreign_key="users.id", index=True)
