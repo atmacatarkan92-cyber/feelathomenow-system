@@ -15,10 +15,74 @@ from app.core.rate_limit import limiter
 from auth.dependencies import get_db_session, require_roles
 from auth.security import hash_password, password_meets_policy_for_new_account
 from db.models import User, UserCredentials, UserRole
+from db.rls import apply_pg_organization_context
 
 router = APIRouter(prefix="/api/admin", tags=["admin-users"])
 
 _CREATABLE_ROLES = frozenset({"admin", "landlord", "tenant"})
+
+
+class AdminUserOut(BaseModel):
+    """Org-scoped user row for admin list/detail (read-only)."""
+
+    id: str
+    email: str
+    full_name: str
+    role: str
+    is_active: bool
+    email_verified_at: datetime | None = None
+
+
+def _user_to_admin_out(user: User) -> AdminUserOut:
+    role_out = getattr(user.role, "value", user.role)
+    return AdminUserOut(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name or "",
+        role=str(role_out),
+        is_active=bool(user.is_active),
+        email_verified_at=user.email_verified_at,
+    )
+
+
+@router.get("/users", response_model=list[AdminUserOut])
+def admin_list_users(
+    current_user: User = Depends(require_roles("admin")),
+    session=Depends(get_db_session),
+):
+    """List users in the caller's organization (admin only)."""
+    org_id = str(current_user.organization_id)
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    apply_pg_organization_context(session, org_id)
+    rows = session.exec(select(User).where(User.organization_id == org_id).order_by(User.email)).all()
+    return [_user_to_admin_out(u) for u in rows]
+
+
+@router.get("/users/{user_id}", response_model=AdminUserOut)
+def admin_get_user(
+    user_id: str,
+    current_user: User = Depends(require_roles("admin")),
+    session=Depends(get_db_session),
+):
+    """Return one user in the caller's organization (admin only)."""
+    org_id = str(current_user.organization_id)
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    apply_pg_organization_context(session, org_id)
+    u = session.get(User, user_id)
+    if u is None or str(u.organization_id) != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found",
+        )
+    return _user_to_admin_out(u)
 
 
 class AdminCreateUserRequest(BaseModel):

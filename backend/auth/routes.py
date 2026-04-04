@@ -712,6 +712,7 @@ def read_me(request: Request, current_user: User = Depends(get_current_user)) ->
         role=role_str,
         is_active=current_user.is_active,
         last_login_at=current_user.last_login_at,
+        email_verified_at=current_user.email_verified_at,
         organization_id=str(current_user.organization_id),
         is_impersonating=bool(imp_active),
         impersonated_organization_name=imp_name,

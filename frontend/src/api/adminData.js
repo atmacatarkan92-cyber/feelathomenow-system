@@ -790,6 +790,27 @@ export function fetchAdminLandlords(status = "active") {
   });
 }
 
+/** GET /api/admin/users — org users (admin only). */
+export function fetchAdminUsers() {
+  return fetch(`${API_BASE_URL}/api/admin/users`, { headers: getApiHeaders() }).then((res) => {
+    if (!res.ok) throw new Error("Benutzer konnten nicht geladen werden.");
+    return res.json();
+  });
+}
+
+/** GET /api/admin/users/:id — single org user (admin only). */
+export function fetchAdminUser(userId) {
+  return fetch(`${API_BASE_URL}/api/admin/users/${encodeURIComponent(userId)}`, {
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error("Benutzer konnte nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
 export function fetchAdminLandlord(id) {
   const base = `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(id)}`;
   const sep = base.includes("?") ? "&" : "?";

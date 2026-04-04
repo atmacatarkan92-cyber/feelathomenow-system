@@ -30,6 +30,7 @@ class UserMe(BaseModel):
     role: str
     is_active: bool
     last_login_at: datetime | None = None
+    email_verified_at: datetime | None = None
     # Canonical org for this account; clients may send this as login.organization_id when email is reused across orgs.
     organization_id: str
     # Set when JWT has platform support-mode impersonation (platform_admin acting as org admin).

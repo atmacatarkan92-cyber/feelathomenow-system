@@ -224,6 +224,66 @@ class TestAdminCreateUser:
         )
         assert r.status_code == 403
 
+    def test_admin_lists_users_includes_email_verified_at(
+        self,
+        client: TestClient,
+        two_orgs_and_admins,
+        override_db_and_patch_admin_users_session,
+    ):
+        ctx = two_orgs_and_admins
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["admin_a_email"], "password": ctx["admin_a_password"]},
+        )
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+        r = client.get("/api/admin/users", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+        items = r.json()
+        assert isinstance(items, list)
+        assert len(items) >= 2
+        emails = {row["email"] for row in items}
+        assert ctx["admin_a_email"] in emails
+        assert ctx["manager_a_email"] in emails
+        for row in items:
+            assert "email_verified_at" in row
+            assert "id" in row
+
+    def test_manager_forbidden_list_users(
+        self,
+        client: TestClient,
+        two_orgs_and_admins,
+        override_db_and_patch_admin_users_session,
+    ):
+        ctx = two_orgs_and_admins
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["manager_a_email"], "password": ctx["manager_a_password"]},
+        )
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+        r = client.get("/api/admin/users", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 403
+
+    def test_admin_get_user_by_id(
+        self,
+        client: TestClient,
+        two_orgs_and_admins,
+        override_db_and_patch_admin_users_session,
+    ):
+        ctx = two_orgs_and_admins
+        login = client.post(
+            "/auth/login",
+            json={"email": ctx["admin_a_email"], "password": ctx["admin_a_password"]},
+        )
+        token = login.json()["access_token"]
+        listed = client.get("/api/admin/users", headers={"Authorization": f"Bearer {token}"}).json()
+        uid = next(r["id"] for r in listed if r["email"] == ctx["admin_a_email"])
+        r = client.get(f"/api/admin/users/{uid}", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+        assert r.json()["email"] == ctx["admin_a_email"]
+        assert "email_verified_at" in r.json()
+
     def test_duplicate_email_same_org_conflict(
         self,
         client: TestClient,
