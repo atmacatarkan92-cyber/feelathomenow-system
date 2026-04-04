@@ -1,6 +1,6 @@
 """Inventory catalog (stock) + assignments (distribution to units/rooms).
 
-Revision ID: 066_inventory_catalog_and_assignments
+Revision ID: 066_inventory
 Revises: 065_email_verification_schema
 
 - inventory_items: org-scoped article stock with total_quantity (not UnitCost).
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import text
 
-revision: str = "066_inventory_catalog_and_assignments"
+revision: str = "066_inventory"
 down_revision: Union[str, None] = "065_email_verification_schema"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
