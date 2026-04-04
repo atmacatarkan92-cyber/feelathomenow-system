@@ -9,7 +9,14 @@ from __future__ import annotations
 from sqlalchemy import delete
 from sqlmodel import Session, select
 
-from db.models import Organization, PasswordResetToken, RefreshToken, User, UserCredentials
+from db.models import (
+    AuditLog,
+    Organization,
+    PasswordResetToken,
+    RefreshToken,
+    User,
+    UserCredentials,
+)
 from db.rls import apply_pg_organization_context
 
 
@@ -31,4 +38,5 @@ def delete_org_scoped_auth_and_users(session: Session) -> None:
         )
         session.execute(delete(RefreshToken).where(RefreshToken.organization_id == oid_s))
         session.execute(delete(UserCredentials).where(UserCredentials.organization_id == oid_s))
+        session.execute(delete(AuditLog).where(AuditLog.organization_id == oid_s))
         session.execute(delete(User).where(User.organization_id == oid_s))
