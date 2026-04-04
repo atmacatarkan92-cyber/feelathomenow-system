@@ -7,14 +7,14 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
+from app.core.rate_limit import limiter
 from auth.dependencies import get_db_session, require_roles
 from auth.security import hash_password, password_meets_policy_for_new_account
 from db.models import User, UserCredentials, UserRole
-from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/api/admin", tags=["admin-users"])
 
@@ -101,13 +101,15 @@ def admin_create_user(
                 detail="Email already in use",
             )
 
+        verified_now = datetime.now(timezone.utc)
         user = User(
             organization_id=org_id,
             email=str(body.email).strip(),
             full_name=_resolve_full_name(body),
             role=target_role,
             is_active=True,
-            updated_at=datetime.now(timezone.utc),
+            email_verified_at=verified_now,
+            updated_at=verified_now,
         )
         session.add(user)
         session.flush()

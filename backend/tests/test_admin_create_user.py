@@ -7,6 +7,7 @@ Overrides get_db_session so auth and admin routes share the same test session.
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from typing import Generator
 
 import pytest
@@ -62,6 +63,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
         full_name="Admin A",
         role=UserRole.admin,
         is_active=True,
+        email_verified_at=datetime.now(timezone.utc),
     )
     admin_users_session.add(admin_a)
     admin_users_session.flush()
@@ -73,6 +75,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
         full_name="Admin B",
         role=UserRole.admin,
         is_active=True,
+        email_verified_at=datetime.now(timezone.utc),
     )
     admin_users_session.add(admin_b)
     admin_users_session.flush()
@@ -103,6 +106,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
         full_name="Manager A",
         role=UserRole.manager,
         is_active=True,
+        email_verified_at=datetime.now(timezone.utc),
     )
     admin_users_session.add(mgr)
     admin_users_session.flush()

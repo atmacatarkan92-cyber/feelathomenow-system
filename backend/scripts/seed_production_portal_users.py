@@ -16,6 +16,7 @@ Idempotent:
 
 import os
 import sys
+from datetime import datetime, timezone
 
 from sqlmodel import select
 
@@ -24,19 +25,18 @@ _backend_root = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 if _backend_root not in sys.path:
     sys.path.insert(0, _backend_root)
 
+from auth.security import hash_password  # noqa: E402
 from db.database import get_session  # noqa: E402
-from db.rls import apply_pg_organization_context  # noqa: E402
 from db.models import (  # noqa: E402
+    Landlord,
+    Room,
+    Tenant,
     User,
     UserCredentials,
     UserRole,
-    Tenant,
-    Landlord,
-    Room,
 )
 from db.organization import get_or_create_default_organization  # noqa: E402
-from auth.security import hash_password  # noqa: E402
-
+from db.rls import apply_pg_organization_context  # noqa: E402
 
 TENANT_EMAIL = "tenant-test@feelathomenow-test.com"
 TENANT_PASSWORD = "TenantTest2026"
@@ -71,6 +71,7 @@ def ensure_tenant(session):
             full_name=TENANT_FULL_NAME,
             role=UserRole.tenant,
             is_active=True,
+            email_verified_at=datetime.now(timezone.utc),
         )
         session.add(user)
         session.commit()
@@ -144,6 +145,7 @@ def ensure_landlord(session):
             full_name=LANDLORD_FULL_NAME,
             role=UserRole.landlord,
             is_active=True,
+            email_verified_at=datetime.now(timezone.utc),
         )
         session.add(user)
         session.commit()

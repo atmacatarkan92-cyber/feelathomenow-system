@@ -8,6 +8,7 @@ Covers:
 """
 
 import os
+from datetime import datetime, timezone
 from typing import Generator
 
 import pytest
@@ -71,6 +72,7 @@ def admin_user(auth_db_session: Session) -> User:
         full_name="Test Admin",
         role=UserRole.admin,
         is_active=True,
+        email_verified_at=datetime.now(timezone.utc),
     )
     auth_db_session.add(user)
     auth_db_session.flush()  # ensure user.id is available

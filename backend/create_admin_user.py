@@ -9,15 +9,16 @@ and stored in user_credentials (not in users). For the running API, set
 SECRET_KEY in .env so JWT auth works; this script does not need SECRET_KEY.
 """
 
+from datetime import datetime, timezone
 from getpass import getpass
 
 from sqlmodel import select
 
+from auth.security import hash_password
 from db.database import get_session
 from db.models import User, UserCredentials, UserRole
 from db.organization import get_or_create_default_organization
 from db.rls import apply_pg_organization_context
-from auth.security import hash_password
 
 
 def main() -> None:
@@ -100,6 +101,7 @@ def main() -> None:
             full_name=full_name,
             role=UserRole.admin,
             is_active=True,
+            email_verified_at=datetime.now(timezone.utc),
         )
         session.add(user)
         session.commit()

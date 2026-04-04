@@ -10,23 +10,24 @@ Does not create new tenancies; may reassign one existing tenancy from an orphan 
 """
 
 import os
+from datetime import datetime, timezone
 from getpass import getpass
 
 from sqlmodel import select
 
+from auth.security import hash_password
 from db.database import get_session
-from db.rls import apply_pg_organization_context
 from db.models import (
+    Invoice,
+    Room,
+    Tenancy,
+    Tenant,
     User,
     UserCredentials,
     UserRole,
-    Tenant,
-    Tenancy,
-    Invoice,
-    Room,
 )
 from db.organization import get_or_create_default_organization
-from auth.security import hash_password
+from db.rls import apply_pg_organization_context
 
 TEST_EMAIL = "tenant-test@feelathomenow-test.com"
 TEST_FULL_NAME = "Tenant Test Account"
@@ -73,6 +74,7 @@ def main() -> None:
                 full_name=TEST_FULL_NAME,
                 role=UserRole.tenant,
                 is_active=True,
+                email_verified_at=datetime.now(timezone.utc),
             )
             session.add(user)
             session.commit()
@@ -135,7 +137,7 @@ def main() -> None:
         print("Temporary password: (use TENANT_TEST_PASSWORD env value or the value you entered at prompt)")
         print(f"User id:           {user.id}")
         print(f"Tenant id:         {tenant.id}")
-        print(f"tenant.user_id linked: True")
+        print("tenant.user_id linked: True")
         print(f"Tenancy linked:    {tenancy_linked}")
         print(f"Invoices reachable for this tenant: {invoices_reachable}")
     finally:

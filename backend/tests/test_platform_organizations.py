@@ -7,7 +7,7 @@ Uses dependency overrides (no DATABASE_URL). Optional PostgreSQL tests when TEST
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
 
@@ -608,6 +608,7 @@ def platform_http_operator(
         full_name="Platform E2E",
         role=UserRole.platform_admin,
         is_active=True,
+        email_verified_at=datetime.now(timezone.utc),
     )
     platform_db_session.add(pa)
     platform_db_session.flush()

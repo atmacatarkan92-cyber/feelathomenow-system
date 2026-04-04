@@ -12,6 +12,7 @@ Does not modify any app code.
 
 import os
 import sys
+from datetime import datetime, timezone
 
 # Ensure backend root is on path so db, auth resolve
 _backend_root = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
@@ -20,11 +21,11 @@ if _backend_root not in sys.path:
 
 from sqlmodel import select
 
+from auth.security import hash_password
 from db.database import get_session
 from db.models import User, UserCredentials, UserRole
 from db.organization import get_or_create_default_organization
 from db.rls import apply_pg_organization_context
-from auth.security import hash_password
 
 ADMIN_EMAIL = "test@feelathomenow.com"
 ADMIN_PASSWORD = "test123"
@@ -58,6 +59,7 @@ def main() -> None:
             full_name=ADMIN_FULL_NAME,
             role=UserRole.admin,
             is_active=True,
+            email_verified_at=datetime.now(timezone.utc),
         )
         session.add(user)
         session.commit()

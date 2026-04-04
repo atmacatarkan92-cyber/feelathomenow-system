@@ -202,3 +202,51 @@ class TestVerifyEmail:
 
         r = client.post("/auth/verify-email", json={"token": raw})
         assert r.status_code == 400
+
+    def test_login_blocked_when_email_unverified(
+        self,
+        client: TestClient,
+        override_ev_db,
+        org_user_unverified: dict,
+    ):
+        r = client.post(
+            "/auth/login",
+            json={
+                "email": org_user_unverified["email"],
+                "password": "ValidPwd1ab",
+            },
+        )
+        assert r.status_code == 403
+        assert r.json()["detail"] == "email_not_verified"
+
+    def test_login_succeeds_after_verification(
+        self,
+        client: TestClient,
+        override_ev_db,
+        org_user_unverified: dict,
+        ev_db_session: Session,
+    ):
+        raw = secrets.token_urlsafe(48)
+        th = hash_password_reset_token(raw)
+        now = datetime.now(timezone.utc)
+        ev_db_session.add(
+            EmailVerificationToken(
+                user_id=org_user_unverified["user_id"],
+                token_hash=th,
+                expires_at=now + timedelta(hours=1),
+                used_at=None,
+            )
+        )
+        ev_db_session.commit()
+
+        assert client.post("/auth/verify-email", json={"token": raw}).status_code == 200
+
+        r = client.post(
+            "/auth/login",
+            json={
+                "email": org_user_unverified["email"],
+                "password": "ValidPwd1ab",
+            },
+        )
+        assert r.status_code == 200
+        assert "access_token" in r.json()

@@ -11,6 +11,7 @@ Does not create duplicates. Does not modify application code or create migration
 
 import os
 import sys
+from datetime import datetime, timezone
 from getpass import getpass
 
 # Ensure backend root is on path so db, auth resolve
@@ -20,11 +21,11 @@ if _backend_root not in sys.path:
 
 from sqlmodel import select
 
+from auth.security import hash_password
 from db.database import get_session
-from db.models import User, UserCredentials, UserRole, Landlord
+from db.models import Landlord, User, UserCredentials, UserRole
 from db.organization import get_or_create_default_organization
 from db.rls import apply_pg_organization_context
-from auth.security import hash_password
 
 TEST_EMAIL = "landlord-test@feelathomenow-test.com"
 TEST_FULL_NAME = "Landlord Test Account"
@@ -91,6 +92,7 @@ def main() -> None:
                 full_name=TEST_FULL_NAME,
                 role=UserRole.landlord,
                 is_active=True,
+                email_verified_at=datetime.now(timezone.utc),
             )
             session.add(user)
             session.commit()

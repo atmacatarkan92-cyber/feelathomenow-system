@@ -128,6 +128,13 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
             detail="Invalid credentials",
         )
 
+    if user.email_verified_at is None:
+        session.info.pop("rls_auth_unscoped", None)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="email_not_verified",
+        )
+
     # Capture ids before commit() — commit expires ORM instances; touching user.id after
     # commit can lazy-load under wrong/missing RLS context and raise ObjectDeletedError.
     user_id = str(user.id)

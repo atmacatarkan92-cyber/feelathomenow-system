@@ -22,16 +22,14 @@ from auth.dependencies import get_db_session
 from auth.security import hash_password
 from db.models import (
     Organization,
-    RefreshToken,
+    PasswordResetToken,
     User,
     UserCredentials,
     UserRole,
-    PasswordResetToken,
 )
 from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
 from tests.org_scoped_cleanup import delete_org_scoped_auth_and_users
-
 
 GENERIC_FORGOT_DETAIL = "If the account exists, a password reset link has been sent."
 
@@ -92,6 +90,7 @@ def org_and_user(reset_db_session: Session, cleanup_reset_tables):
         full_name="Reset User",
         role=UserRole.tenant,
         is_active=True,
+        email_verified_at=datetime.now(timezone.utc),
     )
     reset_db_session.add(user)
     reset_db_session.flush()
