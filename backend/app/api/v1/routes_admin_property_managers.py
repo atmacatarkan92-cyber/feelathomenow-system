@@ -261,6 +261,7 @@ def admin_create_property_manager(
         old_values=None,
         new_values=model_snapshot(pm),
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(pm)
@@ -324,6 +325,7 @@ def admin_patch_property_manager(
                 old_values={key: ov},
                 new_values={key: nv},
                 organization_id=org_id,
+                request=request,
             )
     session.commit()
     session.refresh(pm)

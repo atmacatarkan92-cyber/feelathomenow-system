@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from fastapi import HTTPException
+from starlette.requests import Request
 from sqlalchemy import desc, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
@@ -173,7 +174,13 @@ def get_tenant(session: Session, org_id: str, tenant_id: str) -> dict:
     return tenant_to_dict(tenant)
 
 
-def create_tenant(session: Session, org_id: str, current_user_id: str, body: Any) -> dict:
+def create_tenant(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     assert_room_in_org(session, body.room_id, org_id)
     residence = None if body.is_swiss is True else body.residence_permit
     tenant = Tenant(
@@ -212,13 +219,21 @@ def create_tenant(session: Session, org_id: str, current_user_id: str, body: Any
         old_values=None,
         new_values=model_snapshot(tenant),
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(tenant)
     return tenant_to_dict(tenant)
 
 
-def patch_tenant(session: Session, org_id: str, current_user_id: str, tenant_id: str, body: Any) -> dict:
+def patch_tenant(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    tenant_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     tenant = session.get(Tenant, tenant_id)
     if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -266,13 +281,20 @@ def patch_tenant(session: Session, org_id: str, current_user_id: str, tenant_id:
         old_values=old_snapshot,
         new_values=new_snapshot,
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(tenant)
     return tenant_to_dict(tenant)
 
 
-def delete_tenant(session: Session, org_id: str, current_user_id: str, tenant_id: str) -> dict:
+def delete_tenant(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    tenant_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     tenant = session.get(Tenant, tenant_id)
     if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -290,6 +312,7 @@ def delete_tenant(session: Session, org_id: str, current_user_id: str, tenant_id
             old_values=old_snapshot,
             new_values=None,
             organization_id=org_id,
+            request=request,
         )
         session.commit()
     except IntegrityError:

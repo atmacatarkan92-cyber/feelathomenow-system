@@ -11,6 +11,7 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
+from starlette.requests import Request
 from sqlalchemy import delete, func, or_
 from sqlmodel import Session, select
 
@@ -265,6 +266,7 @@ def log_parent_stream_same_change(
     old_values: Optional[dict],
     new_values: Optional[dict],
     organization_id: str,
+    request: Optional[Request] = None,
 ) -> None:
     """
     Same logical change on tenant and unit parent streams (namespaced payloads).
@@ -279,6 +281,7 @@ def log_parent_stream_same_change(
         old_values=old_values,
         new_values=new_values,
         organization_id=organization_id,
+        request=request,
     )
     create_audit_log(
         session,
@@ -289,6 +292,7 @@ def log_parent_stream_same_change(
         old_values=old_values,
         new_values=new_values,
         organization_id=organization_id,
+        request=request,
     )
 
 
@@ -400,7 +404,13 @@ def list_tenancies_for_room(session: Session, org_id: str, room_id: str) -> list
     return [tenancy_to_response_dict(session, org_id, t, pmap) for t in tenancies]
 
 
-def create_tenancy(session: Session, org_id: str, current_user_id: str, body: Any) -> dict:
+def create_tenancy(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     """Create tenancy + participants; commit. body is validated TenancyCreate."""
     validate_relations(session, body.tenant_id, body.room_id, body.unit_id, org_id)
     status = body.status
@@ -466,13 +476,21 @@ def create_tenancy(session: Session, org_id: str, current_user_id: str, body: An
         None,
         pay,
         org_id,
+        request=request,
     )
     session.commit()
     session.refresh(tenancy)
     return tenancy_to_response_dict(session, org_id, tenancy, None)
 
 
-def patch_tenancy(session: Session, org_id: str, current_user_id: str, tenancy_id: str, body: Any) -> dict:
+def patch_tenancy(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    tenancy_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     """Patch tenancy; commit."""
     tenancy = session.get(Tenancy, tenancy_id)
     if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
@@ -543,13 +561,20 @@ def patch_tenancy(session: Session, org_id: str, current_user_id: str, tenancy_i
             {"tenancy": old_tenancy_payload},
             {"tenancy": new_tenancy_payload},
             org_id,
+            request=request,
         )
     session.commit()
     session.refresh(tenancy)
     return tenancy_to_response_dict(session, org_id, tenancy, None)
 
 
-def delete_tenancy(session: Session, org_id: str, current_user_id: str, tenancy_id: str) -> dict:
+def delete_tenancy(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    tenancy_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     tenancy = session.get(Tenancy, tenancy_id)
     if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenancy not found")
@@ -566,6 +591,7 @@ def delete_tenancy(session: Session, org_id: str, current_user_id: str, tenancy_
         old_pay,
         None,
         org_id,
+        request=request,
     )
     session.commit()
     return {"status": "ok", "message": "Tenancy deleted"}
@@ -586,7 +612,14 @@ def list_tenancy_revenue(session: Session, org_id: str, tenancy_id: str) -> list
     return [tenancy_revenue_to_dict(r) for r in rows]
 
 
-def create_tenancy_revenue(session: Session, org_id: str, current_user_id: str, tenancy_id: str, body: Any) -> dict:
+def create_tenancy_revenue(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    tenancy_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     tenancy = session.get(Tenancy, tenancy_id)
     if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenancy not found")
@@ -614,6 +647,7 @@ def create_tenancy_revenue(session: Session, org_id: str, current_user_id: str, 
         None,
         rev_pay,
         org_id,
+        request=request,
     )
     session.commit()
     session.refresh(row)
@@ -621,7 +655,12 @@ def create_tenancy_revenue(session: Session, org_id: str, current_user_id: str, 
 
 
 def patch_tenancy_revenue(
-    session: Session, org_id: str, current_user_id: str, revenue_id: str, body: Any
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    revenue_id: str,
+    body: Any,
+    request: Optional[Request] = None,
 ) -> dict:
     row = session.get(TenancyRevenue, revenue_id)
     if not row or str(getattr(row, "organization_id", "")) != org_id:
@@ -659,13 +698,20 @@ def patch_tenancy_revenue(
             old_pay,
             new_pay,
             org_id,
+            request=request,
         )
     session.commit()
     session.refresh(row)
     return tenancy_revenue_to_dict(row)
 
 
-def delete_tenancy_revenue(session: Session, org_id: str, current_user_id: str, revenue_id: str) -> dict:
+def delete_tenancy_revenue(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    revenue_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     row = session.get(TenancyRevenue, revenue_id)
     if not row or str(getattr(row, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Revenue row not found")
@@ -683,6 +729,7 @@ def delete_tenancy_revenue(session: Session, org_id: str, current_user_id: str, 
         old_pay,
         None,
         org_id,
+        request=request,
     )
     session.commit()
     return {"status": "ok"}

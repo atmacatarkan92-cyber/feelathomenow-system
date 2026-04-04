@@ -262,7 +262,7 @@ def admin_create_unit(
     session=Depends(get_db_session),
 ):
     """Create a new unit."""
-    return uas.create_unit(session, org_id, str(current_user.id), body)
+    return uas.create_unit(session, org_id, str(current_user.id), body, request)
 
 
 @router.patch("/units/{unit_id}", response_model=dict)
@@ -276,7 +276,7 @@ def admin_patch_unit(
     session=Depends(get_db_session),
 ):
     """Update a unit (partial)."""
-    return uas.patch_unit(session, org_id, str(current_user.id), unit_id, body)
+    return uas.patch_unit(session, org_id, str(current_user.id), unit_id, body, request)
 
 
 @router.delete("/units/{unit_id}")
@@ -289,7 +289,7 @@ def admin_delete_unit(
     session=Depends(get_db_session),
 ):
     """Delete a unit (caller must ensure no dependent listings/rooms)."""
-    return uas.delete_unit(session, org_id, str(current_user.id), unit_id)
+    return uas.delete_unit(session, org_id, str(current_user.id), unit_id, request)
 
 
 @router.get("/units/{unit_id}/rooms", response_model=List[dict])
@@ -324,7 +324,7 @@ def admin_create_unit_cost(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    return uas.create_unit_cost(session, org_id, str(current_user.id), unit_id, body)
+    return uas.create_unit_cost(session, org_id, str(current_user.id), unit_id, body, request)
 
 
 @router.patch("/units/{unit_id}/costs/{cost_id}", response_model=dict)
@@ -351,4 +351,4 @@ def admin_delete_unit_cost(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    return uas.delete_unit_cost(session, org_id, str(current_user.id), unit_id, cost_id)
+    return uas.delete_unit_cost(session, org_id, str(current_user.id), unit_id, cost_id, request)

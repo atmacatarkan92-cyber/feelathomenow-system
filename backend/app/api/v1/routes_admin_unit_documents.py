@@ -145,6 +145,7 @@ def admin_unit_document_download(
 
 @router.delete("/unit-documents/{document_id}")
 def admin_delete_unit_document(
+    request: Request,
     document_id: str,
     org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
@@ -173,6 +174,7 @@ def admin_delete_unit_document(
         },
         new_values=None,
         organization_id=org_id,
+        request=request,
     )
     session.delete(doc)
     session.commit()
@@ -232,6 +234,7 @@ def admin_create_unit_document(
             "document_uploaded": raw_name,
         },
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(doc)

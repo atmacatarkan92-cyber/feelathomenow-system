@@ -141,33 +141,36 @@ def admin_create_landlord(
     session=Depends(get_db_session),
 ):
     """Create a new landlord."""
-    return las.create_landlord(session, org_id, str(current_user.id), body)
+    return las.create_landlord(session, org_id, str(current_user.id), body, request)
 
 
 @router.delete("/landlords/{landlord_id}", response_model=dict)
 def admin_archive_landlord(
+    request: Request,
     landlord_id: str,
     org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Soft-delete (archive) a landlord: sets deleted_at; does not remove related rows."""
-    return las.archive_landlord(session, org_id, str(current_user.id), landlord_id)
+    return las.archive_landlord(session, org_id, str(current_user.id), landlord_id, request)
 
 
 @router.post("/landlords/{landlord_id}/restore", response_model=dict)
 def admin_restore_landlord(
+    request: Request,
     landlord_id: str,
     org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Clear deleted_at (reactivate). No-op if already active."""
-    return las.restore_landlord(session, org_id, str(current_user.id), landlord_id)
+    return las.restore_landlord(session, org_id, str(current_user.id), landlord_id, request)
 
 
 @router.put("/landlords/{landlord_id}", response_model=dict)
 def admin_put_landlord(
+    request: Request,
     landlord_id: str,
     body: LandlordUpdate,
     org_id: str = Depends(get_current_organization),
@@ -175,7 +178,7 @@ def admin_put_landlord(
     session=Depends(get_db_session),
 ):
     """Update a landlord (partial)."""
-    return las.put_landlord(session, org_id, str(current_user.id), landlord_id, body)
+    return las.put_landlord(session, org_id, str(current_user.id), landlord_id, body, request)
 
 
 @router.get("/landlords/{landlord_id}/notes", response_model=dict)

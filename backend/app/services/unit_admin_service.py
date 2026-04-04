@@ -11,6 +11,7 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Set
 
 from fastapi import HTTPException
+from starlette.requests import Request
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlmodel import Session, select
@@ -412,7 +413,13 @@ def get_unit(session: Session, org_id: str, unit_id: str) -> dict:
     return unit_enriched_dict(session, unit)
 
 
-def create_unit(session: Session, org_id: str, current_user_id: str, body: Any) -> dict:
+def create_unit(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     assert_property_and_landlord_in_org(session, body.property_id, org_id)
     assert_landlord_in_org(session, body.landlord_id, org_id)
     assert_property_manager_in_org(session, body.property_manager_id, org_id)
@@ -464,13 +471,21 @@ def create_unit(session: Session, org_id: str, current_user_id: str, body: Any) 
         old_values=None,
         new_values=model_snapshot(unit),
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(unit)
     return unit_to_dict(unit)
 
 
-def patch_unit(session: Session, org_id: str, current_user_id: str, unit_id: str, body: Any) -> dict:
+def patch_unit(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    unit_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
@@ -525,13 +540,20 @@ def patch_unit(session: Session, org_id: str, current_user_id: str, unit_id: str
                 old_values={key: ov},
                 new_values={key: nv},
                 organization_id=org_id,
+                request=request,
             )
     session.commit()
     session.refresh(unit)
     return unit_enriched_dict(session, unit)
 
 
-def delete_unit(session: Session, org_id: str, current_user_id: str, unit_id: str) -> dict:
+def delete_unit(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    unit_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
@@ -578,6 +600,7 @@ def delete_unit(session: Session, org_id: str, current_user_id: str, unit_id: st
             old_values=old_snapshot,
             new_values=None,
             organization_id=org_id,
+            request=request,
         )
         session.commit()
     except IntegrityError:
@@ -609,7 +632,12 @@ def list_unit_costs(session: Session, org_id: str, unit_id: str) -> List[dict]:
 
 
 def create_unit_cost(
-    session: Session, org_id: str, current_user_id: str, unit_id: str, body: Any
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    unit_id: str,
+    body: Any,
+    request: Optional[Request] = None,
 ) -> dict:
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
@@ -631,6 +659,7 @@ def create_unit_cost(
         old_values=None,
         new_values={"unit_cost": unit_cost_audit_payload(row)},
         organization_id=org_id,
+        request=request,
     )
     touch_unit_updated_at(session, unit_id)
     session.commit()
@@ -645,6 +674,7 @@ def patch_unit_cost(
     unit_id: str,
     cost_id: str,
     body: Any,
+    request: Optional[Request] = None,
 ) -> dict:
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
@@ -673,6 +703,7 @@ def patch_unit_cost(
             old_values=old_values,
             new_values=new_values,
             organization_id=org_id,
+            request=request,
         )
     touch_unit_updated_at(session, unit_id)
     session.commit()
@@ -681,7 +712,12 @@ def patch_unit_cost(
 
 
 def delete_unit_cost(
-    session: Session, org_id: str, current_user_id: str, unit_id: str, cost_id: str
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    unit_id: str,
+    cost_id: str,
+    request: Optional[Request] = None,
 ) -> dict:
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
@@ -700,6 +736,7 @@ def delete_unit_cost(
         old_values=old_values,
         new_values=None,
         organization_id=org_id,
+        request=request,
     )
     touch_unit_updated_at(session, unit_id)
     session.commit()

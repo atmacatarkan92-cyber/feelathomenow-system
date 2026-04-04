@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any, List, Literal, Optional
 
 from fastapi import HTTPException
+from starlette.requests import Request
 from sqlalchemy import and_, desc, not_, or_
 from sqlmodel import Session, select
 
@@ -235,7 +236,13 @@ def list_landlord_property_managers(session: Session, org_id: str, landlord_id: 
     return [landlord_property_manager_public_dict(p) for p in rows]
 
 
-def create_landlord(session: Session, org_id: str, current_user_id: str, body: Any) -> dict:
+def create_landlord(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     """Create a new landlord."""
     if body.user_id:
         u = session.get(User, body.user_id)
@@ -268,13 +275,20 @@ def create_landlord(session: Session, org_id: str, current_user_id: str, body: A
         old_values=None,
         new_values=model_snapshot(landlord),
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(landlord)
     return landlord_to_dict(landlord)
 
 
-def archive_landlord(session: Session, org_id: str, current_user_id: str, landlord_id: str) -> dict:
+def archive_landlord(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    landlord_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     """Soft-delete (archive) a landlord: sets deleted_at; does not remove related rows."""
     landlord = session.get(Landlord, landlord_id)
     if (
@@ -301,13 +315,20 @@ def archive_landlord(session: Session, org_id: str, current_user_id: str, landlo
             old_values={"deleted_at": ov},
             new_values={"deleted_at": nv},
             organization_id=org_id,
+            request=request,
         )
     session.commit()
     session.refresh(landlord)
     return landlord_to_dict(landlord)
 
 
-def restore_landlord(session: Session, org_id: str, current_user_id: str, landlord_id: str) -> dict:
+def restore_landlord(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    landlord_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     """Clear deleted_at (reactivate). No-op if already active."""
     landlord = session.get(Landlord, landlord_id)
     if not landlord or str(landlord.organization_id) != org_id:
@@ -332,13 +353,21 @@ def restore_landlord(session: Session, org_id: str, current_user_id: str, landlo
             old_values={"deleted_at": ov},
             new_values={"deleted_at": nv},
             organization_id=org_id,
+            request=request,
         )
     session.commit()
     session.refresh(landlord)
     return landlord_to_dict(landlord)
 
 
-def put_landlord(session: Session, org_id: str, current_user_id: str, landlord_id: str, body: Any) -> dict:
+def put_landlord(
+    session: Session,
+    org_id: str,
+    current_user_id: str,
+    landlord_id: str,
+    body: Any,
+    request: Optional[Request] = None,
+) -> dict:
     """Update a landlord (partial)."""
     landlord = session.get(Landlord, landlord_id)
     if (
@@ -376,6 +405,7 @@ def put_landlord(session: Session, org_id: str, current_user_id: str, landlord_i
                 old_values={key: ov},
                 new_values={key: nv},
                 organization_id=org_id,
+                request=request,
             )
     session.commit()
     session.refresh(landlord)

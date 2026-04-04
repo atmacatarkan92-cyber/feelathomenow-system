@@ -274,6 +274,7 @@ def get_organization(
 
 @router.post("/impersonate/{organization_id}", response_model=Token)
 def platform_impersonate(
+    request: Request,
     organization_id: str,
     current_user: User = Depends(require_platform_admin),
     session: Session = Depends(get_db_session),
@@ -307,6 +308,7 @@ def platform_impersonate(
         target_type="organization",
         target_id=org.id,
         metadata={"impersonation_started_at": datetime.utcnow().isoformat()},
+        request=request,
     )
     access_token = create_access_token(
         {

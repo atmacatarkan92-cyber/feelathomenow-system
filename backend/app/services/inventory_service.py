@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
+from starlette.requests import Request
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
@@ -248,7 +249,13 @@ def get_inventory_summary(session: Session, org_id: str) -> dict:
     }
 
 
-def create_inventory_item(session: Session, org_id: str, body: Any, actor_user_id: str) -> dict:
+def create_inventory_item(
+    session: Session,
+    org_id: str,
+    body: Any,
+    actor_user_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     name = str(getattr(body, "name", "") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
@@ -301,6 +308,7 @@ def create_inventory_item(session: Session, org_id: str, body: Any, actor_user_i
                 old_values=None,
                 new_values=model_snapshot(row),
                 organization_id=org_id,
+                request=request,
             )
             session.commit()
             session.refresh(row)
@@ -314,7 +322,14 @@ def create_inventory_item(session: Session, org_id: str, body: Any, actor_user_i
     raise HTTPException(status_code=500, detail="Could not allocate inventory number")
 
 
-def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any, actor_user_id: str) -> dict:
+def update_inventory_item(
+    session: Session,
+    org_id: str,
+    item_id: str,
+    body: Any,
+    actor_user_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     row = _assert_org_item(session, org_id, item_id)
     data = body.model_dump(exclude_unset=True) if hasattr(body, "model_dump") else {}
     if not data:
@@ -388,6 +403,7 @@ def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any
                 old_values={key: ov},
                 new_values={key: nv},
                 organization_id=org_id,
+                request=request,
             )
     session.commit()
     session.refresh(row)
@@ -396,7 +412,13 @@ def update_inventory_item(session: Session, org_id: str, item_id: str, body: Any
     return _item_to_dict(row, assigned_total=at, available=max(0, tot - at))
 
 
-def delete_inventory_item(session: Session, org_id: str, item_id: str, actor_user_id: str) -> dict:
+def delete_inventory_item(
+    session: Session,
+    org_id: str,
+    item_id: str,
+    actor_user_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     row = _assert_org_item(session, org_id, item_id)
     old_snapshot = model_snapshot(row)
     session.delete(row)
@@ -409,6 +431,7 @@ def delete_inventory_item(session: Session, org_id: str, item_id: str, actor_use
         old_values=old_snapshot,
         new_values=None,
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     return {"status": "ok"}
@@ -467,7 +490,14 @@ def list_assignments_for_unit(session: Session, org_id: str, unit_id: str) -> Li
     return out
 
 
-def create_assignment(session: Session, org_id: str, item_id: str, body: Any, actor_user_id: str) -> dict:
+def create_assignment(
+    session: Session,
+    org_id: str,
+    item_id: str,
+    body: Any,
+    actor_user_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     item = _assert_org_item(session, org_id, item_id)
     uid = str(getattr(body, "unit_id", "") or "").strip()
     if not uid:
@@ -516,6 +546,7 @@ def create_assignment(session: Session, org_id: str, item_id: str, body: Any, ac
             old_values=None,
             new_values={"inventory_assignment": _inventory_assignment_audit_payload(row)},
             organization_id=org_id,
+            request=request,
         )
         session.commit()
         session.refresh(row)
@@ -541,7 +572,14 @@ def _get_assignment_org(session: Session, org_id: str, assignment_id: str) -> In
     return row
 
 
-def update_assignment(session: Session, org_id: str, assignment_id: str, body: Any, actor_user_id: str) -> dict:
+def update_assignment(
+    session: Session,
+    org_id: str,
+    assignment_id: str,
+    body: Any,
+    actor_user_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     a = _get_assignment_org(session, org_id, assignment_id)
     item = _assert_org_item(session, org_id, str(a.inventory_item_id))
     data = body.model_dump(exclude_unset=True) if hasattr(body, "model_dump") else {}
@@ -617,6 +655,7 @@ def update_assignment(session: Session, org_id: str, assignment_id: str, body: A
                 old_values=old_wrap,
                 new_values=new_wrap,
                 organization_id=org_id,
+                request=request,
             )
         session.commit()
         session.refresh(a)
@@ -635,7 +674,13 @@ def update_assignment(session: Session, org_id: str, assignment_id: str, body: A
     return _assignment_to_dict(a, item=item, room_name=rn)
 
 
-def delete_assignment(session: Session, org_id: str, assignment_id: str, actor_user_id: str) -> dict:
+def delete_assignment(
+    session: Session,
+    org_id: str,
+    assignment_id: str,
+    actor_user_id: str,
+    request: Optional[Request] = None,
+) -> dict:
     a = _get_assignment_org(session, org_id, assignment_id)
     item_id = str(a.inventory_item_id)
     old_wrap = {"inventory_assignment": _inventory_assignment_audit_payload(a)}
@@ -649,6 +694,7 @@ def delete_assignment(session: Session, org_id: str, assignment_id: str, actor_u
         old_values=old_wrap,
         new_values=None,
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     return {"status": "ok"}

@@ -192,6 +192,7 @@ def admin_create_owner(
         old_values=None,
         new_values=model_snapshot(o),
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(o)
@@ -259,6 +260,7 @@ def admin_patch_owner(
                 old_values={key: ov},
                 new_values={key: nv},
                 organization_id=org_id,
+                request=request,
             )
     session.commit()
     session.refresh(o)

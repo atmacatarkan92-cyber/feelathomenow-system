@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlmodel import select
 
-from app.core.client_ip import get_client_ip
 from app.core.rate_limit import limiter
 from app.services.email_verification_helpers import (
     process_resend_verification_email,
@@ -170,19 +169,13 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
     user.last_login_at = datetime.now(timezone.utc)
     session.add(user)
 
-    ip_address = get_client_ip(request)
-    user_agent = request.headers.get("user-agent")
     try:
         log_audit_event(
             session,
             actor=user,
             action="login",
             organization_id=user.organization_id,
-            metadata={
-                "ip_address": ip_address,
-                "user_agent": user_agent,
-                "request_id": getattr(request.state, "request_id", None),
-            },
+            request=request,
         )
     except Exception:
         logger.exception(

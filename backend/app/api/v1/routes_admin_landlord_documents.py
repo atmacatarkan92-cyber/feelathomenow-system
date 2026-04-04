@@ -145,6 +145,7 @@ def admin_landlord_document_download(
 
 @router.delete("/landlord-documents/{document_id}")
 def admin_delete_landlord_document(
+    request: Request,
     document_id: str,
     org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
@@ -169,6 +170,8 @@ def admin_delete_landlord_document(
         lid,
         old_values={"document_deleted": deleted_name},
         new_values=None,
+        organization_id=org_id,
+        request=request,
     )
     session.delete(doc)
     session.commit()
@@ -224,6 +227,8 @@ def admin_create_landlord_document(
         str(landlord_id),
         old_values=None,
         new_values={"document_uploaded": raw_name},
+        organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(doc)

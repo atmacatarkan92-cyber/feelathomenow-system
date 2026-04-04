@@ -410,7 +410,7 @@ def admin_create_tenancy(
     session=Depends(get_db_session),
 ):
     """Create a tenancy. Validates tenant/room/unit and prevents overlapping tenancies."""
-    return tas.create_tenancy(session, org_id, str(current_user.id), body)
+    return tas.create_tenancy(session, org_id, str(current_user.id), body, request)
 
 
 @router.patch("/tenancies/{tenancy_id}", response_model=dict)
@@ -424,7 +424,7 @@ def admin_patch_tenancy(
     session=Depends(get_db_session),
 ):
     """Update a tenancy (partial). Checks overlap when dates change."""
-    return tas.patch_tenancy(session, org_id, str(current_user.id), tenancy_id, body)
+    return tas.patch_tenancy(session, org_id, str(current_user.id), tenancy_id, body, request)
 
 
 @router.delete("/tenancies/{tenancy_id}")
@@ -437,7 +437,7 @@ def admin_delete_tenancy(
     session=Depends(get_db_session),
 ):
     """Delete a tenancy."""
-    return tas.delete_tenancy(session, org_id, str(current_user.id), tenancy_id)
+    return tas.delete_tenancy(session, org_id, str(current_user.id), tenancy_id, request)
 
 
 @router.get("/tenancies/{tenancy_id}/revenue", response_model=List[dict])
@@ -460,7 +460,7 @@ def admin_create_tenancy_revenue(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    return tas.create_tenancy_revenue(session, org_id, str(current_user.id), tenancy_id, body)
+    return tas.create_tenancy_revenue(session, org_id, str(current_user.id), tenancy_id, body, request)
 
 
 @router.patch("/tenancy-revenue/{revenue_id}", response_model=dict)
@@ -473,7 +473,7 @@ def admin_patch_tenancy_revenue(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    return tas.patch_tenancy_revenue(session, org_id, str(current_user.id), revenue_id, body)
+    return tas.patch_tenancy_revenue(session, org_id, str(current_user.id), revenue_id, body, request)
 
 
 @router.delete("/tenancy-revenue/{revenue_id}")
@@ -485,4 +485,4 @@ def admin_delete_tenancy_revenue(
     current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    return tas.delete_tenancy_revenue(session, org_id, str(current_user.id), revenue_id)
+    return tas.delete_tenancy_revenue(session, org_id, str(current_user.id), revenue_id, request)

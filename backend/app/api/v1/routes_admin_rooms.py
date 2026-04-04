@@ -150,6 +150,7 @@ def admin_create_room(
         old_values=None,
         new_values={"room": _room_audit_payload(room)},
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     session.refresh(room)
@@ -194,6 +195,7 @@ def admin_patch_room(
             old_values={"room": old_payload},
             new_values={"room": new_payload},
             organization_id=org_id,
+            request=request,
         )
     session.commit()
     session.refresh(room)
@@ -243,6 +245,7 @@ def admin_delete_room(
         old_values={"room": old_payload},
         new_values=None,
         organization_id=org_id,
+        request=request,
     )
     session.commit()
     return {"status": "ok", "message": "Room deleted"}

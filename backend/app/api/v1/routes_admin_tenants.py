@@ -269,7 +269,7 @@ def admin_create_tenant(
     session=Depends(get_db_session),
 ):
     """Create a new tenant."""
-    return tas.create_tenant(session, org_id, str(current_user.id), body)
+    return tas.create_tenant(session, org_id, str(current_user.id), body, request)
 
 
 @router.patch("/tenants/{tenant_id}", response_model=dict)
@@ -283,7 +283,7 @@ def admin_patch_tenant(
     session=Depends(get_db_session),
 ):
     """Update a tenant (partial)."""
-    return tas.patch_tenant(session, org_id, str(current_user.id), tenant_id, body)
+    return tas.patch_tenant(session, org_id, str(current_user.id), tenant_id, body, request)
 
 
 @router.get("/tenants/{tenant_id}/notes", response_model=dict)
@@ -329,4 +329,4 @@ def admin_delete_tenant(
     session=Depends(get_db_session),
 ):
     """Delete a tenant when no blocking tenancy / FK dependencies."""
-    return tas.delete_tenant(session, org_id, str(current_user.id), tenant_id)
+    return tas.delete_tenant(session, org_id, str(current_user.id), tenant_id, request)

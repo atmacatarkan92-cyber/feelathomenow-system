@@ -154,6 +154,7 @@ class TestAuthLogin:
         assert row.actor_email == admin_user.email
         assert str(row.organization_id) == str(admin_user.organization_id)
         meta = row.extra_metadata or {}
+        assert meta.get("source") == "auth_login"
         assert meta.get("user_agent") == ua
         assert "ip_address" in meta
 
