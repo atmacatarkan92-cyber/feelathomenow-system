@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchPlatformAuditLogs } from "../../api/adminData";
 import { buildLoginDeviceStatusMap, loginDeviceStatusLabel } from "../../utils/loginDeviceAuditStatus";
+import { buildSuspiciousLoginAuditMap } from "../../utils/suspiciousLoginAudit";
 import { getDeviceLabelFromUserAgent } from "../../utils/userAgentLabel";
 
 const METADATA_MAX_LEN = 240;
@@ -61,6 +62,9 @@ function loginDeviceBadgeClass(status) {
   return "inline-flex w-fit shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-400";
 }
 
+const suspiciousBadgeClass =
+  "inline-flex w-fit shrink-0 items-center rounded-full border border-rose-400/80 bg-rose-100 px-2 py-0.5 text-[9px] font-semibold text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100";
+
 /**
  * Platform admin: last 50 audit log rows (cross-tenant).
  */
@@ -90,6 +94,7 @@ function PlatformAuditLogsPage() {
   }, []);
 
   const loginDeviceStatusById = useMemo(() => buildLoginDeviceStatusMap(rows), [rows]);
+  const suspiciousLoginById = useMemo(() => buildSuspiciousLoginAuditMap(rows), [rows]);
 
   const detailTextClass = "mt-1 text-[13px] text-[#0f172a] dark:text-[#e2e8f0]";
   const detailJsonClass =
@@ -146,6 +151,21 @@ function PlatformAuditLogsPage() {
                 </dt>
                 <dd className={detailTextClass}>{selectedLog.action || "—"}</dd>
               </div>
+              {selectedLog.action === "login" &&
+              (suspiciousLoginById.get(String(selectedLog.id))?.suspicious ? (
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                    Auffälligkeit
+                  </dt>
+                  <dd className={detailTextClass}>
+                    <ul className="mt-1 list-disc space-y-1 pl-4 text-[12px] text-[#0f172a] dark:text-[#e2e8f0]">
+                      {(suspiciousLoginById.get(String(selectedLog.id))?.reasons || []).map((r, idx) => (
+                        <li key={idx}>{r}</li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              ) : null)}
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
                   Organisation
@@ -322,9 +342,14 @@ function PlatformAuditLogsPage() {
                     <td className="max-w-[280px] px-3 py-2 align-top text-[11px] text-[#64748b] dark:text-[#94a3b8]">
                       <div className="flex flex-col gap-1">
                         {row.action === "login" ? (
-                          <span className={loginDeviceBadgeClass(loginDeviceStatusById.get(row.id))}>
-                            {loginDeviceStatusLabel(loginDeviceStatusById.get(row.id))}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className={loginDeviceBadgeClass(loginDeviceStatusById.get(row.id))}>
+                              {loginDeviceStatusLabel(loginDeviceStatusById.get(row.id))}
+                            </span>
+                            {suspiciousLoginById.get(String(row.id))?.suspicious ? (
+                              <span className={suspiciousBadgeClass}>Auffällig</span>
+                            ) : null}
+                          </div>
                         ) : null}
                         <span className="break-all">{formatMetadataListCell(row)}</span>
                         {row.action === "login" ? (
