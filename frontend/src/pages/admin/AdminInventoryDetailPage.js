@@ -35,11 +35,19 @@ function parseOptionalProductUrl(raw) {
 
 function statusBadgeClass(status) {
   const s = String(status || "active").toLowerCase();
-  if (s === "active") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
-  if (s === "stored" || s === "eingelagert") return "border-sky-500/30 bg-sky-500/10 text-sky-300";
-  if (s === "repair" || s === "reparatur") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
-  if (s === "disposed" || s === "entsorgt") return "border-white/[0.12] bg-white/[0.05] text-[#93a4bf]";
-  return "border-white/[0.12] bg-white/[0.05] text-[#93a4bf]";
+  if (s === "active") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300";
+  }
+  if (s === "stored" || s === "eingelagert") {
+    return "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300";
+  }
+  if (s === "repair" || s === "reparatur") {
+    return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
+  }
+  if (s === "disposed" || s === "entsorgt") {
+    return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.12] dark:bg-white/[0.05] dark:text-[#93a4bf]";
+  }
+  return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.12] dark:bg-white/[0.05] dark:text-[#93a4bf]";
 }
 
 function unitLabel(u) {
@@ -481,7 +489,7 @@ export default function AdminInventoryDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[40vh] bg-[#060b14] px-4 py-8 text-[#93a4bf] [color-scheme:dark]">
+      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#93a4bf] dark:[color-scheme:dark]">
         Lade …
       </div>
     );
@@ -489,11 +497,11 @@ export default function AdminInventoryDetailPage() {
 
   if (error && !item) {
     return (
-      <div className="min-h-[40vh] bg-[#060b14] px-4 py-8 text-[#f8fafc] [color-scheme:dark]">
+      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#f8fafc] dark:[color-scheme:dark]">
         <p className="text-[#f87171]">{error}</p>
         <Link
           to="/admin/inventory"
-          className="mt-4 inline-block rounded-lg border border-white/[0.12] px-4 py-2 text-sm text-[#93a4bf] hover:bg-white/[0.04]"
+          className="mt-4 inline-block rounded-lg border border-black/10 px-4 py-2 text-sm text-[#64748b] hover:bg-slate-100 dark:border-white/[0.12] dark:text-[#93a4bf] dark:hover:bg-white/[0.04]"
         >
           Zurück zum Inventar
         </Link>
@@ -508,19 +516,21 @@ export default function AdminInventoryDetailPage() {
   const available = item.available ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#060b14] text-[#f8fafc] [color-scheme:dark]">
+    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <div className="mx-auto max-w-[min(1100px,100%)] gap-4 p-6">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <Link
               to="/admin/inventory"
-              className="text-[13px] font-medium text-[#5b8cff] hover:underline"
+              className="text-[13px] font-medium text-[#2563eb] hover:underline dark:text-[#5b8cff]"
             >
               ← Zurück zum Inventar
             </Link>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <h1 className="m-0 text-[22px] font-bold tracking-tight">{item.name}</h1>
-              <span className="rounded-md border border-white/[0.1] bg-[#0b1220] px-2 py-0.5 font-mono text-[12px] text-[#93a4bf]">
+              <h1 className="m-0 text-[22px] font-bold tracking-tight text-[#0f172a] dark:text-[#f8fafc]">
+                {item.name}
+              </h1>
+              <span className="rounded-md border border-black/10 bg-slate-100 px-2 py-0.5 font-mono text-[12px] text-[#64748b] dark:border-white/[0.1] dark:bg-[#141824] dark:text-[#93a4bf]">
                 {item.inventory_number}
               </span>
               <span
@@ -534,7 +544,7 @@ export default function AdminInventoryDetailPage() {
             <button
               type="button"
               onClick={openEdit}
-              className="rounded-lg border border-white/[0.12] bg-[#0b1220] px-4 py-2 text-sm font-semibold text-[#f8fafc] hover:bg-white/[0.04]"
+              className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[#0f172a] hover:bg-slate-100 dark:border-white/[0.12] dark:bg-[#141824] dark:text-[#f8fafc] dark:hover:bg-white/[0.04]"
             >
               Bearbeiten
             </button>
@@ -551,60 +561,60 @@ export default function AdminInventoryDetailPage() {
         {error ? <p className="mb-4 text-sm text-[#f87171]">{error}</p> : null}
 
         <div className="grid gap-4">
-          <section className="rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-5">
-            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#93a4bf]">
+          <section className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Basis
             </h2>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Name</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Name</dt>
                 <dd className="mt-0.5 font-medium">{item.name}</dd>
               </div>
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Kategorie</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Kategorie</dt>
                 <dd className="mt-0.5">{item.category || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Marke</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Marke</dt>
                 <dd className="mt-0.5">{item.brand || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Zustand</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Zustand</dt>
                 <dd className="mt-0.5">{item.condition || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Status</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Status</dt>
                 <dd className="mt-0.5">{item.status || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Anschaffung</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Anschaffung</dt>
                 <dd className="mt-0.5 tabular-nums">{formatChf(item.purchase_price_chf)}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-5">
-            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#93a4bf]">
+          <section className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Purchase / Supplier Info
             </h2>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Lieferanten-Artikelnr.</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Lieferanten-Artikelnr.</dt>
                 <dd className="mt-0.5">{item.supplier_article_number || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[11px] text-[#93a4bf]">Gekauft bei</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Gekauft bei</dt>
                 <dd className="mt-0.5">{item.purchased_from || "—"}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-[11px] text-[#93a4bf]">Produkt-URL</dt>
+                <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Produkt-URL</dt>
                 <dd className="mt-0.5">
                   {item.product_url ? (
                     <a
                       href={String(item.product_url).trim()}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex rounded-md border border-[#5b8cff]/40 bg-[#5b8cff]/10 px-2 py-0.5 text-[12px] font-semibold text-[#5b8cff] hover:bg-[#5b8cff]/20"
+                      className="inline-flex rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[12px] font-semibold text-sky-800 hover:bg-sky-100 dark:border-[#5b8cff]/40 dark:bg-[#5b8cff]/10 dark:text-[#5b8cff] dark:hover:bg-[#5b8cff]/20"
                     >
                       Produkt öffnen
                     </a>
@@ -616,18 +626,18 @@ export default function AdminInventoryDetailPage() {
             </dl>
           </section>
 
-          <section className="rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-5">
-            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#93a4bf]">
+          <section className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Bestand
             </h2>
-            <p className="mt-3 text-[15px] font-semibold tabular-nums text-[#f8fafc]">
+            <p className="mt-3 text-[15px] font-semibold tabular-nums text-[#0f172a] dark:text-[#f8fafc]">
               {total} gesamt · {assigned} zugeordnet · {available} frei
             </p>
           </section>
 
-          <section className="rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-5">
+          <section className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#93a4bf]">
+              <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
                 Zuordnungen
               </h2>
               <button
@@ -643,12 +653,12 @@ export default function AdminInventoryDetailPage() {
               <p className="mt-2 text-sm text-[#f87171]">{assignErr}</p>
             ) : null}
             {assignments.length === 0 ? (
-              <p className="mt-3 text-sm text-[#93a4bf]">Keine Zuordnungen.</p>
+              <p className="mt-3 text-sm text-[#64748b] dark:text-[#93a4bf]">Keine Zuordnungen.</p>
             ) : (
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-white/[0.08] text-[9px] font-bold uppercase tracking-[0.8px] text-[#93a4bf]">
+                    <tr className="border-b border-black/10 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:border-white/[0.08] dark:text-[#6b7a9a]">
                       <th className="py-2 pr-3">Unit</th>
                       <th className="py-2 pr-3">Room</th>
                       <th className="py-2 pr-3 text-right">Menge</th>
@@ -657,30 +667,34 @@ export default function AdminInventoryDetailPage() {
                   </thead>
                   <tbody>
                     {assignments.map((row) => (
-                      <tr key={row.id} className="border-b border-white/[0.05]">
+                      <tr key={row.id} className="border-b border-black/5 dark:border-white/[0.05]">
                         <td className="py-2 pr-3">
                           <Link
                             to={`/admin/units/${encodeURIComponent(row.unit_id)}`}
-                            className="font-medium text-[#5b8cff] hover:underline"
+                            className="font-medium text-[#2563eb] hover:underline dark:text-[#5b8cff]"
                           >
                             {unitLabel(unitById.get(String(row.unit_id)))}
                           </Link>
-                          <div className="font-mono text-[10px] text-[#93a4bf]">{row.unit_id}</div>
+                          <div className="font-mono text-[10px] text-[#64748b] dark:text-[#93a4bf]">
+                            {row.unit_id}
+                          </div>
                         </td>
-                        <td className="py-2 pr-3 text-[#93a4bf]">{row.room_name || "—"}</td>
+                        <td className="py-2 pr-3 text-[#64748b] dark:text-[#93a4bf]">
+                          {row.room_name || "—"}
+                        </td>
                         <td className="py-2 pr-3 text-right tabular-nums">{row.quantity}</td>
                         <td className="py-2 pr-0 text-right">
                           <button
                             type="button"
                             onClick={() => openEditAssignment(row)}
-                            className="mr-2 text-[#5b8cff] hover:underline text-sm"
+                            className="mr-2 text-[13px] text-[#2563eb] hover:underline dark:text-[#5b8cff]"
                           >
                             Bearbeiten
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteAssignment(row)}
-                            className="text-[#93a4bf] hover:text-[#f87171] hover:underline text-sm"
+                            className="text-[13px] text-[#64748b] hover:text-[#f87171] hover:underline dark:text-[#93a4bf]"
                           >
                             Entfernen
                           </button>
@@ -693,8 +707,8 @@ export default function AdminInventoryDetailPage() {
             )}
           </section>
 
-          <section className="rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-5">
-            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#93a4bf]">
+          <section className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Notizen
             </h2>
             {notesErr ? <p className="mt-2 text-sm text-[#f87171]">{notesErr}</p> : null}
@@ -702,7 +716,7 @@ export default function AdminInventoryDetailPage() {
               value={notesDraft}
               onChange={(e) => setNotesDraft(e.target.value)}
               rows={4}
-              className="mt-3 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+              className="mt-3 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
             />
             <div className="mt-2 flex justify-end">
               <button
@@ -716,21 +730,21 @@ export default function AdminInventoryDetailPage() {
             </div>
           </section>
 
-          <section className="rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-5">
-            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#93a4bf]">
+          <section className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h2 className="m-0 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
               Verlauf
             </h2>
-            <p className="mt-2 text-[11px] text-[#93a4bf]">
+            <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#93a4bf]">
               Änderungen an diesem Artikel (Audit-Log, neueste zuerst).
             </p>
             {auditLogLoading ? (
-              <p className="mt-3 text-sm text-[#93a4bf]">Lade Verlauf …</p>
+              <p className="mt-3 text-sm text-[#64748b] dark:text-[#93a4bf]">Lade Verlauf …</p>
             ) : auditLogError ? (
               <p className="mt-3 text-sm text-[#f87171]">{auditLogError}</p>
             ) : auditLogs.length === 0 ? (
-              <p className="mt-3 text-sm text-[#93a4bf]">Keine Einträge im Verlauf.</p>
+              <p className="mt-3 text-sm text-[#64748b] dark:text-[#93a4bf]">Keine Einträge im Verlauf.</p>
             ) : (
-              <ul className="ml-1 mt-4 space-y-4 border-l border-white/[0.08] pl-4">
+              <ul className="ml-1 mt-4 space-y-4 border-l border-black/10 pl-4 dark:border-white/[0.08]">
                 {auditLogs.map((log) => {
                   const actor =
                     (log.actor_name && String(log.actor_name).trim()) ||
@@ -742,10 +756,10 @@ export default function AdminInventoryDetailPage() {
                         className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-[#5b8cff]"
                         aria-hidden
                       />
-                      <p className="text-sm font-medium text-[#f8fafc]">
+                      <p className="text-sm font-medium text-[#0f172a] dark:text-[#f8fafc]">
                         {inventoryAuditPrimaryLine(log, unitById)}
                       </p>
-                      <p className="mt-1 text-[11px] text-[#93a4bf]">
+                      <p className="mt-1 text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                         {formatAuditTimestamp(log.created_at)}
                         {actor ? ` · ${actor}` : ""}
                       </p>
@@ -759,37 +773,40 @@ export default function AdminInventoryDetailPage() {
       </div>
 
       {editOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-6">
-            <h4 className="m-0 text-lg font-semibold">Artikel bearbeiten</h4>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 dark:bg-black/60">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h4 className="m-0 text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">Artikel bearbeiten</h4>
             {formErr ? <p className="mt-2 text-sm text-[#f87171]">{formErr}</p> : null}
-            <form onSubmit={submitEdit} className="mt-4 grid grid-cols-1 gap-3 text-[#f8fafc]">
-              <label className="text-[11px] text-[#93a4bf]">
+            <form
+              onSubmit={submitEdit}
+              className="mt-4 grid grid-cols-1 gap-3 text-[#0f172a] dark:text-[#eef2ff]"
+            >
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Name *
                 <input
                   required
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="text-[11px] text-[#93a4bf]">
+                <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                   Gesamtmenge *
                   <input
                     type="number"
                     min={1}
                     value={form.total_quantity}
                     onChange={(e) => setForm((f) => ({ ...f, total_quantity: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                   />
                 </label>
-                <label className="text-[11px] text-[#93a4bf]">
+                <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                   Status
                   <select
                     value={form.status}
                     onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                   >
                     <option value="active">Aktiv</option>
                     <option value="stored">Eingelagert</option>
@@ -798,32 +815,32 @@ export default function AdminInventoryDetailPage() {
                   </select>
                 </label>
               </div>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Kategorie
                 <input
                   value={form.category}
                   onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Marke
                 <input
                   value={form.brand}
                   onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Zustand
                 <input
                   value={form.condition}
                   onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="text-[11px] text-[#93a4bf]">
+                <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                   Anschaffung CHF
                   <input
                     type="number"
@@ -832,60 +849,60 @@ export default function AdminInventoryDetailPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, purchase_price_chf: e.target.value }))
                     }
-                    className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                   />
                 </label>
-                <label className="text-[11px] text-[#93a4bf]">
+                <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                   Kaufdatum
                   <input
                     type="date"
                     value={form.purchase_date}
                     onChange={(e) => setForm((f) => ({ ...f, purchase_date: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                   />
                 </label>
               </div>
-              <div className="rounded-lg border border-white/[0.06] bg-[#060b14]/50 p-3">
-                <p className="m-0 text-[10px] font-bold uppercase tracking-[0.9px] text-[#93a4bf]">
+              <div className="rounded-lg border border-black/10 bg-slate-50 p-3 dark:border-white/[0.06] dark:bg-[#111520]/80">
+                <p className="m-0 text-[10px] font-bold uppercase tracking-[0.9px] text-[#64748b] dark:text-[#93a4bf]">
                   Purchase / Supplier Info
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-3">
-                  <label className="text-[11px] text-[#93a4bf]">
+                  <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                     Lieferanten-Artikelnr.
                     <input
                       value={form.supplier_article_number}
                       onChange={(e) =>
                         setForm((f) => ({ ...f, supplier_article_number: e.target.value }))
                       }
-                      className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                     />
                   </label>
-                  <label className="text-[11px] text-[#93a4bf]">
+                  <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                     Gekauft bei
                     <input
                       value={form.purchased_from}
                       onChange={(e) => setForm((f) => ({ ...f, purchased_from: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                     />
                   </label>
-                  <label className="text-[11px] text-[#93a4bf]">
+                  <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                     Produkt-URL
                     <input
                       type="url"
                       value={form.product_url}
                       onChange={(e) => setForm((f) => ({ ...f, product_url: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                     />
                   </label>
                 </div>
               </div>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Notizen
                 <textarea
                   rows={2}
                   value={form.notes}
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
               <div className="flex justify-end gap-2 pt-2">
@@ -895,7 +912,7 @@ export default function AdminInventoryDetailPage() {
                     setEditOpen(false);
                     setFormErr("");
                   }}
-                  className="rounded-lg border border-white/[0.12] px-4 py-2 text-sm"
+                  className="rounded-lg border border-black/10 px-4 py-2 text-sm text-[#0f172a] hover:bg-slate-100 dark:border-white/[0.12] dark:text-[#eef2ff] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>
@@ -913,14 +930,14 @@ export default function AdminInventoryDetailPage() {
       )}
 
       {assignOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-6">
-            <h4 className="m-0 text-lg font-semibold">Zuordnung hinzufügen</h4>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 dark:bg-black/60">
+          <div className="w-full max-w-md rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h4 className="m-0 text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">Zuordnung hinzufügen</h4>
             {assignErr && assignOpen ? (
               <p className="mt-2 text-sm text-[#f87171]">{assignErr}</p>
             ) : null}
             <form onSubmit={submitAssign} className="mt-4 grid gap-3">
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Unit *
                 <select
                   required
@@ -928,7 +945,7 @@ export default function AdminInventoryDetailPage() {
                   onChange={(e) =>
                     setAssignForm((f) => ({ ...f, unit_id: e.target.value, room_id: "" }))
                   }
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="">— wählen —</option>
                   {units.map((u) => {
@@ -942,12 +959,12 @@ export default function AdminInventoryDetailPage() {
                   })}
                 </select>
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Room (optional)
                 <select
                   value={assignForm.room_id}
                   onChange={(e) => setAssignForm((f) => ({ ...f, room_id: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="">— ganze Unit —</option>
                   {assignRooms.map((r) => {
@@ -960,7 +977,7 @@ export default function AdminInventoryDetailPage() {
                   })}
                 </select>
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Menge (frei: {available})
                 <input
                   type="number"
@@ -968,15 +985,15 @@ export default function AdminInventoryDetailPage() {
                   max={available}
                   value={assignForm.quantity}
                   onChange={(e) => setAssignForm((f) => ({ ...f, quantity: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Notiz
                 <input
                   value={assignForm.notes}
                   onChange={(e) => setAssignForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
               <div className="flex justify-end gap-2 pt-2">
@@ -986,7 +1003,7 @@ export default function AdminInventoryDetailPage() {
                     setAssignOpen(false);
                     setAssignErr("");
                   }}
-                  className="rounded-lg border border-white/[0.12] px-4 py-2 text-sm"
+                  className="rounded-lg border border-black/10 px-4 py-2 text-sm text-[#0f172a] hover:bg-slate-100 dark:border-white/[0.12] dark:text-[#eef2ff] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>
@@ -1004,14 +1021,14 @@ export default function AdminInventoryDetailPage() {
       )}
 
       {editAssignOpen && editingAsg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-6">
-            <h4 className="m-0 text-lg font-semibold">Zuordnung bearbeiten</h4>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 dark:bg-black/60">
+          <div className="w-full max-w-md rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+            <h4 className="m-0 text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">Zuordnung bearbeiten</h4>
             {assignErr && editAssignOpen ? (
               <p className="mt-2 text-sm text-[#f87171]">{assignErr}</p>
             ) : null}
             <form onSubmit={submitEditAssignment} className="mt-4 grid gap-3">
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Unit *
                 <select
                   required
@@ -1019,7 +1036,7 @@ export default function AdminInventoryDetailPage() {
                   onChange={(e) =>
                     setEditAssignForm((f) => ({ ...f, unit_id: e.target.value, room_id: "" }))
                   }
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   {units.map((u) => {
                     const nu = normalizeUnit(u);
@@ -1032,12 +1049,12 @@ export default function AdminInventoryDetailPage() {
                   })}
                 </select>
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Room
                 <select
                   value={editAssignForm.room_id}
                   onChange={(e) => setEditAssignForm((f) => ({ ...f, room_id: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="">— ganze Unit —</option>
                   {editAssignRooms.map((r) => {
@@ -1050,22 +1067,22 @@ export default function AdminInventoryDetailPage() {
                   })}
                 </select>
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Menge
                 <input
                   type="number"
                   min={1}
                   value={editAssignForm.quantity}
                   onChange={(e) => setEditAssignForm((f) => ({ ...f, quantity: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
-              <label className="text-[11px] text-[#93a4bf]">
+              <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Notiz
                 <input
                   value={editAssignForm.notes}
                   onChange={(e) => setEditAssignForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-[#060b14] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </label>
               <div className="flex justify-end gap-2 pt-2">
@@ -1076,7 +1093,7 @@ export default function AdminInventoryDetailPage() {
                     setEditingAsg(null);
                     setAssignErr("");
                   }}
-                  className="rounded-lg border border-white/[0.12] px-4 py-2 text-sm"
+                  className="rounded-lg border border-black/10 px-4 py-2 text-sm text-[#0f172a] hover:bg-slate-100 dark:border-white/[0.12] dark:text-[#eef2ff] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>

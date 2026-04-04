@@ -13,7 +13,7 @@ function ItemProductLink({ url }) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex rounded-md border border-[#5b8cff]/40 bg-[#5b8cff]/10 px-2 py-0.5 text-[10px] font-semibold text-[#5b8cff] hover:bg-[#5b8cff]/20"
+      className="inline-flex rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-800 hover:bg-sky-100 dark:border-[#5b8cff]/40 dark:bg-[#5b8cff]/10 dark:text-[#5b8cff] dark:hover:bg-[#5b8cff]/20"
     >
       Produkt öffnen
     </a>
@@ -96,9 +96,10 @@ export default function InventorySection({ unitId, rooms = [] }) {
                       <Link
                         to={detailUrl}
                         onClick={(e) => e.stopPropagation()}
-                        className="text-[#5b8cff] hover:underline"
+                        className="text-[#2563eb] hover:underline dark:text-[#5b8cff]"
                       >
-                        <span className="text-[#93a4bf]">{row.inventory_number}</span> {row.item_name}
+                        <span className="text-[#64748b] dark:text-[#93a4bf]">{row.inventory_number}</span>{" "}
+                        {row.item_name}
                       </Link>
                     </td>
                     <td className="py-2 pr-3 text-[#64748b] dark:text-[#93a4bf]">
@@ -131,7 +132,7 @@ export default function InventorySection({ unitId, rooms = [] }) {
                     <td className="py-2 pr-3 text-right tabular-nums">{row.quantity}</td>
                     <td className="py-2 pr-3">{row.item_condition || "—"}</td>
                     <td className="py-2 pr-3">{row.item_status || "—"}</td>
-                    <td className="py-2 pr-3 text-right text-[11px] text-[#93a4bf]">
+                    <td className="py-2 pr-3 text-right text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                       {row.item_available ?? "—"}
                     </td>
                     <td className="py-2 pr-2 text-right">
@@ -152,7 +153,7 @@ export default function InventorySection({ unitId, rooms = [] }) {
       )}
 
       <p className="mt-4 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
-        <Link to="/admin/inventory" className="text-[#5b8cff] hover:underline">
+        <Link to="/admin/inventory" className="text-[#2563eb] hover:underline dark:text-[#5b8cff]">
           Gesamt-Inventar verwalten
         </Link>
       </p>
