@@ -8,6 +8,7 @@ payloads (e.g. tenancy, tenancy_revenue, room, unit_cost).
 """
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from typing import Any, Optional
 
@@ -106,6 +107,36 @@ def merge_audit_metadata(
     return cleaned if cleaned else None
 
 
+def _sanitize_audit_metadata(obj: Any) -> Any:
+    """
+    Recursively coerce values to JSON-serializable forms for JSONB storage.
+    Preserves dict/list structure; leaves standard JSON scalars unchanged;
+    converts datetimes to ISO strings; non-serializable leaves (e.g. MagicMock
+    in tests) become str(value).
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return {str(k): _sanitize_audit_metadata(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_audit_metadata(x) for x in obj]
+    if isinstance(obj, (str, int, bool)):
+        return obj
+    if isinstance(obj, float):
+        try:
+            json.dumps(obj)
+            return obj
+        except (TypeError, ValueError):
+            return str(obj)
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    try:
+        json.dumps(obj)
+        return obj
+    except (TypeError, ValueError):
+        return str(obj)
+
+
 def create_audit_log(
     session: Session,
     actor_user_id: Optional[str],
@@ -144,6 +175,8 @@ def create_audit_log(
 
     actor_email = _resolve_actor_email(session, actor_user_id, actor_user)
     extra_meta = merge_audit_metadata(request=request, source=source, extra=metadata)
+    if extra_meta is not None:
+        extra_meta = _sanitize_audit_metadata(extra_meta)
 
     entry = AuditLog(
         organization_id=str(org_id).strip(),
