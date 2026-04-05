@@ -564,31 +564,46 @@ const gridTwoCol = {
   gap: "12px 20px",
 };
 
-const pageWrapClass = "mx-auto max-w-[min(1400px,100%)] p-6";
+const pageWrapClass = "mx-auto max-w-[min(1400px,100%)]";
 
 const tableClass =
-  "w-full border-collapse text-sm text-[#0f172a] dark:text-[#eef2ff]";
+  "w-full border-collapse text-[11px] text-[#8892b0]";
 
 const thCellClass =
-  "border-b border-black/10 px-3 py-2.5 text-left text-[11px] font-semibold text-[#64748b] dark:border-white/[0.05] dark:text-[#6b7a9a]";
+  "border-b border-[#1c2035] px-[14px] py-2 text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]";
 
 const tdCellClass =
-  "border-b border-black/10 px-3 py-2.5 align-top text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]";
+  "border-b border-[#1c2035] px-[14px] py-[9px] align-middle text-[11px] text-[#8892b0]";
 
 const sectionCardClass =
-  "mb-3 rounded-[14px] border border-black/10 bg-white p-4 dark:border-white/[0.07] dark:bg-[#141824]";
+  "mb-0 overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]";
 
 const labelClass =
-  "mb-1 block text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]";
+  "mb-1 block text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]";
 
 const inputClass =
-  "box-border w-full rounded-[9px] border border-black/10 bg-slate-100 px-2.5 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]";
+  "box-border w-full rounded-[7px] border border-[#1c2035] bg-[#141720] px-2.5 py-2 text-sm text-[#edf0f7] outline-none placeholder:text-[#4a5070] focus:border-[#242840]";
 
 const textareaClass =
-  "box-border min-h-[88px] w-full resize-y rounded-[9px] border border-black/10 bg-slate-100 px-2.5 py-2 font-[inherit] text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]";
+  "box-border min-h-[80px] w-full resize-y rounded-[7px] border border-[#1c2035] bg-[#141720] px-[12px] py-[10px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none placeholder:text-[#4a5070] focus:border-[#242840]";
 
 const sectionTitleClass =
-  "mb-2.5 mt-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]";
+  "text-[11px] font-medium uppercase tracking-[0.5px] text-[#edf0f7]";
+
+function tenantInitialsFromTenant(t) {
+  if (!t) return "?";
+  const fn = String(t.first_name || "").trim();
+  const ln = String(t.last_name || "").trim();
+  if (fn && ln) return `${fn[0]}${ln[0]}`.toUpperCase();
+  const name = tenantDisplayName(t) || "";
+  const parts = String(name)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+}
 
 function TenantNotesBlock({
   notes,
@@ -601,66 +616,61 @@ function TenantNotesBlock({
 }) {
   return (
     <div className={sectionCardClass}>
-      <div className={sectionTitleClass}>Notizen</div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit();
-        }}
-      >
-        <label htmlFor="td-note" className={`${labelClass} mb-1.5`}>
-          Neue Notiz
-        </label>
-        <textarea
-          id="td-note"
-          className={textareaClass}
-          value={noteDraft}
-          onChange={(e) => setNoteDraft(e.target.value)}
-          disabled={noteSaving}
-          placeholder="Interne Notiz …"
-        />
-        {noteErr ? (
-          <div style={{ marginTop: "8px", fontSize: "13px", color: "#f87171" }}>{noteErr}</div>
-        ) : null}
-        {noteSubmitError ? (
-          <div style={{ marginTop: "8px", fontSize: "13px", color: "#f87171" }}>{noteSubmitError}</div>
-        ) : null}
-        <div style={{ marginTop: "10px" }}>
-          <button
-            type="submit"
+      <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+        <div className={sectionTitleClass}>Notizen</div>
+      </div>
+      <div className="px-[16px] py-[14px]">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+        >
+          <label htmlFor="td-note" className={`${labelClass} mb-1.5`}>
+            Neue Notiz
+          </label>
+          <textarea
+            id="td-note"
+            className={textareaClass}
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
             disabled={noteSaving}
-            className={`rounded-[8px] bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3.5 py-2 text-sm font-semibold text-white ${
-              noteSaving ? "cursor-default opacity-50" : "cursor-pointer"
-            }`}
-            style={{ border: "none" }}
-          >
-            {noteSaving ? "Speichern …" : "Notiz speichern"}
-          </button>
+            placeholder="Interne Notiz …"
+          />
+          {noteErr ? (
+            <div style={{ marginTop: "8px", fontSize: "13px", color: "#ff5f6d" }}>{noteErr}</div>
+          ) : null}
+          {noteSubmitError ? (
+            <div style={{ marginTop: "8px", fontSize: "13px", color: "#ff5f6d" }}>{noteSubmitError}</div>
+          ) : null}
+          <div className="mt-[10px]">
+            <button
+              type="submit"
+              disabled={noteSaving}
+              className={`rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6] ${
+                noteSaving ? "cursor-default opacity-50" : "cursor-pointer"
+              }`}
+            >
+              {noteSaving ? "Speichern …" : "Notiz speichern"}
+            </button>
+          </div>
+        </form>
+        <div className="mt-[10px] border-t border-[#1c2035] pt-[10px]">
+          {!notes.length ? (
+            <p className="m-0 text-[11px] italic text-[#4a5070]">Noch keine Notizen</p>
+          ) : (
+            <ul className="m-0 list-none p-0">
+              {notes.map((n) => (
+                <li key={n.id} className="mb-3 last:mb-0">
+                  <div className="whitespace-pre-wrap text-[11px] text-[#8892b0]">{n.content}</div>
+                  <div className="mt-1.5 text-[11px] text-[#4a5070]">
+                    {formatDateTime(n.created_at)} · {n.author_name || "—"}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      </form>
-      <div className="mt-4 border-t border-black/10 pt-3.5 dark:border-white/[0.05]">
-        <div className="mb-2 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-          Alle Notizen
-        </div>
-        {!notes.length ? (
-          <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch keine Notizen</p>
-        ) : (
-          <ul className="m-0 list-none p-0">
-            {notes.map((n) => (
-              <li
-                key={n.id}
-                className="mb-3 rounded-[10px] border border-black/10 bg-slate-100 p-3 last:mb-0 dark:border-white/[0.05] dark:bg-[#111520]"
-              >
-                <div className="whitespace-pre-wrap text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                  {n.content}
-                </div>
-                <div className="mt-1.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-                  {formatDateTime(n.created_at)} · {n.author_name || "—"}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );
@@ -669,68 +679,74 @@ function TenantNotesBlock({
 function TenantHistoryBlock({ events }) {
   return (
     <div className={sectionCardClass}>
-      <div className={sectionTitleClass}>Verlauf / Aktivität</div>
-      {!events.length ? (
-        <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch kein Verlauf</p>
-      ) : (
-        <ul className="m-0 list-none p-0">
-          {events.map((ev) => {
-            const showDiff =
-              ev.action_type === "tenant_updated" &&
-              ev.field_name &&
-              (ev.old_value != null || ev.new_value != null);
-            const isAudit = String(ev.id || "").startsWith("audit-");
-            const auditChanges = isAudit && Array.isArray(ev.audit_changes) ? ev.audit_changes : [];
-            return (
-              <li
-                key={ev.id}
-                className="border-b border-black/10 py-3 last:border-b-0 dark:border-white/[0.05]"
-              >
-                <div className="text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">{ev.summary}</div>
-                {auditChanges.length > 0 ? (
-                  <AuditChangeRows changes={auditChanges} listClassName="!mt-2" />
-                ) : null}
-                {!auditChanges.length && showDiff ? (
-                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <div>
-                      <div className="text-[9px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
-                        Alt
+      <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+        <div className={sectionTitleClass}>Änderungsprotokoll</div>
+        <span className="text-[10px] text-[#4a5070]">{events.length}</span>
+      </div>
+      <div className="px-[16px] py-[14px]">
+        {!events.length ? (
+          <p className="m-0 text-[11px] text-[#4a5070]">Noch kein Verlauf</p>
+        ) : (
+          <ul className="m-0 list-none p-0">
+            {events.map((ev) => {
+              const showDiff =
+                ev.action_type === "tenant_updated" &&
+                ev.field_name &&
+                (ev.old_value != null || ev.new_value != null);
+              const isAudit = String(ev.id || "").startsWith("audit-");
+              const auditChanges = isAudit && Array.isArray(ev.audit_changes) ? ev.audit_changes : [];
+              return (
+                <li key={ev.id} className="border-b border-[#1c2035] py-[10px] last:border-b-0">
+                  <div className="mb-[2px] text-[11px] font-medium text-[#edf0f7]">{ev.summary}</div>
+                  {auditChanges.length > 0 ? (
+                    <AuditChangeRows changes={auditChanges} listClassName="!mt-2" />
+                  ) : null}
+                  {!auditChanges.length && showDiff ? (
+                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div>
+                        <div className="text-[9px] font-semibold uppercase tracking-wide text-[#4a5070]">Alt</div>
+                        <div className="mt-0.5 rounded-md border border-[#1c2035] bg-[#191c28] px-2 py-1.5 text-[12px] text-[#8892b0]">
+                          {ev.old_value ?? "—"}
+                        </div>
                       </div>
-                      <div className="mt-0.5 rounded-md border border-amber-200/80 bg-amber-50/90 px-2 py-1.5 text-[12px] text-amber-950 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-100">
-                        {ev.old_value ?? "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[9px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
-                        Neu
-                      </div>
-                      <div className="mt-0.5 rounded-md border border-emerald-200/80 bg-emerald-50/90 px-2 py-1.5 text-[12px] text-emerald-950 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-100">
-                        {ev.new_value ?? "—"}
+                      <div>
+                        <div className="text-[9px] font-semibold uppercase tracking-wide text-[#4a5070]">Neu</div>
+                        <div className="mt-0.5 rounded-md border border-[#1c2035] bg-[#141720] px-2 py-1.5 text-[12px] text-[#edf0f7]">
+                          {ev.new_value ?? "—"}
+                        </div>
                       </div>
                     </div>
+                  ) : null}
+                  <div className="mt-2 text-[10px] text-[#4a5070]">
+                    {formatDateTime(ev.created_at)}
+                    {isAudit && ev.audit_action != null && String(ev.audit_action) !== ""
+                      ? ` · ${auditActionLabel(ev.audit_action)}`
+                      : ""}
+                    {" · "}
+                    <span className="text-[#f5a623]">{ev.author_name || "—"}</span>
                   </div>
-                ) : null}
-                <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
-                  {formatDateTime(ev.created_at)}
-                  {isAudit && ev.audit_action != null && String(ev.audit_action) !== ""
-                    ? ` · ${auditActionLabel(ev.audit_action)}`
-                    : ""}
-                  {` · ${ev.author_name || "—"}`}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
 
 function Row({ label, value }) {
+  const empty = value == null || String(value).trim() === "";
   return (
-    <div style={{ marginBottom: "12px" }}>
+    <div className="flex flex-col gap-[3px]">
       <span className={labelClass}>{label}</span>
-      <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{value || "—"}</div>
+      <div
+        className={
+          empty ? "text-[12px] font-normal text-[#4a5070]" : "text-[12px] font-medium text-[#edf0f7]"
+        }
+      >
+        {empty ? "—" : value}
+      </div>
     </div>
   );
 }
@@ -1718,18 +1734,18 @@ export default function AdminTenantDetailPage() {
 
   const tenantOpBadgeClass =
     statusMeta?.label === "Aktiv"
-      ? "inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400"
+      ? "inline-flex shrink-0 items-center rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]"
       : statusMeta?.label === "Reserviert"
-        ? "inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400"
+        ? "inline-flex shrink-0 items-center rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]"
         : statusMeta?.label === "Ausgezogen"
-          ? "inline-flex rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold text-red-400"
-          : "inline-flex rounded-full border border-black/10 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-[#0f172a] dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-[#eef2ff]";
+          ? "inline-flex shrink-0 items-center rounded-full border border-[#1c2035] bg-[#191c28] px-2 py-[2px] text-[9px] font-semibold text-[#4a5070]"
+          : "inline-flex shrink-0 items-center rounded-full border border-[#1c2035] bg-[#191c28] px-2 py-[2px] text-[9px] font-semibold text-[#8892b0]";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
+    <div className="-m-6 min-h-screen bg-[#080a0f] text-[#edf0f7]">
       <div className={pageWrapClass}>
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-black/10 bg-[#f8fafc] pb-5 dark:border-white/[0.07] dark:bg-[#07090f]">
-          <div className="flex min-w-0 flex-wrap items-start gap-3">
+        <div className="sticky top-0 z-30 flex h-[50px] items-center border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+          <div className="flex min-w-0 flex-1 items-center gap-[12px]">
             <button
               type="button"
               onClick={() => {
@@ -1739,64 +1755,73 @@ export default function AdminTenantDetailPage() {
                 }
                 goToTenantList();
               }}
-              className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
+              className="shrink-0 rounded-[6px] border border-[#252a3a] bg-[#141720] px-[10px] py-[4px] text-[11px] text-[#4a5070] transition-colors hover:border-[#242840] hover:text-[#edf0f7]"
               style={{ cursor: "pointer" }}
             >
               {editing ? "Abbrechen" : "← Zurück"}
             </button>
-            <div style={{ minWidth: 0 }}>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Mieter</div>
-              <h1 className="mt-1 break-words text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
-                {loading ? "…" : displayName}
-              </h1>
-              {!loading && tenant && (
-                <div className="mt-2.5">
-                  <span className={tenantOpBadgeClass}>{statusMeta?.label || "Status"}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            {!editing && tenant && !loadError && !loading ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSaveError(null);
-                  navigate(
-                    {
-                      pathname: location.pathname,
-                      search: location.search,
-                      hash: location.hash,
-                    },
-                    {
-                      state: {
-                        ...(typeof location.state === "object" && location.state !== null
-                          ? location.state
-                          : {}),
-                        tenantStammdatenEdit: true,
-                      },
-                    }
-                  );
-                }}
-                className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
-                style={{ cursor: "pointer" }}
-              >
-                Bearbeiten
-              </button>
+            <div className="h-5 w-px shrink-0 bg-[#1c2035]" aria-hidden />
+            <span className="shrink-0 text-[10px] text-[#4a5070]">Mieter</span>
+            <span className="shrink-0 text-[#1c2035]">/</span>
+            <span className="min-w-0 truncate text-[14px] font-medium text-[#edf0f7]">
+              {loading ? "…" : displayName}
+            </span>
+            {!loading && tenant ? (
+              <span className={tenantOpBadgeClass}>{statusMeta?.label || "Status"}</span>
             ) : null}
           </div>
-        </header>
+          <div className="flex shrink-0 items-center gap-[8px]">
+            {!editing && tenant && !loadError && !loading ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSaveError(null);
+                    navigate(
+                      {
+                        pathname: location.pathname,
+                        search: location.search,
+                        hash: location.hash,
+                      },
+                      {
+                        state: {
+                          ...(typeof location.state === "object" && location.state !== null
+                            ? location.state
+                            : {}),
+                          tenantStammdatenEdit: true,
+                        },
+                      }
+                    );
+                  }}
+                  className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[4px] text-[11px] text-[#8892b0] transition-colors hover:border-[#242840] hover:text-[#edf0f7]"
+                  style={{ cursor: "pointer" }}
+                >
+                  Bearbeiten
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTenantDocPick}
+                  disabled={tenantDocUploading || !tenantId}
+                  className="rounded-[6px] border border-[rgba(91,156,246,0.35)] bg-[rgba(91,156,246,0.12)] px-[14px] py-[4px] text-[11px] font-medium text-[#5b9cf6] transition-colors hover:border-[rgba(91,156,246,0.5)] hover:bg-[rgba(91,156,246,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ cursor: tenantDocUploading || !tenantId ? "not-allowed" : "pointer" }}
+                >
+                  Dokument erstellen
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
 
         <main>
           {loading ? (
-            <p className="text-[#64748b] dark:text-[#6b7a9a]">Lade Daten …</p>
+            <p className="px-6 py-5 text-[#4a5070]">Lade Daten …</p>
           ) : loadError ? (
-            <div className="rounded-[14px] border border-red-500/20 bg-red-500/10 p-4 text-[#f87171]">
+            <div className="mx-6 my-5 rounded-[12px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] p-4 text-[#ff5f6d]">
               <p style={{ margin: "0 0 12px 0" }}>{loadError}</p>
               <button
                 type="button"
                 onClick={goToTenantList}
-                className="rounded-[8px] border border-black/10 bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[#64748b] dark:border-white/[0.1] dark:text-[#8090b0]"
+                className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[4px] text-[11px] text-[#8892b0] hover:border-[#242840] hover:text-[#edf0f7]"
                 style={{ cursor: "pointer" }}
               >
                 Zurück zur Übersicht
@@ -1804,98 +1829,125 @@ export default function AdminTenantDetailPage() {
             </div>
           ) : tenant ? (
             <>
+              <div className="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1fr_300px] lg:items-start">
+                <div className="flex flex-col gap-3">
               {!editing ? (
-                <>
-                  <div className={sectionCardClass}>
-                    <div className={sectionTitleClass}>Stammdaten</div>
-                    <div style={gridTwoCol}>
-                      <Row label="Vorname" value={tenant.first_name} />
-                      <Row label="Nachname" value={tenant.last_name} />
-                      <Row label="Geburtsdatum" value={formatDateOnly(tenant.birth_date)} />
-                      <Row label="Nationalität" value={tenant.nationality} />
-                    </div>
-                    <div className="mt-3 border-t border-black/10 pt-3 dark:border-white/[0.05]">
-                      <span className={labelClass}>Erfasst am</span>
-                      <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                        {formatDateTime(tenant.created_at)}
+                      <div className={sectionCardClass}>
+                        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#1c2035] px-[16px] py-[12px]">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] text-[16px] font-semibold text-[#5b9cf6]">
+                              {tenantInitialsFromTenant(tenant)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-[16px] font-semibold text-[#edf0f7]">{displayName}</div>
+                              <div className="mt-[2px] text-[11px] text-[#4a5070]">
+                                Erfasst {formatDateTime(tenant.created_at)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="px-[16px] py-[14px]">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <Row label="Vorname" value={tenant.first_name} />
+                            <Row label="Nachname" value={tenant.last_name} />
+                            <div className="flex flex-col gap-[3px]">
+                              <span className={labelClass}>Geburtsdatum</span>
+                              <div
+                                className={
+                                  !tenant.birth_date
+                                    ? "font-mono text-[11px] font-normal text-[#4a5070]"
+                                    : "font-mono text-[11px] font-medium text-[#edf0f7]"
+                                }
+                              >
+                                {!tenant.birth_date ? "—" : formatDateOnly(tenant.birth_date)}
+                              </div>
+                            </div>
+                            <Row label="Nationalität" value={tenant.nationality} />
+                          </div>
+                          <div className="my-3 h-px bg-[#1c2035]" />
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <Row
+                              label="Schweizer/in"
+                              value={
+                                tenant.is_swiss === true
+                                  ? "Ja"
+                                  : tenant.is_swiss === false
+                                    ? "Nein"
+                                    : "Unbekannt"
+                              }
+                            />
+                            {tenant.is_swiss !== true ? (
+                              <Row label="Aufenthaltsbewilligung" value={permitReadLabel(tenant)} />
+                            ) : null}
+                          </div>
+                          <div className="my-3 h-px bg-[#1c2035]" />
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <Row label="E-Mail" value={tenant.email} />
+                            <div className="flex flex-col gap-[3px]">
+                              <span className={labelClass}>Telefon</span>
+                              <div
+                                className={
+                                  !tenant.phone
+                                    ? "font-mono text-[11px] font-normal text-[#4a5070]"
+                                    : "font-mono text-[11px] font-medium text-[#edf0f7]"
+                                }
+                              >
+                                {!tenant.phone ? "—" : tenant.phone}
+                              </div>
+                            </div>
+                            <Row label="Firma" value={tenant.company} />
+                          </div>
+                          <div className="my-3 h-px bg-[#1c2035]" />
+                          <div>
+                            <span className={labelClass}>Adresse</span>
+                            <div className="mt-1 flex items-start gap-2">
+                              <span className="text-[9px] text-[#4a5070]" aria-hidden>
+                                📍
+                              </span>
+                              <div className="min-w-0 flex-1 space-y-1 text-[12px] font-medium text-[#5b9cf6]">
+                                <p>{tenantAddrLine1 ? tenantAddrLine1 : "—"}</p>
+                                <p>{tenantAddrLine2 ? tenantAddrLine2 : "—"}</p>
+                                <p>{tenantAddrLine3 ? tenantAddrLine3 : "—"}</p>
+                              </div>
+                              {tenantAddrLine1 || tenantPlz || tenantCity ? (
+                                <button
+                                  type="button"
+                                  title="In Google Maps öffnen"
+                                  aria-label="In Google Maps öffnen"
+                                  onClick={() =>
+                                    window.open(
+                                      buildGoogleMapsSearchUrl(
+                                        tenant.street,
+                                        tenant.postal_code,
+                                        tenant.city
+                                      ),
+                                      "_blank",
+                                      "noopener,noreferrer"
+                                    )
+                                  }
+                                  className="inline-flex shrink-0 items-center justify-center rounded-[6px] border border-[#1c2035] bg-transparent p-1.5 text-[#4a5070] transition-colors hover:border-[#242840] hover:text-[#8892b0]"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden
+                                  >
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                  </svg>
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className={sectionCardClass}>
-                    <div className={sectionTitleClass}>Aufenthalt</div>
-                    <div style={gridTwoCol}>
-                      <Row
-                        label="Schweizer/in"
-                        value={
-                          tenant.is_swiss === true
-                            ? "Ja"
-                            : tenant.is_swiss === false
-                              ? "Nein"
-                              : "Unbekannt"
-                        }
-                      />
-                      {tenant.is_swiss !== true ? (
-                        <Row
-                          label="Aufenthaltsbewilligung"
-                          value={permitReadLabel(tenant)}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className={sectionCardClass}>
-                    <div className={sectionTitleClass}>Kontakt</div>
-                    <div style={gridTwoCol}>
-                      <Row label="E-Mail" value={tenant.email} />
-                      <Row label="Telefon" value={tenant.phone} />
-                      <Row label="Firma" value={tenant.company} />
-                    </div>
-                  </div>
-                  <section className="mb-3 rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
-                    <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</h2>
-                    <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1 space-y-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                        <p>{tenantAddrLine1 ? tenantAddrLine1 : "—"}</p>
-                        <p>{tenantAddrLine2 ? tenantAddrLine2 : "—"}</p>
-                        <p>{tenantAddrLine3 ? tenantAddrLine3 : "—"}</p>
-                      </div>
-                      {tenantAddrLine1 || tenantPlz || tenantCity ? (
-                        <button
-                          type="button"
-                          title="In Google Maps öffnen"
-                          aria-label="In Google Maps öffnen"
-                          onClick={() =>
-                            window.open(
-                              buildGoogleMapsSearchUrl(
-                                tenant.street,
-                                tenant.postal_code,
-                                tenant.city
-                              ),
-                              "_blank",
-                              "noopener,noreferrer"
-                            )
-                          }
-                          className="inline-flex shrink-0 items-center justify-center rounded-[8px] border border-black/10 bg-transparent p-1.5 text-[#64748b] hover:bg-slate-100 hover:text-[#0f172a] dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.05] dark:hover:text-[#eef2ff]"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden
-                          >
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                        </button>
-                      ) : null}
-                    </div>
-                  </section>
-                </>
               ) : (
                 <form onSubmit={handleSave}>
                   <div className={sectionCardClass}>
@@ -2114,13 +2166,16 @@ export default function AdminTenantDetailPage() {
                   </form>
                 )}
 
-              <div className="my-2 text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
+              <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">
                 Verknüpfungen &amp; CRM
               </div>
               <div className={sectionCardClass}>
-                <div className={sectionTitleClass}>Mietverhältnisse</div>
+                <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+                  <div className={sectionTitleClass}>Mietverhältnisse</div>
+                </div>
+                <div className="px-[16px] py-[14px]">
                 {!tenancies.length ? (
-                  <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">
+                  <p className="m-0 text-[11px] text-[#4a5070]">
                     Keine Mietverhältnisse vorhanden
                   </p>
                 ) : (
@@ -2144,7 +2199,7 @@ export default function AdminTenantDetailPage() {
                           const urgencyNote = tenancyEndUrgencyNote(tn);
                           return (
                             <React.Fragment key={rowKey}>
-                              <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+                              <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] p-[16px]">
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                   <div className="min-w-0 flex-1 space-y-2">
                                     <span
@@ -2192,7 +2247,7 @@ export default function AdminTenantDetailPage() {
                                       type="button"
                                       onClick={() => startTenancyEdit(tn)}
                                       disabled={tenancyEditSaving}
-                                      className="rounded-lg border border-black/10 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-[#0f172a] hover:bg-slate-200/80 dark:border-white/[0.1] dark:bg-white/[0.05] dark:text-[#eef2ff] dark:hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
+                                      className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#8892b0] transition-colors hover:border-[#242840] hover:text-[#edf0f7] disabled:cursor-default disabled:opacity-50"
                                       style={{
                                         cursor: tenancyEditSaving ? "default" : "pointer",
                                       }}
@@ -2204,7 +2259,7 @@ export default function AdminTenantDetailPage() {
                                         type="button"
                                         onClick={() => navigate(`/admin/units/${tn.unit_id}`)}
                                         disabled={tenancyEditSaving}
-                                        className="rounded-lg border border-black/10 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-[#0f172a] hover:bg-slate-200/80 dark:border-white/[0.1] dark:bg-white/[0.05] dark:text-[#eef2ff] dark:hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-50"
+                                        className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#8892b0] transition-colors hover:border-[#242840] hover:text-[#edf0f7] disabled:cursor-default disabled:opacity-50"
                                         style={{
                                           cursor: tenancyEditSaving ? "default" : "pointer",
                                         }}
@@ -2221,24 +2276,24 @@ export default function AdminTenantDetailPage() {
                                   const loadingRow = tenancyRevenueLoadingId === tidStr;
                                   if (revRowsForCell === undefined || loadingRow) {
                                     return (
-                                      <div className="mt-5 flex flex-col divide-y divide-black/10 overflow-hidden rounded-[10px] border border-black/10 bg-slate-100 sm:flex-row sm:divide-x sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05] dark:bg-[#111520]">
-                                        <div className="flex-1 px-4 py-4">
+                                      <div className="mb-3 mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                        <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                           <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Monatliche Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">…</p>
+                                          <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">…</p>
                                         </div>
-                                        <div className="flex-1 px-4 py-4">
+                                        <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                           <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Einmalige Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">…</p>
+                                          <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">…</p>
                                         </div>
-                                        <div className="flex-1 px-4 py-4">
+                                        <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                           <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Kaution
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
+                                          <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">
                                             {formatChfRent(tn.tenant_deposit_amount)}
                                           </p>
                                           <p className="mt-1 text-[11px] text-[#7f8daa]">
@@ -2253,28 +2308,28 @@ export default function AdminTenantDetailPage() {
                                   }
                                   if (!revRowsForCell.length) {
                                     return (
-                                      <div className="mt-5 flex flex-col divide-y divide-black/10 overflow-hidden rounded-[10px] border border-black/10 bg-slate-100 sm:flex-row sm:divide-x sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05] dark:bg-[#111520]">
-                                        <div className="flex-1 px-4 py-4">
+                                      <div className="mb-3 mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                        <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                           <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Monatliche Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
+                                          <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">
                                             Keine Einnahmen definiert
                                           </p>
                                         </div>
-                                        <div className="flex-1 px-4 py-4">
+                                        <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                           <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Einmalige Einnahmen
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
+                                          <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">
                                             Keine Einnahmen definiert
                                           </p>
                                         </div>
-                                        <div className="flex-1 px-4 py-4">
+                                        <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                           <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                             Kaution
                                           </p>
-                                          <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
+                                          <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">
                                             {formatChfRent(tn.tenant_deposit_amount)}
                                           </p>
                                           <p className="mt-1 text-[11px] text-[#7f8daa]">
@@ -2290,28 +2345,28 @@ export default function AdminTenantDetailPage() {
                                   const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
                                   const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
                                   return (
-                                    <div className="mt-5 flex flex-col divide-y divide-black/10 overflow-hidden rounded-[10px] border border-black/10 bg-slate-100 sm:flex-row sm:divide-x sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05] dark:bg-[#111520]">
-                                      <div className="flex-1 px-4 py-4">
+                                    <div className="mb-3 mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                      <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                         <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Monatliche Einnahmen
                                         </p>
-                                        <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
+                                        <p className="font-mono text-[16px] font-medium leading-none text-[#3ddc84]">
                                           {formatChfRent(monthlyFromSaved)}
                                         </p>
                                       </div>
-                                      <div className="flex-1 px-4 py-4">
+                                      <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                         <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Einmalige Einnahmen
                                         </p>
-                                        <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
+                                        <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">
                                           {formatChfRent(oneTimeTotal)}
                                         </p>
                                       </div>
-                                      <div className="flex-1 px-4 py-4">
+                                      <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
                                         <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                                           Kaution
                                         </p>
-                                        <p className="text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff] md:text-[20px]">
+                                        <p className="font-mono text-[16px] font-medium leading-none text-[#edf0f7]">
                                           {formatChfRent(tn.tenant_deposit_amount)}
                                         </p>
                                         <p className="mt-1 text-[11px] text-[#7f8daa]">
@@ -2418,94 +2473,8 @@ export default function AdminTenantDetailPage() {
                                 </div>
 
                                 {urgencyNote ? (
-                                  <p className="mt-3 text-[11px] font-semibold text-[#7f8daa]">{urgencyNote}</p>
+                                  <p className="mt-3 text-[11px] font-semibold text-[#8892b0]">{urgencyNote}</p>
                                 ) : null}
-
-                                <div className="mt-6 border-t border-black/10 pt-5 dark:border-white/[0.05]">
-                                  <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                                    Einnahmen-Übersicht
-                                  </p>
-                                  {(() => {
-                                    const tidStr = String(tn.id);
-                                    const revRowsForCell = tenancyRevenueByTenancyId[tidStr];
-                                    const loadingRow = tenancyRevenueLoadingId === tidStr;
-                                    if (revRowsForCell === undefined || loadingRow) {
-                                      return (
-                                        <span className="text-[13px] text-[#7f8daa] md:text-[14px]">…</span>
-                                      );
-                                    }
-                                    if (!revRowsForCell.length) {
-                                      return (
-                                        <span className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
-                                          Keine Einnahmen definiert
-                                        </span>
-                                      );
-                                    }
-                                    const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
-                                    const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
-                                    const recBrCell = recurringMonthlyBreakdownEntries(revRowsForCell);
-                                    const otBrCell = oneTimeBreakdownEntries(revRowsForCell);
-                                    return (
-                                      <div className="rounded-[10px] border border-black/10 bg-slate-100 p-4 dark:border-white/[0.05] dark:bg-[#111520]">
-                                        <div className="flex items-center justify-between gap-4 border-b border-black/10 py-3 dark:border-white/[0.05]">
-                                          <span className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
-                                            Gesamteinnahmen / Monat
-                                          </span>
-                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
-                                            {formatChfRent(monthlyFromSaved)}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-4 border-b border-black/10 py-3 dark:border-white/[0.05]">
-                                          <span className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
-                                            Einmalige Einnahmen
-                                          </span>
-                                          <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
-                                            {formatChfRent(oneTimeTotal)}
-                                          </span>
-                                        </div>
-                                        {recBrCell.length ? (
-                                          <div className="divide-y divide-white/[0.05]">
-                                            {recBrCell.map((b) => (
-                                              <div
-                                                key={b.typeKey}
-                                                className="flex items-center justify-between gap-4 py-3"
-                                              >
-                                                <span className="text-[13px] font-medium text-[#7f8daa] md:text-[14px]">
-                                                  {b.label}
-                                                </span>
-                                                <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
-                                                  {formatChfRent(b.total)}
-                                                </span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        ) : null}
-                                        {otBrCell.length ? (
-                                          <div className="border-t border-black/10 pt-4 dark:border-white/[0.05]">
-                                            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.8px] text-[#7f8daa]">
-                                              Einmalige Einnahmen
-                                            </p>
-                                            <div className="divide-y divide-white/[0.05]">
-                                              {otBrCell.map((b) => (
-                                                <div
-                                                  key={b.typeKey}
-                                                  className="flex items-center justify-between gap-4 py-3"
-                                                >
-                                                  <span className="text-[13px] font-medium text-[#7f8daa] md:text-[14px]">
-                                                    {b.label}
-                                                  </span>
-                                                  <span className="text-[13px] font-semibold whitespace-nowrap text-[#0f172a] dark:text-[#eef2ff] md:text-[14px]">
-                                                    {formatChfRent(b.total)}
-                                                  </span>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
                               </div>
                               {String(tenancyEditingId) === String(tn.id) ? (
                                 <div
@@ -3682,49 +3651,53 @@ export default function AdminTenantDetailPage() {
                     </div>
                   </form>
                 ) : null}
+                </div>
               </div>
               <div className={sectionCardClass}>
-                <div className={sectionTitleClass}>Rechnungen</div>
-                {!invoices.length ? (
-                  <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">
-                    Keine Rechnungen vorhanden
-                  </p>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className={tableClass}>
-                      <thead>
-                        <tr>
-                          <th className={thCellClass}>Rechnung</th>
-                          <th className={`${thCellClass} text-right`}>Betrag</th>
-                          <th className={thCellClass}>Fällig</th>
-                          <th className={thCellClass}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {invoices.map((inv) => {
-                          return (
-                            <tr key={inv.id != null ? String(inv.id) : `${inv.invoice_number}-${inv.due_date}`}>
-                              <td className={`${tdCellClass} font-bold text-[#0f172a] dark:text-[#eef2ff]`}>
-                                {inv.invoice_number || "—"}
-                              </td>
-                              <td className={`${tdCellClass} text-right text-[#0f172a] dark:text-[#eef2ff]`}>
-                                {formatInvoiceAmount(inv.amount, inv.currency)}
-                              </td>
-                              <td className={`${tdCellClass} text-sm text-[#64748b] dark:text-[#6b7a9a]`}>
-                                {formatDateOnly(inv.due_date)}
-                              </td>
-                              <td className={tdCellClass}>
-                                <span className="inline-flex rounded-full border border-black/10 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-[#7aaeff] dark:border-white/[0.1] dark:bg-white/[0.06]">
-                                  {inv.status || "—"}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+                  <div className={sectionTitleClass}>Rechnungen</div>
+                </div>
+                <div className="px-[16px] py-[14px]">
+                  {!invoices.length ? (
+                    <p className="m-0 text-[11px] text-[#4a5070]">Keine Rechnungen vorhanden</p>
+                  ) : (
+                    <div>
+                      {invoices.map((inv) => {
+                        const invKey = inv.id != null ? String(inv.id) : `${inv.invoice_number}-${inv.due_date}`;
+                        const st = String(inv.status || "").toLowerCase();
+                        const statusClass =
+                          st === "paid" || st === "bezahlt"
+                            ? "border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] text-[#3ddc84]"
+                            : st === "overdue" || st === "überfällig"
+                              ? "border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] text-[#ff5f6d]"
+                              : st === "open" || st === "offen" || st === "unpaid"
+                                ? "border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]"
+                                : "border-[#1c2035] bg-[#191c28] text-[#8892b0]";
+                        return (
+                          <div
+                            key={invKey}
+                            className="flex items-center gap-[10px] border-b border-[#1c2035] py-[9px] last:border-b-0"
+                          >
+                            <span className="flex-1 font-mono text-[10px] text-[#5b9cf6]">
+                              {inv.invoice_number || "—"}
+                            </span>
+                            <span className="font-mono text-[11px] font-medium text-[#edf0f7]">
+                              {formatInvoiceAmount(inv.amount, inv.currency)}
+                            </span>
+                            <span className="font-mono text-[10px] text-[#4a5070]">
+                              {formatDateOnly(inv.due_date)}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2 py-[2px] text-[9px] font-semibold ${statusClass}`}
+                            >
+                              {inv.status || "—"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
               <TenantNotesBlock
                 notes={notes}
@@ -3858,10 +3831,125 @@ export default function AdminTenantDetailPage() {
                   </div>
                 )}
               </div>
-              <TenantHistoryBlock events={mergedHistoryEvents} />
+                </div>
+              {!editing ? (
+                <aside className="flex flex-col gap-3">
+                  {tenancies.map((tn) => {
+                    const tidStr = String(tn.id);
+                    const rowKeyAside = tn.id != null ? String(tn.id) : `${tn.move_in_date}-${tn.room_id}`;
+                    const revRowsForCell = tenancyRevenueByTenancyId[tidStr];
+                    const loadingRow = tenancyRevenueLoadingId === tidStr;
+                    return (
+                      <div key={`einnahmen-${rowKeyAside}`} className={sectionCardClass}>
+                        <div className="border-b border-[#1c2035] px-[16px] py-[12px]">
+                          <div className={sectionTitleClass}>Einnahmen Übersicht</div>
+                          <p className="mt-1 text-[10px] text-[#4a5070]">Mietverhältnis #{tidStr}</p>
+                        </div>
+                        <div className="px-[16px] py-[10px]">
+                          {(() => {
+                            if (revRowsForCell === undefined || loadingRow) {
+                              return (
+                                <p className="m-0 text-[12px] text-[#4a5070]">…</p>
+                              );
+                            }
+                            if (!revRowsForCell.length) {
+                              return (
+                                <p className="m-0 text-[12px] text-[#8892b0]">Keine Einnahmen definiert</p>
+                              );
+                            }
+                            const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
+                            const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
+                            const recBrCell = recurringMonthlyBreakdownEntries(revRowsForCell);
+                            const otBrCell = oneTimeBreakdownEntries(revRowsForCell);
+                            return (
+                              <>
+                                <div className="flex items-center justify-between border-b border-[#1c2035] py-[8px]">
+                                  <span className="text-[12px] text-[#8892b0]">Gesamteinnahmen / Monat</span>
+                                  <span className="font-mono text-[12px] font-medium text-[#3ddc84]">
+                                    {formatChfRent(monthlyFromSaved)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between border-b border-[#1c2035] py-[8px]">
+                                  <span className="text-[12px] text-[#8892b0]">Einmalige Einnahmen</span>
+                                  <span className="font-mono text-[12px] font-medium text-[#f5a623]">
+                                    {formatChfRent(oneTimeTotal)}
+                                  </span>
+                                </div>
+                                {recBrCell.length ? (
+                                  <>
+                                    <p className="mt-[4px] py-[6px] text-[9px] uppercase tracking-[0.6px] text-[#4a5070]">
+                                      Zusammensetzung
+                                    </p>
+                                    {recBrCell.map((b) => (
+                                      <div
+                                        key={b.typeKey}
+                                        className="flex items-center justify-between border-b border-[#1c2035] py-[8px]"
+                                      >
+                                        <span className="text-[12px] text-[#8892b0]">{b.label}</span>
+                                        <span className="font-mono text-[12px] font-medium text-[#3ddc84]">
+                                          {formatChfRent(b.total)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </>
+                                ) : null}
+                                {otBrCell.length ? (
+                                  <>
+                                    <p className="mt-[4px] py-[6px] text-[9px] uppercase tracking-[0.6px] text-[#4a5070]">
+                                      Einmalige Posten
+                                    </p>
+                                    {otBrCell.map((b) => (
+                                      <div
+                                        key={b.typeKey}
+                                        className="flex items-center justify-between border-b border-[#1c2035] py-[8px]"
+                                      >
+                                        <span className="text-[12px] text-[#8892b0]">{b.label}</span>
+                                        <span className="font-mono text-[12px] font-medium text-[#f5a623]">
+                                          {formatChfRent(b.total)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </>
+                                ) : null}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <TenantHistoryBlock events={mergedHistoryEvents} />
+                  <div className={sectionCardClass}>
+                    <div className="border-b border-[#1c2035] px-[16px] py-[12px]">
+                      <div className={sectionTitleClass}>Schnellinfo</div>
+                    </div>
+                    <div className="py-0">
+                      <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[9px]">
+                        <span className="text-[11px] text-[#4a5070]">Status</span>
+                        <span className={tenantOpBadgeClass}>{statusMeta?.label || "—"}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[9px]">
+                        <span className="text-[11px] text-[#4a5070]">Mieter-ID</span>
+                        <span className="text-[12px] font-medium text-[#edf0f7]">{tenant?.id ?? "—"}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[9px]">
+                        <span className="text-[11px] text-[#4a5070]">E-Mail</span>
+                        <span className="max-w-[160px] truncate text-[12px] font-medium text-[#edf0f7]">
+                          {tenant?.email || "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between px-[16px] py-[9px]">
+                        <span className="text-[11px] text-[#4a5070]">Mietverhältnisse</span>
+                        <span className="text-[12px] font-medium text-[#edf0f7]">{tenancies.length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+              ) : null}
+              </div>
             </>
           ) : (
-            <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Daten.</p>
+            <p className="px-6 py-5 text-[#4a5070]">Keine Daten.</p>
           )}
         </main>
       </div>
