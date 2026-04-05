@@ -771,9 +771,25 @@ export function normalizeUnit(u) {
   };
 }
 
+function _firstTrimmedString(...vals) {
+  for (const v of vals) {
+    if (v == null) continue;
+    const s = String(v).trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+/** True when label is only the same as city (avoid leading with city instead of a unit code). */
+function _labelLooksLikeCityOnly(label, city) {
+  const a = String(label || "").trim().toLowerCase();
+  const b = String(city || "").trim().toLowerCase();
+  return Boolean(a && b && a === b);
+}
+
 /**
- * Label for Unit select options: short id (title) · address, PLZ Ort.
- * Degrades if address or locality missing; prefers title/name over raw UUID.
+ * Label for Unit select options: short id · address, PLZ Ort.
+ * Leading token: explicit short-id fields (if present), else title/name unless duplicate of city, else UUID.
  * @param {object|null|undefined} u - Raw unit from API
  * @returns {string}
  */
@@ -781,17 +797,41 @@ export function formatUnitSelectOptionLabel(u) {
   if (!u) return "—";
   const nu = normalizeUnit(u);
   const idStr = String(nu.id || nu.unitId || "").trim();
-  const shortId =
-    String(nu.title || nu.name || "").trim() ||
-    (idStr.length > 12 ? `${idStr.slice(0, 8)}…` : idStr) ||
-    "—";
+  const uuidShort = idStr.length > 12 ? `${idStr.slice(0, 8)}…` : idStr;
+
+  const city = String(nu.city || "").trim();
+
+  const explicitShort = _firstTrimmedString(
+    u.unit_short_id,
+    u.short_unit_id,
+    u.unit_code,
+    u.external_unit_id,
+    nu.unit_short_id,
+    nu.short_unit_id,
+    nu.unit_code,
+    nu.external_unit_id
+  );
+
+  let leading = explicitShort;
+  if (!leading) {
+    const t = String(nu.title || "").trim();
+    if (t && !_labelLooksLikeCityOnly(t, city)) leading = t;
+  }
+  if (!leading) {
+    const n = String(nu.name || "").trim();
+    const t = String(nu.title || "").trim();
+    if (n && !_labelLooksLikeCityOnly(n, city) && n !== t) leading = n;
+  }
+  if (!leading) {
+    leading = uuidShort || "—";
+  }
+
   const addr = String(nu.address || "").trim();
   const pc = String(nu.zip || nu.postal_code || "").trim();
-  const city = String(nu.city || "").trim();
   const placePart = [pc, city].filter(Boolean).join(" ");
   const tail = [addr, placePart].filter(Boolean).join(", ");
-  if (tail) return `${shortId} · ${tail}`;
-  return shortId;
+  if (tail) return `${leading} · ${tail}`;
+  return leading;
 }
 
 /**
