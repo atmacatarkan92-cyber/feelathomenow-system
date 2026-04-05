@@ -46,7 +46,6 @@ class InventoryItemCreateBody(BaseModel):
     brand: Optional[str] = None
     total_quantity: int = Field(default=1, ge=1)
     condition: str = ""
-    status: str = "active"
     purchase_price_chf: Optional[float] = None
     purchase_date: Optional[date] = None
     purchased_from: Optional[str] = None
@@ -71,7 +70,6 @@ class InventoryItemPatchBody(BaseModel):
     brand: Optional[str] = None
     total_quantity: Optional[int] = Field(default=None, ge=1)
     condition: Optional[str] = None
-    status: Optional[str] = None
     purchase_price_chf: Optional[float] = None
     purchase_date: Optional[date] = None
     purchased_from: Optional[str] = None

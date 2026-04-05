@@ -44,13 +44,41 @@ function ProductUrlLink({ url, className = "" }) {
   );
 }
 
+const INVENTORY_CATEGORIES = [
+  "Wohnzimmer",
+  "Schlafzimmer",
+  "Küche",
+  "Esszimmer",
+  "Badezimmer",
+  "Balkon / Terrasse",
+  "Büro",
+  "Flur / Eingangsbereich",
+  "Sonstiges",
+];
+
+function buildCategorySelectOptions(currentValue) {
+  const v = String(currentValue || "").trim();
+  if (v && !INVENTORY_CATEGORIES.includes(v)) {
+    return [v, ...INVENTORY_CATEGORIES];
+  }
+  return [...INVENTORY_CATEGORIES];
+}
+
+function normalizeInventoryCategory(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  if (INVENTORY_CATEGORIES.includes(s)) return s;
+  const lower = s.toLowerCase();
+  const hit = INVENTORY_CATEGORIES.find((c) => c.toLowerCase() === lower);
+  return hit || s;
+}
+
 const emptyItemForm = () => ({
   name: "",
   category: "",
   brand: "",
   total_quantity: "1",
   condition: "",
-  status: "active",
   purchase_price_chf: "",
   purchase_date: "",
   supplier_article_number: "",
@@ -72,11 +100,10 @@ function draftToForm(draft) {
       : "";
   return {
     name: draft.name != null ? String(draft.name) : "",
-    category: draft.category != null ? String(draft.category) : "",
+    category: normalizeInventoryCategory(draft.category != null ? String(draft.category) : ""),
     brand: draft.brand != null ? String(draft.brand) : "",
     total_quantity: pq,
     condition: draft.condition != null ? String(draft.condition) : "",
-    status: draft.status != null ? String(draft.status) : "active",
     purchase_price_chf: pp,
     purchase_date: pd,
     supplier_article_number:
@@ -99,7 +126,6 @@ function inventoryBodyFromForm(f) {
     brand: String(f.brand || "").trim() || null,
     total_quantity: tq,
     condition: String(f.condition || "").trim(),
-    status: String(f.status || "active").trim() || "active",
     purchase_price_chf:
       f.purchase_price_chf === "" || f.purchase_price_chf == null
         ? null
@@ -144,9 +170,6 @@ function importFieldReviewStatus(fieldKey, form, fieldHints) {
     if (empty(form.total_quantity) || !Number.isFinite(n) || n < 1) return "fehlt";
     return "erkannt";
   }
-  if (fieldKey === "status") {
-    return "erkannt";
-  }
   if (hint === "missing") return "fehlt";
   if (hint === "review") return "pruefen";
   if (!empty(form[fieldKey])) return "erkannt";
@@ -187,7 +210,13 @@ function FieldReviewBadge({ status }) {
   return null;
 }
 
-function InventoryItemFormFields({ form, setForm, fieldHints = {}, showReviewStatusBadges }) {
+function InventoryItemFormFields({
+  form,
+  setForm,
+  fieldHints = {},
+  showReviewStatusBadges,
+  statusReadOnlyLabel,
+}) {
   const hintRow = (key) =>
     !showReviewStatusBadges && fieldHints[key] ? <FieldHint code={fieldHints[key]} /> : null;
   const badgeRow = (key) =>
@@ -220,28 +249,27 @@ function InventoryItemFormFields({ form, setForm, fieldHints = {}, showReviewSta
           />
           {badgeRow("total_quantity")}
         </label>
-        <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
+        <div className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
           Status
-          <select
-            value={form.status}
-            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-            className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
-          >
-            <option value="active">Aktiv</option>
-            <option value="stored">Eingelagert</option>
-            <option value="repair">Reparatur</option>
-            <option value="disposed">Entsorgt</option>
-          </select>
-          {badgeRow("status")}
-        </label>
+          <p className="mt-1 rounded-lg border border-black/10 border-dashed bg-slate-50 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.1] dark:bg-[#111520]/60 dark:text-[#eef2ff]">
+            {statusReadOnlyLabel || "—"}
+          </p>
+        </div>
       </div>
       <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
         Kategorie
-        <input
+        <select
           value={form.category}
           onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
           className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
-        />
+        >
+          <option value="">—</option>
+          {buildCategorySelectOptions(form.category).map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
         {badgeRow("category")}
         {hintRow("category")}
       </label>
@@ -705,7 +733,11 @@ export default function AdminInventoryPage() {
               onSubmit={submitCreate}
               className="mt-4 grid grid-cols-1 gap-3 text-[#0f172a] dark:text-[#eef2ff]"
             >
-              <InventoryItemFormFields form={form} setForm={setForm} />
+              <InventoryItemFormFields
+                form={form}
+                setForm={setForm}
+                statusReadOnlyLabel="Status: Eingelagert (automatisch)"
+              />
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -850,6 +882,7 @@ export default function AdminInventoryPage() {
                   setForm={setImportForm}
                   fieldHints={importFieldHints}
                   showReviewStatusBadges
+                  statusReadOnlyLabel="Status: Eingelagert (automatisch)"
                 />
                 <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap sm:justify-end">
                   <button

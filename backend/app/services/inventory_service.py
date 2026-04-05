@@ -70,6 +70,37 @@ def _assert_room_belongs_to_unit(session: Session, room_id: str, unit_id: str) -
     return room
 
 
+def _count_assignments_for_item(session: Session, item_id: str) -> int:
+    stmt = (
+        select(func.count())
+        .select_from(InventoryAssignment)
+        .where(InventoryAssignment.inventory_item_id == item_id)
+    )
+    n = session.exec(stmt).one()
+    return int(n or 0)
+
+
+# Operational states that are not derived from assignments (priority over auto logic).
+_STATUS_LOCKED_FROM_ASSIGNMENTS = frozenset({"disposed", "repair"})
+
+
+def _sync_item_status_from_assignments(session: Session, item_id: str) -> None:
+    """
+    Derive status from assignments: no rows → stored; at least one → active.
+    Does not override explicit disposed / repair (they keep priority).
+    """
+    row = session.get(InventoryItem, item_id)
+    if not row:
+        return
+    cur = str(row.status or "").strip().lower()
+    if cur in _STATUS_LOCKED_FROM_ASSIGNMENTS:
+        return
+    n = _count_assignments_for_item(session, item_id)
+    row.status = "active" if n > 0 else "stored"
+    row.updated_at = datetime.utcnow()
+    session.add(row)
+
+
 def _assigned_sum(
     session: Session,
     item_id: str,
@@ -277,7 +308,7 @@ def create_inventory_item(
             or None,
             total_quantity=tq,
             condition=str(getattr(body, "condition", "") or "").strip(),
-            status=str(getattr(body, "status", "active") or "active").strip() or "active",
+            status="stored",
             purchase_price_chf=purchase_price_chf,
             purchase_date=getattr(body, "purchase_date", None),
             purchased_from=(str(getattr(body, "purchased_from")).strip() if getattr(body, "purchased_from", None) else None)
@@ -310,6 +341,9 @@ def create_inventory_item(
                 organization_id=org_id,
                 request=request,
             )
+            session.commit()
+            session.refresh(row)
+            _sync_item_status_from_assignments(session, str(row.id))
             session.commit()
             session.refresh(row)
             at = _assigned_sum(session, str(row.id))
@@ -364,8 +398,6 @@ def update_inventory_item(
         )
     if "condition" in data and data["condition"] is not None:
         row.condition = str(data["condition"]).strip()
-    if "status" in data and data["status"] is not None:
-        row.status = str(data["status"]).strip() or "active"
     if "purchase_price_chf" in data:
         v = data["purchase_price_chf"]
         row.purchase_price_chf = float(v) if v is not None else None
@@ -386,6 +418,8 @@ def update_inventory_item(
 
     row.updated_at = datetime.utcnow()
     session.add(row)
+    session.flush()
+    _sync_item_status_from_assignments(session, item_id)
     session.flush()
     new_snapshot = model_snapshot(row)
     for key in data:
@@ -550,6 +584,9 @@ def create_assignment(
         )
         session.commit()
         session.refresh(row)
+        _sync_item_status_from_assignments(session, str(item.id))
+        session.commit()
+        item = session.get(InventoryItem, item.id)
     except IntegrityError as e:
         session.rollback()
         logger.warning("assignment unique or fk failed: %s", e)
@@ -659,6 +696,8 @@ def update_assignment(
             )
         session.commit()
         session.refresh(a)
+        _sync_item_status_from_assignments(session, str(a.inventory_item_id))
+        session.commit()
     except IntegrityError:
         session.rollback()
         raise HTTPException(
@@ -696,5 +735,7 @@ def delete_assignment(
         organization_id=org_id,
         request=request,
     )
+    session.commit()
+    _sync_item_status_from_assignments(session, item_id)
     session.commit()
     return {"status": "ok"}

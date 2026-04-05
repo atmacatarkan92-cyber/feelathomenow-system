@@ -21,6 +21,50 @@ function formatChf(value) {
   return `CHF ${Number(value).toLocaleString("de-CH", { maximumFractionDigits: 2 })}`;
 }
 
+const INVENTORY_CATEGORIES = [
+  "Wohnzimmer",
+  "Schlafzimmer",
+  "Küche",
+  "Esszimmer",
+  "Badezimmer",
+  "Balkon / Terrasse",
+  "Büro",
+  "Flur / Eingangsbereich",
+  "Sonstiges",
+];
+
+function buildCategorySelectOptions(currentValue) {
+  const v = String(currentValue || "").trim();
+  if (v && !INVENTORY_CATEGORIES.includes(v)) {
+    return [v, ...INVENTORY_CATEGORIES];
+  }
+  return [...INVENTORY_CATEGORIES];
+}
+
+function normalizeInventoryCategory(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  if (INVENTORY_CATEGORIES.includes(s)) return s;
+  const lower = s.toLowerCase();
+  const hit = INVENTORY_CATEGORIES.find((c) => c.toLowerCase() === lower);
+  return hit || s;
+}
+
+function inventoryStatusLabelDe(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "active") return "Aktiv";
+  if (s === "stored") return "Eingelagert";
+  if (s === "repair") return "In Reparatur";
+  if (s === "disposed") return "Entsorgt";
+  return status || "—";
+}
+
+function statusReadOnlySuffix(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "repair" || s === "disposed") return "";
+  return " (automatisch)";
+}
+
 function parseOptionalProductUrl(raw) {
   if (raw == null || String(raw).trim() === "") return { value: null };
   const s = String(raw).trim();
@@ -67,7 +111,6 @@ const emptyItemForm = () => ({
   brand: "",
   total_quantity: "1",
   condition: "",
-  status: "active",
   purchase_price_chf: "",
   purchase_date: "",
   supplier_article_number: "",
@@ -80,11 +123,10 @@ function itemToForm(row) {
   if (!row) return emptyItemForm();
   return {
     name: row.name || "",
-    category: row.category || "",
+    category: normalizeInventoryCategory(row.category || ""),
     brand: row.brand || "",
     total_quantity: String(row.total_quantity ?? 1),
     condition: row.condition || "",
-    status: row.status || "active",
     purchase_price_chf: row.purchase_price_chf != null ? String(row.purchase_price_chf) : "",
     purchase_date: row.purchase_date ? String(row.purchase_date).slice(0, 10) : "",
     supplier_article_number: row.supplier_article_number || "",
@@ -235,7 +277,6 @@ export default function AdminInventoryDetailPage() {
       brand: String(form.brand || "").trim() || null,
       total_quantity: tq,
       condition: String(form.condition || "").trim(),
-      status: String(form.status || "active").trim() || "active",
       purchase_price_chf:
         form.purchase_price_chf === "" || form.purchase_price_chf == null
           ? null
@@ -458,7 +499,7 @@ export default function AdminInventoryDetailPage() {
               <span
                 className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusBadgeClass(item.status)}`}
               >
-                {item.status || "active"}
+                {inventoryStatusLabelDe(item.status)}
               </span>
             </div>
           </div>
@@ -506,7 +547,7 @@ export default function AdminInventoryDetailPage() {
               </div>
               <div>
                 <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Status</dt>
-                <dd className="mt-0.5">{item.status || "—"}</dd>
+                <dd className="mt-0.5">{inventoryStatusLabelDe(item.status)}</dd>
               </div>
               <div>
                 <dt className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">Anschaffung</dt>
@@ -718,27 +759,29 @@ export default function AdminInventoryDetailPage() {
                     className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                   />
                 </label>
-                <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
+                <div className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                   Status
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
-                  >
-                    <option value="active">Aktiv</option>
-                    <option value="stored">Eingelagert</option>
-                    <option value="repair">Reparatur</option>
-                    <option value="disposed">Entsorgt</option>
-                  </select>
-                </label>
+                  <p className="mt-1 rounded-lg border border-black/10 border-dashed bg-slate-50 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.1] dark:bg-[#111520]/60 dark:text-[#eef2ff]">
+                    {item
+                      ? `Status: ${inventoryStatusLabelDe(item.status)}${statusReadOnlySuffix(item.status)}`
+                      : "—"}
+                  </p>
+                </div>
               </div>
               <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Kategorie
-                <input
+                <select
                   value={form.category}
                   onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                   className="mt-1 w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
-                />
+                >
+                  <option value="">—</option>
+                  {buildCategorySelectOptions(form.category).map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="text-[11px] text-[#64748b] dark:text-[#93a4bf]">
                 Marke
