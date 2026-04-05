@@ -21,7 +21,6 @@ import AdminInvoicesPage from "../pages/admin/AdminInvoicesPage";
 import AdminInvoiceDetailPage from "../pages/admin/AdminInvoiceDetailPage";
 import AdminBusinessApartmentsDashboardPage from "../pages/admin/AdminBusinessApartmentsDashboardPage";
 import AdminPortfolioMapPage from "../pages/admin/AdminPortfolioMapPage";
-import AdminPortfolioMapGoogleSpikePage from "../pages/admin/AdminPortfolioMapGoogleSpikePage";
 import AdminInventoryPage from "../pages/admin/AdminInventoryPage";
 import AdminInventoryDetailPage from "../pages/admin/AdminInventoryDetailPage";
 import AdminObjektePage from "../pages/admin/AdminObjektePage";
@@ -113,10 +112,6 @@ export default function AppRouter() {
               <Route path="operations" element={<AdminCoLivingDashboardPage />} />
               <Route path="business-apartments-dashboard" element={<AdminBusinessApartmentsDashboardPage />} />
               <Route path="portfolio-map" element={<AdminPortfolioMapPage />} />
-              <Route
-                path="portfolio-map-google-spike"
-                element={<AdminPortfolioMapGoogleSpikePage />}
-              />
               <Route path="objekte-dashboard" element={<AdminObjektePage />} />
               <Route path="rechnungen-dashboard" element={<AdminInvoicesPage />} />
               <Route path="apartments" element={<AdminApartmentsPage />} />
