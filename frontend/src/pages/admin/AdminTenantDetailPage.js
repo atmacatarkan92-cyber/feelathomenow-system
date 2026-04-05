@@ -3024,11 +3024,11 @@ export default function AdminTenantDetailPage() {
                           <option value="">
                             {assignUnitsLoading ? "Lade Einheiten …" : "— Einheit wählen"}
                           </option>
-                          {assignUnits.map((u, idx) => {
+                          {assignUnits.map((u) => {
                             const loc = String(u.address || u.place || "").trim();
                             const label = loc
-                              ? `${getDisplayUnitId(u, idx)} — ${loc}`
-                              : getDisplayUnitId(u, idx);
+                              ? `${getDisplayUnitId(u)} — ${loc}`
+                              : getDisplayUnitId(u);
                             return (
                               <option key={String(u.id)} value={String(u.id)}>
                                 {label}

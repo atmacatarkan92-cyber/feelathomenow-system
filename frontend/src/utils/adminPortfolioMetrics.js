@@ -22,17 +22,15 @@ function compareProfitWorst(a, b) {
   return a.revenue - b.revenue;
 }
 
-/** Same label rules as AdminPerformancePage (APT/CL index + city / fallbacks). */
+/** Same label rules as AdminPerformancePage (persisted short ID + city / fallbacks). */
 export function getPortfolioUnitLabel(unit, listIndex) {
   if (!unit) return "—";
 
   const city = unit.city ?? unit.place ?? "";
 
-  if (typeof listIndex === "number" && listIndex >= 0 && city) {
-    const rid = getDisplayUnitId(unit, listIndex);
-    if (rid && rid !== "—") {
-      return `${rid} · ${city}`;
-    }
+  const rid = getDisplayUnitId(unit, listIndex);
+  if (rid && rid !== "—" && city) {
+    return `${rid} · ${city}`;
   }
 
   if (unit.unitId && city) {

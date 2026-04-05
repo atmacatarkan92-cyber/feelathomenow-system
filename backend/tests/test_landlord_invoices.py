@@ -84,6 +84,7 @@ class TestLandlordInvoicesList:
         unit = Unit(
             id=unit_id,
             organization_id="test-org-mock-id",
+            short_unit_id="APT-001",
             title="Wohnung 1",
             address="Str 1",
             city="Zurich",

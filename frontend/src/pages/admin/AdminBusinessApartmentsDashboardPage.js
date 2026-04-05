@@ -46,11 +46,15 @@ function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
 
-/** Readable label for lists/cards; UUID only as last resort. */
+/** Readable label for lists/cards; persisted short ID when present; UUID only as last resort. */
 function apartmentDisplayLabel(unit) {
   if (!unit) return "—";
+  const shortId = String(unit.shortUnitId ?? unit.short_unit_id ?? "").trim();
   const addr = String(unit.address ?? "").trim();
   const city = String(unit.city ?? "").trim();
+  const loc = [addr, city].filter(Boolean).join(", ");
+  if (shortId && loc) return `${shortId} · ${loc}`;
+  if (shortId) return shortId;
   if (addr && city) return `${addr}, ${city}`;
   if (addr) return addr;
   const title = String(unit.title ?? unit.name ?? "").trim();
@@ -454,7 +458,7 @@ function AdminBusinessApartmentsDashboardPage() {
         unitId: unit.unitId,
         displayLabel: apartmentDisplayLabel(unit),
         place: unit.place,
-        title: unit.title || unit.unitId,
+        title: unit.shortUnitId || unit.short_unit_id || unit.title || unit.unitId,
         revenue: fin.revenue,
         costs: fin.costs,
         profit: fin.profit,

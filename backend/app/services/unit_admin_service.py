@@ -30,6 +30,7 @@ from db.models import (
 )
 from app.services.occupancy_service import get_unit_occupancy_batch
 from app.services.revenue_forecast import calculate_monthly_revenue_for_units
+from app.services.unit_short_id import allocate_next_short_unit_id
 
 logger = logging.getLogger(__name__)
 
@@ -191,9 +192,12 @@ def unit_to_dict(
     occ = getattr(u, "occupancy_status", None) or ""
     ld = getattr(u, "landlord_lease_start_date", None)
     af = getattr(u, "available_from", None)
+    sid = getattr(u, "short_unit_id", None) or ""
     return {
         "id": str(u.id),
         "unitId": str(u.id),
+        "short_unit_id": sid,
+        "shortUnitId": sid,
         "name": u.title,
         "title": u.title,
         "address": getattr(u, "address", "") or "",
@@ -425,42 +429,60 @@ def create_unit(
     assert_property_manager_in_org(session, body.property_manager_id, org_id)
     assert_owner_in_org(session, body.owner_id, org_id)
     title = (body.title or body.name or "").strip() or "New Unit"
-    unit = Unit(
-        organization_id=org_id,
-        title=title,
-        address=body.address or "",
-        city=body.city or "",
-        rooms=body.rooms,
-        type=body.type,
-        city_id=body.city_id,
-        property_id=body.property_id,
-        landlord_id=body.landlord_id,
-        property_manager_id=body.property_manager_id,
-        owner_id=body.owner_id,
-        tenant_price_monthly_chf=body.tenant_price_monthly_chf,
-        landlord_rent_monthly_chf=body.landlord_rent_monthly_chf,
-        utilities_monthly_chf=body.utilities_monthly_chf,
-        cleaning_cost_monthly_chf=body.cleaning_cost_monthly_chf,
-        landlord_lease_start_date=body.landlord_lease_start_date,
-        available_from=body.available_from,
-        occupancy_status=(body.occupancy_status or "").strip() or None,
-        occupied_rooms=body.occupied_rooms,
-        postal_code=(body.postal_code or "").strip() or None,
-        landlord_deposit_type=body.landlord_deposit_type,
-        landlord_deposit_amount=body.landlord_deposit_amount,
-        landlord_deposit_annual_premium=body.landlord_deposit_annual_premium,
-        lease_type=body.lease_type,
-        lease_start_date=body.lease_start_date,
-        lease_end_date=body.lease_end_date,
-        notice_given_date=body.notice_given_date,
-        termination_effective_date=body.termination_effective_date,
-        returned_to_landlord_date=body.returned_to_landlord_date,
-        lease_status=body.lease_status,
-        lease_notes=body.lease_notes,
-        updated_at=datetime.utcnow(),
-    )
-    session.add(unit)
-    session.flush()
+    unit: Optional[Unit] = None
+    for attempt in range(8):
+        try:
+            short_code = allocate_next_short_unit_id(
+                session, org_id, getattr(body, "type", None)
+            )
+            unit = Unit(
+                organization_id=org_id,
+                short_unit_id=short_code,
+                title=title,
+                address=body.address or "",
+                city=body.city or "",
+                rooms=body.rooms,
+                type=body.type,
+                city_id=body.city_id,
+                property_id=body.property_id,
+                landlord_id=body.landlord_id,
+                property_manager_id=body.property_manager_id,
+                owner_id=body.owner_id,
+                tenant_price_monthly_chf=body.tenant_price_monthly_chf,
+                landlord_rent_monthly_chf=body.landlord_rent_monthly_chf,
+                utilities_monthly_chf=body.utilities_monthly_chf,
+                cleaning_cost_monthly_chf=body.cleaning_cost_monthly_chf,
+                landlord_lease_start_date=body.landlord_lease_start_date,
+                available_from=body.available_from,
+                occupancy_status=(body.occupancy_status or "").strip() or None,
+                occupied_rooms=body.occupied_rooms,
+                postal_code=(body.postal_code or "").strip() or None,
+                landlord_deposit_type=body.landlord_deposit_type,
+                landlord_deposit_amount=body.landlord_deposit_amount,
+                landlord_deposit_annual_premium=body.landlord_deposit_annual_premium,
+                lease_type=body.lease_type,
+                lease_start_date=body.lease_start_date,
+                lease_end_date=body.lease_end_date,
+                notice_given_date=body.notice_given_date,
+                termination_effective_date=body.termination_effective_date,
+                returned_to_landlord_date=body.returned_to_landlord_date,
+                lease_status=body.lease_status,
+                lease_notes=body.lease_notes,
+                updated_at=datetime.utcnow(),
+            )
+            session.add(unit)
+            session.flush()
+            break
+        except IntegrityError:
+            session.rollback()
+            if attempt == 7:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Could not allocate a unique unit code. Please retry.",
+                ) from None
+            continue
+    if unit is None:
+        raise HTTPException(status_code=500, detail="Unit creation failed")
     create_initial_rooms_for_unit(session, unit, body)
     create_audit_log(
         session,
@@ -509,6 +531,8 @@ def patch_unit(
     elif "title" in data:
         pass
     for k, v in data.items():
+        if k == "short_unit_id":
+            continue
         if hasattr(unit, k):
             setattr(unit, k, v)
     if "property_id" in data and data["property_id"] == "":

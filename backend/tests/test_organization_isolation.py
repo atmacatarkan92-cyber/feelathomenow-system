@@ -28,6 +28,7 @@ class TestAdminUnitIsolation:
         unit = Unit(
             id="unit-in-b",
             organization_id="org-b",
+            short_unit_id="APT-001",
             title="Foreign",
             address="x",
             city="y",
@@ -64,6 +65,7 @@ class TestAdminUnitIsolation:
         unit = Unit(
             id="unit-in-a",
             organization_id="org-a",
+            short_unit_id="APT-001",
             title="Mine",
             address="x",
             city="y",

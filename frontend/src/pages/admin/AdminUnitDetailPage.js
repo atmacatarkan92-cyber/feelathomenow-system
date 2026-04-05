@@ -308,8 +308,12 @@ function formatUnitHeaderLocationLine(unit) {
 
 function getUnitPageMainTitle(unit) {
   if (!unit) return "—";
-  const uid = String(unit.unitId || "").trim();
+  const shortId = String(unit.shortUnitId ?? unit.short_unit_id ?? "").trim();
   const address = String(unit.address || "").trim();
+  if (shortId && address) {
+    return `${shortId} · ${address}`;
+  }
+  const uid = String(unit.unitId || "").trim();
   if (uid && !isUuidLike(uid) && address) {
     return `${uid} · ${address}`;
   }

@@ -739,6 +739,7 @@ export function normalizeUnit(u) {
   return {
     ...u,
     unitId: u.unitId ?? u.id,
+    shortUnitId: u.shortUnitId ?? u.short_unit_id ?? "",
     place: u.place ?? u.city ?? u.address ?? "",
     tenantPriceMonthly: u.tenantPriceMonthly ?? u.tenant_price_monthly_chf ?? "",
     landlordRentMonthly: u.landlordRentMonthly ?? u.landlord_rent_monthly_chf ?? "",
@@ -802,10 +803,12 @@ export function formatUnitSelectOptionLabel(u) {
   const city = String(nu.city || "").trim();
 
   const explicitShort = _firstTrimmedString(
+    u.shortUnitId,
     u.unit_short_id,
     u.short_unit_id,
     u.unit_code,
     u.external_unit_id,
+    nu.shortUnitId,
     nu.unit_short_id,
     nu.short_unit_id,
     nu.unit_code,

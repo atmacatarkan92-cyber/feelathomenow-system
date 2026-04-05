@@ -43,6 +43,12 @@ class MockSessionUnits:
     def commit(self):
         pass
 
+    def flush(self):
+        pass
+
+    def rollback(self):
+        pass
+
     def refresh(self, obj):
         pass
 
@@ -101,6 +107,7 @@ class TestLandlordUnitsList:
         unit1 = Unit(
             id="unit-1",
             organization_id="test-org-mock-id",
+            short_unit_id="APT-001",
             title="Unit A",
             address="Addr 1",
             city="Zurich",
@@ -133,6 +140,7 @@ class TestLandlordUnitsList:
         assert data[0]["title"] == "Unit A"
         assert data[0]["property_title"] == "My Property"
         assert data[0]["property_id"] == prop_id
+        assert data[0].get("shortUnitId") == "APT-001"
 
     def test_landlord_list_units_empty_when_no_units(
         self, client: TestClient, landlord_user_and_landlord
@@ -194,6 +202,8 @@ class TestLandlordUnitsCreate:
         assert data["city"] == "Zurich"
         assert data["rooms"] == 3
         assert "id" in data
+        assert data.get("shortUnitId") == "UNIT-001"
+        assert data.get("short_unit_id") == "UNIT-001"
 
     def test_landlord_cannot_create_unit_for_other_landlord_property(
         self, client: TestClient, landlord_user_and_landlord

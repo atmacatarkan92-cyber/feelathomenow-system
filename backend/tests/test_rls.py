@@ -233,6 +233,7 @@ def seeded_tenant_rows(engine, rls_test_ids):
             Unit(
                 id=ids["unit_a"],
                 organization_id=org_a,
+                short_unit_id="APT-001",
                 title="RLS Unit",
                 address="1 Test St",
                 city="Zurich",
@@ -433,6 +434,7 @@ def test_rls_insert_unit_without_context_fails(engine):
                 Unit(
                     id=uid,
                     organization_id=org_x,
+                    short_unit_id="APT-001",
                     title="No ctx",
                     address="a",
                     city="Zurich",

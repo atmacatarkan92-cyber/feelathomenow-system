@@ -31,17 +31,15 @@ function compareWorst(a, b) {
   return a.revenue - b.revenue;
 }
 
-/** listIndex aligns labels with AdminApartmentsPage (APT-xxx / CL-xxx). */
+/** Short ID from API when present; listIndex only legacy fallback in getDisplayUnitId. */
 function getUnitLabel(unit, listIndex) {
   if (!unit) return "—";
 
   const city = unit.city ?? unit.place ?? "";
 
-  if (typeof listIndex === "number" && listIndex >= 0 && city) {
-    const rid = getDisplayUnitId(unit, listIndex);
-    if (rid && rid !== "—") {
-      return `${rid} · ${city}`;
-    }
+  const rid = getDisplayUnitId(unit, listIndex);
+  if (rid && rid !== "—" && city) {
+    return `${rid} · ${city}`;
   }
 
   if (unit.unitId && city) {

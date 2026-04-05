@@ -109,6 +109,7 @@ def test_admin_create_and_patch_participants_sync_tenant_id(engine):
             Unit(
                 id=ua,
                 organization_id=org,
+                short_unit_id="APT-001",
                 title="TP U A",
                 address="1 St",
                 city="Zurich",
@@ -119,6 +120,7 @@ def test_admin_create_and_patch_participants_sync_tenant_id(engine):
             Unit(
                 id=ub,
                 organization_id=org,
+                short_unit_id="APT-002",
                 title="TP U B",
                 address="2 St",
                 city="Zurich",

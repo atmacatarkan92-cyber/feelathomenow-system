@@ -1,5 +1,6 @@
 /**
  * Short unit labels for admin UI (APT-001 / CL-001).
+ * Prefer persisted `shortUnitId` / `short_unit_id` from the API; optional `index` is legacy fallback only.
  * API calls and routing still use UUID (`unit.id` / `unit.unitId`).
  */
 
@@ -19,6 +20,11 @@ export function normalizeUnitTypeLabel(raw) {
 
 export function getDisplayUnitId(unit, index) {
   if (!unit) return "—";
-  const prefix = normalizeUnitTypeLabel(unit.type) === "Co-Living" ? "CL" : "APT";
-  return `${prefix}-${String(index + 1).padStart(3, "0")}`;
+  const sid = String(unit.shortUnitId ?? unit.short_unit_id ?? "").trim();
+  if (sid) return sid;
+  if (typeof index === "number" && index >= 0) {
+    const prefix = normalizeUnitTypeLabel(unit.type) === "Co-Living" ? "CL" : "APT";
+    return `${prefix}-${String(index + 1).padStart(3, "0")}`;
+  }
+  return "—";
 }

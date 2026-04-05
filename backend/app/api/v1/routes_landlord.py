@@ -8,10 +8,12 @@ from typing import List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from auth.dependencies import get_current_landlord, get_db_session
 from app.services.tenancy_lifecycle import tenancy_derived_display_status, tenancy_display_end_date
+from app.services.unit_short_id import allocate_next_short_unit_id
 from db.models import User, Landlord, Property, Unit, Tenancy, TenancyRevenue, Tenant, Invoice
 from app.services.invoice_service import _invoice_to_api
 
@@ -57,11 +59,14 @@ def _property_to_dict(p: Property) -> dict:
 
 
 def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
+    sid = getattr(u, "short_unit_id", None) or ""
     return {
         "id": str(u.id),
         "unitId": str(u.id),
         "name": u.title,
         "title": u.title,
+        "short_unit_id": sid,
+        "shortUnitId": sid,
         "address": getattr(u, "address", "") or "",
         "city": getattr(u, "city", "") or "",
         "city_id": getattr(u, "city_id", None),
@@ -223,17 +228,34 @@ def landlord_create_unit(
             detail="Property not found or you do not have permission to add units to it.",
         )
     title = (body.title or "").strip() or "New Unit"
-    unit = Unit(
-        organization_id=str(landlord.organization_id),
-        title=title,
-        address=body.address or "",
-        city=body.city or "",
-        rooms=body.rooms,
-        type=body.type,
-        city_id=body.city_id,
-        property_id=body.property_id,
-    )
-    session.add(unit)
+    org_id = str(landlord.organization_id)
+    unit: Optional[Unit] = None
+    for attempt in range(8):
+        try:
+            short_code = allocate_next_short_unit_id(session, org_id, body.type)
+            unit = Unit(
+                organization_id=org_id,
+                short_unit_id=short_code,
+                title=title,
+                address=body.address or "",
+                city=body.city or "",
+                rooms=body.rooms,
+                type=body.type,
+                city_id=body.city_id,
+                property_id=body.property_id,
+            )
+            session.add(unit)
+            session.flush()
+            break
+        except IntegrityError:
+            session.rollback()
+            if attempt == 7:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Could not allocate a unique unit code. Please retry.",
+                ) from None
+    if unit is None:
+        raise HTTPException(status_code=500, detail="Unit creation failed")
     session.commit()
     session.refresh(unit)
     prop = session.get(Property, unit.property_id) if unit.property_id else None

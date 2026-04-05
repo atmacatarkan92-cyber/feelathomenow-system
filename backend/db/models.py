@@ -163,6 +163,8 @@ class Unit(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     organization_id: str = Field(foreign_key="organization.id", index=True)
+    # Human-readable code, unique per organization (e.g. APT-001, CL-002). Set by service + migration.
+    short_unit_id: Optional[str] = Field(default=None, max_length=32, index=True)
     title: str
     address: str
     city: str

@@ -321,7 +321,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
           </thead>
 
           <tbody>
-            {items.map((unit, index) => {
+            {items.map((unit) => {
               const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
               const leaseEnded =
                 String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
@@ -342,7 +342,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                     to={`/admin/units/${unit.unitId}`}
                     className="block font-medium text-sky-700 dark:text-sky-400 hover:underline"
                   >
-                    {getDisplayUnitId(unit, index)}
+                    {getDisplayUnitId(unit)}
                   </Link>
                   <span className="mt-0.5 block break-all text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
                     {unit.unitId}
@@ -458,7 +458,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
           </thead>
 
           <tbody>
-            {items.map((unit, index) => {
+            {items.map((unit) => {
               const metrics = getCoLivingMetrics(unit, rooms, tenancies);
               const unitCosts =
                 unitCostsByUnitId?.[String(unit.id)] ??
@@ -484,7 +484,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                       to={`/admin/units/${unit.unitId}`}
                       className="block font-medium text-sky-700 dark:text-sky-400 hover:underline"
                     >
-                      {getDisplayUnitId(unit, index)}
+                      {getDisplayUnitId(unit)}
                     </Link>
                     <span className="mt-0.5 block break-all text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
                       {unit.unitId}

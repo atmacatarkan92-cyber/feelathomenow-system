@@ -125,6 +125,7 @@ def exclusion_seed(engine):
             Unit(
                 id=ua,
                 organization_id=org,
+                short_unit_id="APT-001",
                 title="U A",
                 address="1 St",
                 city="Zurich",
@@ -135,6 +136,7 @@ def exclusion_seed(engine):
             Unit(
                 id=ub,
                 organization_id=org,
+                short_unit_id="APT-002",
                 title="U B",
                 address="2 St",
                 city="Zurich",
