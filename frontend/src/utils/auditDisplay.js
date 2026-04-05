@@ -518,7 +518,19 @@ function unitLabelFromMap(u) {
   return line || nu.id || "—";
 }
 
+/** German labels for inventory_item.status in audit timeline (V1). */
+function formatInventoryItemStatusDe(raw) {
+  const s = String(raw ?? "").trim().toLowerCase();
+  if (s === "active") return "Aktiv";
+  if (s === "stored") return "Eingelagert";
+  if (s === "repair") return "In Reparatur";
+  if (s === "disposed") return "Entsorgt";
+  if (raw == null || raw === "") return "—";
+  return String(raw);
+}
+
 /**
+ * Inventory item audit → summary + changes (admin Verlauf / V1 timeline).
  * @param {object} log
  * @param {Map<string, object>} [unitById]
  */
@@ -533,8 +545,8 @@ export function formatInventoryAuditResult(log, unitById) {
     const u = unitById && unitById.get ? unitById.get(String(asg.unit_id)) : null;
     const ul = u ? unitLabelFromMap(u) : String(asg.unit_id || "").slice(0, 12);
     return {
-      summary: `Zuordnung hinzugefügt · ${ul} · Menge ${asg.quantity ?? "—"}`,
-      changes: [{ label: "Zuordnung", old: "—", new: `${ul} · ${asg.quantity ?? "—"}` }],
+      summary: `Artikel zugewiesen · ${ul} · Menge ${asg.quantity ?? "—"}`,
+      changes: [{ label: "Zuordnung", old: "—", new: `${ul} · Menge ${asg.quantity ?? "—"}` }],
     };
   }
   if (a === "delete" && ov.inventory_assignment && !ov.name && !ov.inventory_number) {
@@ -563,7 +575,7 @@ export function formatInventoryAuditResult(log, unitById) {
       ch.push({ label: "Zimmer (ID)", old: formatAuditScalar(o.room_id), new: formatAuditScalar(n.room_id) });
     }
     return {
-      summary: ch.length ? "Zuordnung bearbeitet" : "Zuordnung bearbeitet",
+      summary: "Zuordnung geändert",
       changes: ch.length ? ch : [{ label: "Zuordnung", old: "—", new: "Bearbeitet" }],
     };
   }
@@ -628,23 +640,61 @@ export function formatInventoryAuditResult(log, unitById) {
         k !== "id" &&
         k !== "organization_id"
     );
+    const changedKeys = keys.filter((k) => !auditValuesEqual(ov[k], nv[k]));
+    if (
+      changedKeys.length === 1 &&
+      changedKeys[0] === "status" &&
+      !Object.prototype.hasOwnProperty.call(ov, "inventory_assignment") &&
+      !Object.prototype.hasOwnProperty.call(nv, "inventory_assignment")
+    ) {
+      const os = String(ov.status ?? "").trim().toLowerCase();
+      const ns = String(nv.status ?? "").trim().toLowerCase();
+      if (ns === "repair" && os !== "repair") {
+        return {
+          summary: "In Reparatur gesetzt",
+          changes: [
+            {
+              label: invLabels.status || "Status",
+              old: formatInventoryItemStatusDe(ov.status),
+              new: formatInventoryItemStatusDe(nv.status),
+            },
+          ],
+        };
+      }
+      if (ns === "disposed" && os !== "disposed") {
+        return {
+          summary: "Als entsorgt markiert",
+          changes: [
+            {
+              label: invLabels.status || "Status",
+              old: formatInventoryItemStatusDe(ov.status),
+              new: formatInventoryItemStatusDe(nv.status),
+            },
+          ],
+        };
+      }
+    }
+
     /** @type {AuditChange[]} */
     const changes = [];
     for (const k of keys) {
       if (auditValuesEqual(ov[k], nv[k])) continue;
       const lbl = invLabels[k] || k;
+      const oldV = k === "status" ? formatInventoryItemStatusDe(ov[k]) : formatAuditScalar(ov[k]);
+      const newV = k === "status" ? formatInventoryItemStatusDe(nv[k]) : formatAuditScalar(nv[k]);
       changes.push({
         label: lbl,
-        old: formatAuditScalar(ov[k]),
-        new: formatAuditScalar(nv[k]),
+        old: oldV,
+        new: newV,
       });
     }
-    const changedKeys = keys.filter((k) => !auditValuesEqual(ov[k], nv[k]));
     let summary;
     if (changedKeys.length === 1) {
       const k = changedKeys[0];
       const lbl = invLabels[k] || k;
-      summary = `${lbl}: ${formatAuditScalar(ov[k])} → ${formatAuditScalar(nv[k])}`;
+      const oldD = k === "status" ? formatInventoryItemStatusDe(ov[k]) : formatAuditScalar(ov[k]);
+      const newD = k === "status" ? formatInventoryItemStatusDe(nv[k]) : formatAuditScalar(nv[k]);
+      summary = `${lbl}: ${oldD} → ${newD}`;
     } else if (changedKeys.length > 1) {
       summary = "Artikel bearbeitet";
     } else {
@@ -657,7 +707,7 @@ export function formatInventoryAuditResult(log, unitById) {
       a === "create"
         ? "Artikel erstellt"
         : a === "delete"
-          ? "Eintrag gelöscht"
+          ? "Artikel gelöscht"
           : a === "update"
             ? "Bearbeitet"
             : String(log.action || "—"),

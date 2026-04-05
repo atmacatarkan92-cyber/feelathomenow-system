@@ -698,7 +698,7 @@ export default function AdminInventoryDetailPage() {
               Verlauf
             </h2>
             <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#93a4bf]">
-              Änderungen an diesem Artikel (Audit-Log, neueste zuerst).
+              Verlauf aus dem Audit-Log (nur Lesen, neueste zuerst): Erstellung, Bearbeitung, Zuordnungen.
             </p>
             {auditLogLoading ? (
               <p className="mt-3 text-sm text-[#64748b] dark:text-[#93a4bf]">Lade Verlauf …</p>
