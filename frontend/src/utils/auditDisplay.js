@@ -574,7 +574,50 @@ export function formatInventoryAuditResult(log, unitById) {
     };
   }
   if (a === "delete" && (ov.inventory_number != null || ov.name != null) && !ov.inventory_assignment) {
-    return { summary: "Artikel gelöscht", changes: [] };
+    /** Full `model_snapshot` exists on delete; surface core identifying fields for auditability. */
+    const skip = new Set(["id", "organization_id", "created_at", "updated_at", "inventory_assignment"]);
+    const priority = [
+      "inventory_number",
+      "name",
+      "category",
+      "supplier_article_number",
+      "brand",
+      "purchase_price_chf",
+      "purchase_date",
+      "total_quantity",
+      "condition",
+      "status",
+      "purchased_from",
+      "product_url",
+      "notes",
+    ];
+    const seen = new Set();
+    /** @type {AuditChange[]} */
+    const changes = [];
+    for (const k of priority) {
+      if (!Object.prototype.hasOwnProperty.call(ov, k) || skip.has(k)) continue;
+      seen.add(k);
+      const lbl = invLabels[k] || getAuditFieldLabel("inventory_item", k);
+      changes.push({
+        label: lbl,
+        old: formatAuditScalar(ov[k]),
+        new: "—",
+      });
+    }
+    for (const k of Object.keys(ov)) {
+      if (skip.has(k) || seen.has(k) || k === "inventory_assignment") continue;
+      if (!invLabels[k]) continue;
+      seen.add(k);
+      const lbl = invLabels[k] || getAuditFieldLabel("inventory_item", k);
+      changes.push({ label: lbl, old: formatAuditScalar(ov[k]), new: "—" });
+    }
+    const num = ov.inventory_number != null ? String(ov.inventory_number).trim() : "";
+    const nm = ov.name != null ? String(ov.name).trim() : "";
+    const summary =
+      num || nm
+        ? `Artikel gelöscht${num ? ` · ${num}` : ""}${nm ? ` · ${nm}` : ""}`
+        : "Artikel gelöscht";
+    return { summary, changes };
   }
   if (a === "update") {
     const keys = [...new Set([...Object.keys(ov), ...Object.keys(nv)])].filter(
@@ -686,6 +729,131 @@ function inferEntityType(log) {
 }
 
 /**
+ * Full unit delete with flat model_snapshot (not room/tenancy nested payloads).
+ * @returns {{ summary: string, changes: AuditChange[] } | null}
+ */
+function tryFormatUnitFlatDelete(log, resolvers) {
+  const ov =
+    log.old_values != null && typeof log.old_values === "object" && !Array.isArray(log.old_values)
+      ? log.old_values
+      : null;
+  if (!ov) return null;
+  if (ov.room || ov.tenancy || ov.tenancy_revenue || ov.unit_cost || ov.unit_document) return null;
+
+  const unitLabels = ENTITY_AUDIT_LABELS.unit || {};
+  const skip = new Set([
+    "id",
+    "organization_id",
+    "created_at",
+    "updated_at",
+  ]);
+  const priority = [
+    "title",
+    "address",
+    "postal_code",
+    "city",
+    "type",
+    "rooms",
+    "tenant_price_monthly_chf",
+    "landlord_rent_monthly_chf",
+    "occupancy_status",
+  ];
+  const seen = new Set();
+  /** @type {AuditChange[]} */
+  const changes = [];
+  for (const k of priority) {
+    if (!Object.prototype.hasOwnProperty.call(ov, k) || skip.has(k)) continue;
+    seen.add(k);
+    const lbl = unitLabels[k] || k;
+    changes.push({
+      label: lbl,
+      old: formatUnitAuditFieldValue(k, ov[k], resolvers),
+      new: "—",
+    });
+  }
+  for (const k of Object.keys(ov)) {
+    if (skip.has(k) || seen.has(k)) continue;
+    if (!unitLabels[k]) continue;
+    seen.add(k);
+    changes.push({
+      label: unitLabels[k],
+      old: formatUnitAuditFieldValue(k, ov[k], resolvers),
+      new: "—",
+    });
+  }
+  const title = String(ov.title || "").trim();
+  const city = String(ov.city || "").trim();
+  const pc = String(ov.postal_code || "").trim();
+  const place = [pc, city].filter(Boolean).join(" ");
+  const summary =
+    title || place
+      ? `Einheit gelöscht${title ? ` · ${title}` : ""}${place ? ` · ${place}` : ""}`
+      : "Einheit gelöscht";
+  return { summary, changes };
+}
+
+/**
+ * Tenant row delete (model_snapshot); skips tenancy/revenue/document-specific payloads.
+ * @returns {{ summary: string, changes: AuditChange[] } | null}
+ */
+function tryFormatTenantFlatDelete(log) {
+  const ov =
+    log.old_values != null && typeof log.old_values === "object" && !Array.isArray(log.old_values)
+      ? log.old_values
+      : null;
+  if (!ov) return null;
+  if (ov.tenancy || ov.tenancy_revenue || ov.document_uploaded != null || ov.document_deleted != null) {
+    return null;
+  }
+
+  const fn = String(ov.first_name || "").trim();
+  const ln = String(ov.last_name || "").trim();
+  const legacy = String(ov.name || "").trim();
+  const displayName =
+    [fn, ln].filter(Boolean).join(" ") || legacy || String(ov.email || "").trim() || "—";
+
+  const skip = new Set(["id", "organization_id", "created_at", "updated_at", "room_id"]);
+  const priority = [
+    "first_name",
+    "last_name",
+    "name",
+    "email",
+    "phone",
+    "company",
+    "street",
+    "postal_code",
+    "city",
+    "country",
+  ];
+  const seen = new Set();
+  /** @type {AuditChange[]} */
+  const changes = [];
+  for (const k of priority) {
+    if (!Object.prototype.hasOwnProperty.call(ov, k) || skip.has(k)) continue;
+    seen.add(k);
+    changes.push({
+      label: getAuditFieldLabel("tenant", k),
+      old: formatAuditScalar(ov[k]),
+      new: "—",
+    });
+  }
+  const tenantLabels = ENTITY_AUDIT_LABELS.tenant || {};
+  for (const k of Object.keys(ov)) {
+    if (skip.has(k) || seen.has(k)) continue;
+    if (!tenantLabels[k]) continue;
+    changes.push({
+      label: getAuditFieldLabel("tenant", k),
+      old: formatAuditScalar(ov[k]),
+      new: "—",
+    });
+  }
+  return {
+    summary: `Mieter gelöscht · ${displayName}`,
+    changes,
+  };
+}
+
+/**
  * Main entry: human summary + structured field changes.
  * @param {object} log
  * @param {object} [context]
@@ -697,6 +865,17 @@ function inferEntityType(log) {
  */
 export function formatAuditLog(log, context = {}) {
   const entityType = context.entityType || inferEntityType(log);
+  const action = String(log.action || "").toLowerCase();
+  const resolvers = context.resolvers || {};
+
+  if (entityType === "unit" && action === "delete") {
+    const flatUnit = tryFormatUnitFlatDelete(log, resolvers);
+    if (flatUnit) return flatUnit;
+  }
+  if (entityType === "tenant" && action === "delete") {
+    const flatTenant = tryFormatTenantFlatDelete(log);
+    if (flatTenant) return flatTenant;
+  }
 
   if (entityType === "unit") {
     const lines = getAuditEntryDisplayLines(log, context.resolvers || {});

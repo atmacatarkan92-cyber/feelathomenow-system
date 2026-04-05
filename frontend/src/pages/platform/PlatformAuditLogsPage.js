@@ -5,6 +5,8 @@ import {
   fetchPlatformOrganizations,
 } from "../../api/adminData";
 import { auditActionLabel, formatAuditLog, formatAuditTimestamp } from "../../utils/auditDisplay";
+import { partitionAuditMetadata } from "../../utils/auditMetadataDisplay";
+import { auditSeverityPillClass, getAuditSeverityDetail } from "../../utils/auditSeverity";
 import { AuditChangeRows } from "../../components/admin/AuditLogVisual";
 import { buildLoginDeviceStatusMap, loginDeviceStatusLabel } from "../../utils/loginDeviceAuditStatus";
 import { buildSuspiciousLoginAuditMap } from "../../utils/suspiciousLoginAudit";
@@ -245,6 +247,19 @@ function PlatformAuditLogsPage() {
     return formatAuditLog(selectedLog, { entityType: selectedLog.target_type });
   }, [selectedLog]);
 
+  const selectedLogMetaPartition = useMemo(
+    () =>
+      selectedLog
+        ? partitionAuditMetadata(selectedLog.metadata)
+        : { known: [], rows: [], remainder: null },
+    [selectedLog]
+  );
+
+  const selectedLogSeverityDetail = useMemo(
+    () => (selectedLog ? getAuditSeverityDetail(selectedLog) : { level: "info", label: "Info" }),
+    [selectedLog]
+  );
+
   const detailTextClass = "mt-1 text-[13px] text-[#0f172a] dark:text-[#e2e8f0]";
   const detailJsonClass =
     "mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-[8px] border border-black/[0.08] bg-[#f8fafc] p-2 font-mono text-[11px] leading-relaxed text-[#0f172a] dark:border-white/[0.08] dark:bg-[#0c1018] dark:text-[#e2e8f0]";
@@ -311,6 +326,18 @@ function PlatformAuditLogsPage() {
                   Aktion
                 </dt>
                 <dd className={detailTextClass}>{auditActionLabel(selectedLog.action)}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                  Einstufung
+                </dt>
+                <dd className={detailTextClass}>
+                  <span
+                    className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${auditSeverityPillClass(selectedLogSeverityDetail.level)}`}
+                  >
+                    {selectedLogSeverityDetail.label}
+                  </span>
+                </dd>
               </div>
               {selectedLog.action === "login" &&
               (suspiciousLoginById.get(String(selectedLog.id))?.suspicious ? (
@@ -412,9 +439,33 @@ function PlatformAuditLogsPage() {
                 <div className="mt-2 space-y-2">
                   <div>
                     <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
-                      metadata
+                      Metadaten
                     </dt>
-                    <dd className={detailJsonClass}>{formatJsonField(selectedLog.metadata)}</dd>
+                    <dd className={`${detailTextClass} space-y-2`}>
+                      {selectedLogMetaPartition.known.length > 0 ? (
+                        <dl className="space-y-2 rounded-[8px] border border-black/[0.06] bg-[#f8fafc] p-2 dark:border-white/[0.06] dark:bg-[#0c1018]">
+                          {selectedLogMetaPartition.known.map((r) => (
+                            <div key={r.key} className="grid gap-1 sm:grid-cols-[minmax(0,7rem)_1fr] sm:gap-2">
+                              <dt className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">{r.label}</dt>
+                              <dd className="break-all text-[12px] text-[#0f172a] dark:text-[#e2e8f0]">{r.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : null}
+                      {selectedLogMetaPartition.remainder ? (
+                        <div>
+                          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                            Weitere Felder
+                          </div>
+                          <div className={detailJsonClass}>{formatJsonField(selectedLogMetaPartition.remainder)}</div>
+                        </div>
+                      ) : null}
+                      {selectedLog.metadata == null ? (
+                        <span className="text-[12px]">—</span>
+                      ) : selectedLogMetaPartition.known.length === 0 && !selectedLogMetaPartition.remainder ? (
+                        <div className={detailJsonClass}>{formatJsonField(selectedLog.metadata)}</div>
+                      ) : null}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
@@ -629,7 +680,9 @@ function PlatformAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => (
+                rows.map((row) => {
+                  const rowSev = getAuditSeverityDetail(row);
+                  return (
                   <tr
                     key={row.id}
                     role="button"
@@ -649,8 +702,16 @@ function PlatformAuditLogsPage() {
                     <td className="max-w-[180px] px-3 py-2 align-top break-all">
                       {row.actor_email || row.actor_user_id || "—"}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 align-top font-medium">
-                      {auditActionLabel(row.action)}
+                    <td className="max-w-[200px] px-3 py-2 align-top font-medium">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold leading-none ${auditSeverityPillClass(rowSev.level)}`}
+                          title={rowSev.label}
+                        >
+                          {rowSev.label}
+                        </span>
+                        <span className="min-w-0">{auditActionLabel(row.action)}</span>
+                      </div>
                     </td>
                     <td className="max-w-[200px] px-3 py-2 align-top break-all">
                       {row.organization_name || row.organization_id || "—"}
@@ -676,7 +737,8 @@ function PlatformAuditLogsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

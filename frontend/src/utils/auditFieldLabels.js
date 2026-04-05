@@ -40,6 +40,7 @@ export const ENTITY_AUDIT_LABELS = {
     landlord_deposit_annual_premium: "Kautionsprämie",
   },
   inventory_item: {
+    inventory_number: "Inventarnummer",
     name: "Name",
     category: "Kategorie",
     brand: "Marke",
@@ -70,6 +71,8 @@ export const ENTITY_AUDIT_LABELS = {
   },
   tenant: {
     ...COMMON_AUDIT_FIELD_LABELS,
+    first_name: "Vorname",
+    last_name: "Nachname",
   },
 };
 
