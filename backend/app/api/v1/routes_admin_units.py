@@ -279,6 +279,20 @@ def admin_patch_unit(
     return uas.patch_unit(session, org_id, str(current_user.id), unit_id, body, request)
 
 
+@router.post("/units/{unit_id}/geocode", response_model=dict)
+def admin_geocode_unit(
+    unit_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """
+    Manually re-run geocoding for the current unit address (same logic as save, forced).
+    Always returns 200 with unit + geocoding metadata when the unit exists.
+    """
+    return uas.geocode_unit(session, org_id, unit_id)
+
+
 @router.delete("/units/{unit_id}")
 @limiter.limit("10/minute")
 def admin_delete_unit(

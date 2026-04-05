@@ -1446,6 +1446,19 @@ export function geocodeAdminProperty(id) {
   });
 }
 
+/**
+ * POST /api/admin/units/{id}/geocode — manual geocoding retry (server-side).
+ */
+export function geocodeAdminUnit(id) {
+  return fetch(`${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}/geocode`, {
+    method: "POST",
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) throw new Error("Geocoding-Anfrage fehlgeschlagen.");
+    return res.json();
+  });
+}
+
 export function fetchAdminUnitDocuments(unitId) {
   return fetch(
     `${API_BASE_URL}/api/admin/unit-documents?unit_id=${encodeURIComponent(unitId)}`,

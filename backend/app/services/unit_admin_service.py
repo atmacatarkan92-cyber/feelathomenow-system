@@ -30,6 +30,7 @@ from db.models import (
 )
 from app.services.occupancy_service import get_unit_occupancy_batch
 from app.services.revenue_forecast import calculate_monthly_revenue_for_units
+from app.services.unit_geocoding import apply_unit_geocoding, unit_address_signature_from_model
 from app.services.unit_short_id import allocate_next_short_unit_id
 
 logger = logging.getLogger(__name__)
@@ -245,6 +246,11 @@ def unit_to_dict(
         ),
         "leaseStatus": getattr(u, "lease_status", None),
         "leaseNotes": getattr(u, "lease_notes", None),
+        "latitude": getattr(u, "latitude", None),
+        "longitude": getattr(u, "longitude", None),
+        "geocoded_at": (
+            u.geocoded_at.isoformat() if getattr(u, "geocoded_at", None) else None
+        ),
     }
 
 
@@ -484,6 +490,7 @@ def create_unit(
     if unit is None:
         raise HTTPException(status_code=500, detail="Unit creation failed")
     create_initial_rooms_for_unit(session, unit, body)
+    geo = apply_unit_geocoding(session, unit, address_changed=True)
     create_audit_log(
         session,
         str(current_user_id),
@@ -497,7 +504,9 @@ def create_unit(
     )
     session.commit()
     session.refresh(unit)
-    return unit_to_dict(unit)
+    out = unit_enriched_dict(session, unit)
+    out["geocoding"] = geo
+    return out
 
 
 def patch_unit(
@@ -511,6 +520,7 @@ def patch_unit(
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
+    old_sig = unit_address_signature_from_model(unit)
     old_snapshot = model_snapshot(unit)
     data = body.model_dump(exclude_unset=True)
     if "property_id" in data:
@@ -548,6 +558,9 @@ def patch_unit(
     if data:
         unit.updated_at = datetime.utcnow()
     session.add(unit)
+    new_sig = unit_address_signature_from_model(unit)
+    address_changed = old_sig != new_sig
+    geo = apply_unit_geocoding(session, unit, address_changed=address_changed)
     new_snapshot = model_snapshot(unit)
     for key in data:
         if key not in UNIT_PATCH_AUDIT_FIELDS:
@@ -568,7 +581,28 @@ def patch_unit(
             )
     session.commit()
     session.refresh(unit)
-    return unit_enriched_dict(session, unit)
+    out = unit_enriched_dict(session, unit)
+    out["geocoding"] = geo
+    return out
+
+
+def geocode_unit(
+    session: Session,
+    org_id: str,
+    unit_id: str,
+) -> dict:
+    """Manual geocoding retry (same rules as save, forced). Caller commits."""
+    unit = session.get(Unit, unit_id)
+    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    unit.updated_at = datetime.utcnow()
+    geo = apply_unit_geocoding(session, unit, address_changed=True, force=True)
+    session.add(unit)
+    session.commit()
+    session.refresh(unit)
+    out = unit_enriched_dict(session, unit)
+    out["geocoding"] = geo
+    return out
 
 
 def delete_unit(

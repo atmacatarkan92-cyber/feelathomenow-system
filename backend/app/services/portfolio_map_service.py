@@ -1,5 +1,5 @@
 """
-Portfolio map V1: unit-level map status + property coordinates only (no geocoding).
+Portfolio map: unit-level map status + coordinates (unit lat/lng first, else property).
 
 Map status precedence (single winner per unit):
 1. landlord_ended
@@ -90,6 +90,19 @@ def compute_unit_map_status(unit: Unit, tenancies: List[Tenancy], today: date) -
     return "vacant"
 
 
+def _unit_coords(u: Unit) -> Tuple[Optional[float], Optional[float]]:
+    lat = getattr(u, "latitude", None)
+    lng = getattr(u, "longitude", None)
+    if lat is None or lng is None:
+        return None, None
+    try:
+        la = float(lat)
+        lo = float(lng)
+    except (TypeError, ValueError):
+        return None, None
+    return la, lo
+
+
 def _property_coords(prop: Optional[Property]) -> Tuple[Optional[float], Optional[float]]:
     if prop is None:
         return None, None
@@ -109,14 +122,10 @@ def resolve_portfolio_map_coordinates(
     unit: Unit,
     prop: Optional[Property],
 ) -> Tuple[Optional[float], Optional[float], str]:
-    """
-    Resolve map pin coordinates for one portfolio row.
-
-    Target model (when schema allows): unit-first, then property fallback, else none.
-    Current behavior: same as historical logic — Property.lat / Property.lng only.
-    The ``unit`` argument is reserved for a future unit-level coordinate branch.
-    """
-    _ = unit  # reserved for unit lat/lng once persisted on Unit
+    """Prefer Unit.latitude/longitude; else Property.lat/lng; else none."""
+    ula, ulo = _unit_coords(unit)
+    if ula is not None and ulo is not None:
+        return ula, ulo, "unit"
     lat, lng = _property_coords(prop)
     if lat is not None and lng is not None:
         return lat, lng, "property"

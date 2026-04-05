@@ -197,6 +197,9 @@ class Unit(SQLModel, table=True):
     returned_to_landlord_date: Optional[date] = None
     lease_status: Optional[str] = Field(default=None, max_length=64)
     lease_notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    latitude: Optional[float] = Field(default=None)
+    longitude: Optional[float] = Field(default=None)
+    geocoded_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default=None, nullable=True)
 

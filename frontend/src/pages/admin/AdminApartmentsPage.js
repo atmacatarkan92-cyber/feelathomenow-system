@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -14,6 +15,7 @@ import {
   createAdminUnitCost,
   deleteAdminUnitCost,
   verifyAdminAddress,
+  geocodeAdminUnit,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -114,6 +116,64 @@ function leaseStatusLabel(key) {
 function strOrNull(raw) {
   const t = String(raw ?? "").trim();
   return t === "" ? null : t;
+}
+
+/** Geocoding line for unit modal (aligned with Liegenschaften / AdminPropertiesPage). */
+function unitGeocodingStatusPresentation(meta, snapshot, isCreate) {
+  if (isCreate) {
+    return {
+      text: "Koordinaten: Noch nicht berechnet",
+      className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+    };
+  }
+  if (meta) {
+    if (meta.status === "ok") {
+      return {
+        text: "Koordinaten: Erfolgreich",
+        className: "text-[11px] font-medium text-emerald-600 dark:text-emerald-400",
+      };
+    }
+    if (meta.status === "skipped") {
+      if (meta.reason === "unchanged") {
+        return {
+          text: "Koordinaten: Adresse unverändert",
+          className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+        };
+      }
+      if (meta.reason === "incomplete_address") {
+        return {
+          text: "Koordinaten: Unvollständig",
+          className: "text-[11px] font-medium text-amber-600 dark:text-amber-400/95",
+        };
+      }
+      if (meta.reason === "provider_unavailable") {
+        return {
+          text: "Koordinaten: Unvollständig",
+          className: "text-[11px] font-medium text-amber-700 dark:text-amber-500/90",
+        };
+      }
+      return {
+        text: "Koordinaten: Übersprungen",
+        className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+      };
+    }
+    if (meta.status === "failed") {
+      return {
+        text: "Koordinaten: Fehlgeschlagen",
+        className: "text-[11px] font-medium text-red-600 dark:text-red-400/95",
+      };
+    }
+  }
+  if (snapshot && snapshot.lat != null && snapshot.lng != null) {
+    return {
+      text: "Koordinaten: Erfolgreich",
+      className: "text-[11px] text-emerald-600/95 dark:text-emerald-400/85",
+    };
+  }
+  return {
+    text: "Koordinaten: Noch nicht berechnet",
+    className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+  };
 }
 
 function numFieldStr(v) {
@@ -705,6 +765,9 @@ function AdminApartmentsPage() {
   const [unitCantonHint, setUnitCantonHint] = useState("");
   const [unitCantonLockedByPlz, setUnitCantonLockedByPlz] = useState(false);
   const [unitPlzNotFound, setUnitPlzNotFound] = useState(false);
+  const [unitLastGeocoding, setUnitLastGeocoding] = useState(null);
+  const [unitCoordSnapshot, setUnitCoordSnapshot] = useState(null);
+  const [unitGeocodingRetrying, setUnitGeocodingRetrying] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -765,6 +828,16 @@ function AdminApartmentsPage() {
     }, 0);
     return `FAH-U-${String(maxNumber + 1).padStart(4, "0")}`;
   }, [units]);
+
+  const unitGeoLine = useMemo(
+    () =>
+      unitGeocodingStatusPresentation(
+        unitLastGeocoding,
+        unitCoordSnapshot,
+        !editingId
+      ),
+    [unitLastGeocoding, unitCoordSnapshot, editingId]
+  );
 
   // useLayoutEffect: must run before paint so room blocks exist before submit (Enter) in the same tick as the last rooms change.
   useLayoutEffect(() => {
@@ -881,6 +954,9 @@ function AdminApartmentsPage() {
     setUnitCantonHint("");
     setUnitCantonLockedByPlz(false);
     setUnitPlzNotFound(false);
+    setUnitLastGeocoding(null);
+    setUnitCoordSnapshot(null);
+    setUnitGeocodingRetrying(false);
     setIsModalOpen(true);
   }
 
@@ -927,6 +1003,13 @@ function AdminApartmentsPage() {
     setUnitCantonHint("");
     setUnitCantonLockedByPlz(false);
     setUnitPlzNotFound(false);
+    setUnitLastGeocoding(null);
+    setUnitCoordSnapshot(
+      unit.latitude != null && unit.longitude != null
+        ? { lat: unit.latitude, lng: unit.longitude }
+        : { lat: null, lng: null }
+    );
+    setUnitGeocodingRetrying(false);
     let costRows = makeDefaultModalCostRows();
     try {
       const costs = await fetchAdminUnitCosts(unit.id);
@@ -964,6 +1047,9 @@ function AdminApartmentsPage() {
     setUnitCantonHint("");
     setUnitCantonLockedByPlz(false);
     setUnitPlzNotFound(false);
+    setUnitLastGeocoding(null);
+    setUnitCoordSnapshot(null);
+    setUnitGeocodingRetrying(false);
   }
 
   function addModalCostRow() {
@@ -1213,10 +1299,32 @@ function AdminApartmentsPage() {
 
     try {
       if (editingId) {
-        await updateAdminUnit(editingId, {
+        const saved = await updateAdminUnit(editingId, {
           ...baseUnitPayload,
           ...persistedUnitFields,
         });
+        if (saved) {
+          setUnitLastGeocoding(saved.geocoding ?? null);
+          setUnitCoordSnapshot(
+            saved.latitude != null && saved.longitude != null
+              ? { lat: saved.latitude, lng: saved.longitude }
+              : { lat: null, lng: null }
+          );
+        }
+        const g = saved && saved.geocoding;
+        if (g && g.status !== "ok" && g.reason && g.reason !== "unchanged") {
+          const reason = g.reason;
+          let msg =
+            "Unit gespeichert, aber Koordinaten konnten nicht automatisch ermittelt werden.";
+          if (reason === "incomplete_address") {
+            msg =
+              "Unit gespeichert, aber die Adresse war für die automatische Kartenposition unvollständig.";
+          } else if (reason === "provider_unavailable") {
+            msg =
+              "Unit gespeichert, aber Koordinaten konnten nicht automatisch ermittelt werden (Geocoding nicht konfiguriert).";
+          }
+          toast.warning(msg);
+        }
         const existing = await fetchAdminUnitCosts(editingId);
         for (const c of existing) {
           await deleteAdminUnitCost(editingId, c.id);
@@ -1230,6 +1338,20 @@ function AdminApartmentsPage() {
         }
       } else {
         const created = await createAdminUnit(apiPayload);
+        const g = created && created.geocoding;
+        if (g && g.status !== "ok" && g.reason && g.reason !== "unchanged") {
+          const reason = g.reason;
+          let msg =
+            "Unit gespeichert, aber Koordinaten konnten nicht automatisch ermittelt werden.";
+          if (reason === "incomplete_address") {
+            msg =
+              "Unit gespeichert, aber die Adresse war für die automatische Kartenposition unvollständig.";
+          } else if (reason === "provider_unavailable") {
+            msg =
+              "Unit gespeichert, aber Koordinaten konnten nicht automatisch ermittelt werden (Geocoding nicht konfiguriert).";
+          }
+          toast.warning(msg);
+        }
         const newId = created?.id || created?.unitId;
         if (!newId) {
           throw new Error("Unit konnte nicht gespeichert werden.");
@@ -1263,6 +1385,41 @@ function AdminApartmentsPage() {
       setSaving(false);
     }
   }
+
+  const handleRetryUnitGeocode = useCallback(() => {
+    if (!editingId || unitGeocodingRetrying) return;
+    setUnitGeocodingRetrying(true);
+    geocodeAdminUnit(editingId)
+      .then((data) => {
+        setUnitLastGeocoding(data.geocoding ?? null);
+        setUnitCoordSnapshot(
+          data.latitude != null && data.longitude != null
+            ? { lat: data.latitude, lng: data.longitude }
+            : { lat: null, lng: null }
+        );
+        const g = data.geocoding;
+        if (g && g.status === "ok") {
+          toast.success("Koordinaten erfolgreich aktualisiert.");
+        } else if (g && g.reason === "incomplete_address") {
+          toast.warning("Adresse unvollständig – Koordinaten konnten nicht ermittelt werden.");
+        } else if (g && g.reason === "provider_unavailable") {
+          toast.warning("Geocoding nicht verfügbar.");
+        } else {
+          toast.warning("Koordinaten konnten nicht automatisch ermittelt werden.");
+        }
+        return Promise.all([
+          fetchAdminUnits(),
+          fetchAdminRooms(),
+          fetchAdminTenanciesAll(),
+        ]).then(([unitsData, roomsData, tenanciesData]) => {
+          setUnits(Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []);
+          setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
+          setTenancies(Array.isArray(tenanciesData) ? tenanciesData : []);
+        });
+      })
+      .catch((e) => toast.error(e.message || "Geocoding fehlgeschlagen."))
+      .finally(() => setUnitGeocodingRetrying(false));
+  }, [editingId, unitGeocodingRetrying]);
 
   function handleDelete(id) {
     const unitRooms = getRoomsForUnit(id, rooms);
@@ -1558,6 +1715,20 @@ function AdminApartmentsPage() {
                     required
                     className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
                   />
+                </div>
+
+                <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className={unitGeoLine.className}>{unitGeoLine.text}</p>
+                  {editingId ? (
+                    <button
+                      type="button"
+                      onClick={handleRetryUnitGeocode}
+                      disabled={saving || unitGeocodingRetrying}
+                      className="shrink-0 rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {unitGeocodingRetrying ? "Berechne …" : "Koordinaten erneut berechnen"}
+                    </button>
+                  ) : null}
                 </div>
 
                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
