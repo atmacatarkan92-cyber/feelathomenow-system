@@ -10,6 +10,7 @@ import re
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 from db.models import Unit
@@ -76,25 +77,39 @@ def backfill_all_units(session: Session) -> None:
     """
     One-time migration: assign deterministic short_unit_id per org, grouped by type prefix,
     stable order: created_at, id.
+
+    Uses raw SQL for the initial read and for updates so this does not depend on every
+    column present on the Unit ORM model (Alembic 068 runs before later unit migrations).
     """
-    units = list(
-        _exec(
-            session,
-            select(Unit).order_by(Unit.organization_id, Unit.created_at, Unit.id),
-        ).all()
-    )
     from collections import defaultdict
 
-    by_org: dict[str, list[Unit]] = defaultdict(list)
-    for u in units:
-        by_org[str(u.organization_id)].append(u)
+    raw_rows = session.execute(
+        text(
+            "SELECT id, organization_id, type, created_at FROM unit "
+            "ORDER BY organization_id, created_at, id"
+        )
+    ).all()
+
+    by_org: dict[str, list[dict]] = defaultdict(list)
+    for row in raw_rows:
+        by_org[str(row[1])].append(
+            {
+                "id": row[0],
+                "organization_id": str(row[1]),
+                "type": row[2],
+                "created_at": row[3],
+            }
+        )
 
     for _org_id, rows in by_org.items():
-        buckets: dict[str, list[Unit]] = defaultdict(list)
-        for u in rows:
-            buckets[unit_type_to_prefix(u.type)].append(u)
+        buckets: dict[str, list[dict]] = defaultdict(list)
+        for r in rows:
+            buckets[unit_type_to_prefix(r["type"])].append(r)
         for prefix, bucket in buckets.items():
-            bucket.sort(key=lambda x: (x.created_at or datetime.min, x.id))
-            for i, u in enumerate(bucket, start=1):
-                u.short_unit_id = format_short_unit_code(prefix, i)
-                session.add(u)
+            bucket.sort(key=lambda x: (x["created_at"] or datetime.min, x["id"]))
+            for i, r in enumerate(bucket, start=1):
+                code = format_short_unit_code(prefix, i)
+                session.execute(
+                    text("UPDATE unit SET short_unit_id = :sid WHERE id = :id"),
+                    {"sid": code, "id": r["id"]},
+                )
