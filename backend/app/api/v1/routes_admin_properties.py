@@ -4,7 +4,7 @@ Protected by require_roles("admin", "manager").
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -13,6 +13,10 @@ from sqlmodel import select
 from auth.dependencies import get_current_organization, get_db_session, require_roles
 from db.models import Property, Landlord
 from app.core.rate_limit import limiter
+from app.services.property_geocoding import (
+    apply_property_geocoding,
+    property_address_signature_from_model,
+)
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-properties"])
@@ -44,6 +48,13 @@ def _property_to_dict(p: Property) -> dict:
         "updated_at": p.updated_at.isoformat() if getattr(p, "updated_at", None) else None,
         "deleted_at": p.deleted_at.isoformat() if getattr(p, "deleted_at", None) and p.deleted_at else None,
     }
+
+
+def _property_to_response(p: Property, geocoding: Optional[dict[str, Any]] = None) -> dict:
+    out = _property_to_dict(p)
+    if geocoding is not None:
+        out["geocoding"] = geocoding
+    return out
 
 
 class PropertyCreate(BaseModel):
@@ -129,9 +140,11 @@ def admin_create_property(
         notes=body.notes,
     )
     session.add(prop)
+    session.flush()
+    geo = apply_property_geocoding(session, prop, address_changed=True)
     session.commit()
     session.refresh(prop)
-    return _property_to_dict(prop)
+    return _property_to_response(prop, geo)
 
 
 @router.put("/properties/{property_id}", response_model=dict)
@@ -149,12 +162,38 @@ def admin_put_property(
     data = body.model_dump(exclude_unset=True)
     if "landlord_id" in data:
         _assert_landlord_in_org(session, data.get("landlord_id"), org_id)
+    old_sig = property_address_signature_from_model(prop)
     for k, v in data.items():
         if hasattr(prop, k):
             setattr(prop, k, v)
     if data:
         prop.updated_at = datetime.utcnow()
+    new_sig = property_address_signature_from_model(prop)
+    address_changed = old_sig != new_sig
+    geo = apply_property_geocoding(session, prop, address_changed=address_changed)
     session.add(prop)
     session.commit()
     session.refresh(prop)
-    return _property_to_dict(prop)
+    return _property_to_response(prop, geo)
+
+
+@router.post("/properties/{property_id}/geocode", response_model=dict)
+def admin_geocode_property(
+    property_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """
+    Manually re-run geocoding for the current property address (same logic as save, forced).
+    Always returns 200 with property + geocoding metadata when the property exists.
+    """
+    prop = session.get(Property, property_id)
+    if not prop or str(getattr(prop, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Property not found")
+    prop.updated_at = datetime.utcnow()
+    geo = apply_property_geocoding(session, prop, address_changed=True, force=True)
+    session.add(prop)
+    session.commit()
+    session.refresh(prop)
+    return _property_to_response(prop, geo)

@@ -1,10 +1,69 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   fetchAdminProperties,
   fetchAdminLandlords,
   createAdminProperty,
   updateAdminProperty,
+  geocodeAdminProperty,
 } from "../../api/adminData";
+
+function geocodingStatusPresentation(meta, snapshot, isCreate) {
+  if (isCreate) {
+    return {
+      text: "Geocoding: Noch nicht berechnet",
+      className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+    };
+  }
+  if (meta) {
+    if (meta.status === "ok") {
+      return {
+        text: "Geocoding: Erfolgreich",
+        className: "text-[11px] font-medium text-emerald-600 dark:text-emerald-400",
+      };
+    }
+    if (meta.status === "skipped") {
+      if (meta.reason === "unchanged") {
+        return {
+          text: "Geocoding: Adresse unverändert",
+          className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+        };
+      }
+      if (meta.reason === "incomplete_address") {
+        return {
+          text: "Geocoding: Unvollständig",
+          className: "text-[11px] font-medium text-amber-600 dark:text-amber-400/95",
+        };
+      }
+      if (meta.reason === "provider_unavailable") {
+        return {
+          text: "Geocoding: Nicht verfügbar",
+          className: "text-[11px] font-medium text-amber-700 dark:text-amber-500/90",
+        };
+      }
+      return {
+        text: "Geocoding: Übersprungen",
+        className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+      };
+    }
+    if (meta.status === "failed") {
+      return {
+        text: "Geocoding: Fehlgeschlagen",
+        className: "text-[11px] font-medium text-red-600 dark:text-red-400/95",
+      };
+    }
+  }
+  if (snapshot && snapshot.lat != null && snapshot.lng != null) {
+    return {
+      text: "Geocoding: Koordinaten vorhanden",
+      className: "text-[11px] text-emerald-600/95 dark:text-emerald-400/85",
+    };
+  }
+  return {
+    text: "Geocoding: Noch nicht berechnet",
+    className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+  };
+}
 
 const tableStyle = { width: "100%", borderCollapse: "collapse" };
 const thStyle = {
@@ -44,6 +103,9 @@ function AdminPropertiesPage() {
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const [lastGeocodingMeta, setLastGeocodingMeta] = useState(null);
+  const [coordinateSnapshot, setCoordinateSnapshot] = useState(null);
+  const [geocodingRetrying, setGeocodingRetrying] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -63,6 +125,8 @@ function AdminPropertiesPage() {
 
   const openCreate = () => {
     setEditingId(null);
+    setLastGeocodingMeta(null);
+    setCoordinateSnapshot(null);
     setForm({
       landlord_id: "",
       title: "",
@@ -79,6 +143,10 @@ function AdminPropertiesPage() {
 
   const openEdit = (row) => {
     setEditingId(row.id);
+    setLastGeocodingMeta(null);
+    setCoordinateSnapshot(
+      row.lat != null && row.lng != null ? { lat: row.lat, lng: row.lng } : { lat: null, lng: null }
+    );
     setForm({
       landlord_id: row.landlord_id || "",
       title: row.title || "",
@@ -112,13 +180,65 @@ function AdminPropertiesPage() {
       ? updateAdminProperty(editingId, body)
       : createAdminProperty(body);
     promise
-      .then(() => {
+      .then((data) => {
+        if (data) {
+          setLastGeocodingMeta(data.geocoding ?? null);
+          setCoordinateSnapshot(
+            data.lat != null && data.lng != null ? { lat: data.lat, lng: data.lng } : { lat: null, lng: null }
+          );
+        }
+        const g = data && data.geocoding;
+        if (
+          g &&
+          g.status !== "ok" &&
+          g.reason &&
+          g.reason !== "unchanged"
+        ) {
+          const reason = g.reason;
+          let msg =
+            "Liegenschaft gespeichert, aber Koordinaten konnten nicht automatisch ermittelt werden.";
+          if (reason === "incomplete_address") {
+            msg =
+              "Liegenschaft gespeichert, aber die Adresse war für die automatische Kartenposition unvollständig.";
+          } else if (reason === "provider_unavailable") {
+            msg =
+              "Liegenschaft gespeichert, aber Koordinaten konnten nicht automatisch ermittelt werden (Geocoding nicht konfiguriert).";
+          }
+          toast.warning(msg);
+        }
         setFormOpen(false);
         load();
       })
       .catch((e) => setError(e.message || "Speichern fehlgeschlagen."))
       .finally(() => setSaving(false));
   };
+
+  const handleRetryGeocode = () => {
+    if (!editingId || geocodingRetrying) return;
+    setGeocodingRetrying(true);
+    geocodeAdminProperty(editingId)
+      .then((data) => {
+        setLastGeocodingMeta(data.geocoding ?? null);
+        setCoordinateSnapshot(
+          data.lat != null && data.lng != null ? { lat: data.lat, lng: data.lng } : { lat: null, lng: null }
+        );
+        const g = data.geocoding;
+        if (g && g.status === "ok") {
+          toast.success("Koordinaten erfolgreich aktualisiert.");
+        } else if (g && g.reason === "incomplete_address") {
+          toast.warning("Adresse unvollständig – Koordinaten konnten nicht ermittelt werden.");
+        } else if (g && g.reason === "provider_unavailable") {
+          toast.warning("Geocoding nicht verfügbar.");
+        } else {
+          toast.warning("Koordinaten konnten nicht automatisch ermittelt werden.");
+        }
+        load();
+      })
+      .catch((e) => toast.error(e.message || "Geocoding fehlgeschlagen."))
+      .finally(() => setGeocodingRetrying(false));
+  };
+
+  const geoPresent = geocodingStatusPresentation(lastGeocodingMeta, coordinateSnapshot, !editingId);
 
   const getLandlordLabel = (id) => {
     if (!id) return "—";
@@ -278,6 +398,19 @@ function AdminPropertiesPage() {
                   className={inputClass}
                 />
               </div>
+              <p className={geoPresent.className}>{geoPresent.text}</p>
+              {editingId ? (
+                <div>
+                  <button
+                    type="button"
+                    disabled={saving || geocodingRetrying}
+                    onClick={handleRetryGeocode}
+                    className="rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-[12px] font-semibold text-[#0f172a] transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.12] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+                  >
+                    {geocodingRetrying ? "Berechne …" : "Koordinaten erneut berechnen"}
+                  </button>
+                </div>
+              ) : null}
               <div>
                 <label className={labelClass}>Status</label>
                 <select
