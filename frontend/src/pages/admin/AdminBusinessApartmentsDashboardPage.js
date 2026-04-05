@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import L from "leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  useMap,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   ResponsiveContainer,
@@ -206,7 +213,83 @@ function portfolioMapCircleStyle(mapStatus) {
   }
 }
 
+function portfolioMapStatusEmoji(mapStatus) {
+  switch (mapStatus) {
+    case "occupied":
+      return "🟢";
+    case "vacant":
+      return "🔴";
+    case "notice":
+      return "🟡";
+    case "landlord_ended":
+      return "⚫";
+    default:
+      return "•";
+  }
+}
+
+/** Fits all markers on load/update; single marker gets a fixed zoom. */
+function PortfolioMapFitBounds({ items }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!items?.length) return;
+    if (items.length === 1) {
+      const it = items[0];
+      map.setView([Number(it.latitude), Number(it.longitude)], 14, {
+        animate: false,
+      });
+      return;
+    }
+    const b = L.latLngBounds(
+      items.map((it) => [Number(it.latitude), Number(it.longitude)])
+    );
+    map.fitBounds(b, { padding: [36, 36], maxZoom: 15, animate: false });
+  }, [map, items]);
+  return null;
+}
+
+function PortfolioMapPopupBody({ it }) {
+  const shortId = String(it.short_unit_id || it.unit_id || "").trim() || "—";
+  const city = String(it.city || "").trim();
+  const line1 =
+    shortId !== "—" && city
+      ? `${shortId} · ${city}`
+      : shortId !== "—"
+        ? shortId
+        : city || "—";
+
+  const addressLine = String(it.address || "").trim();
+  const postal = String(it.postal_code || "").trim();
+  const postalCity = [postal, city].filter(Boolean).join(" ");
+
+  return (
+    <div className="min-w-[200px] max-w-[260px] space-y-2 text-[13px] leading-snug text-[#0f172a]">
+      <p className="font-semibold text-slate-900">{line1}</p>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[15px] leading-none" aria-hidden>
+          {portfolioMapStatusEmoji(it.map_status)}
+        </span>
+        <span className="font-medium text-slate-800">{it.map_status_label}</span>
+      </div>
+      {addressLine ? (
+        <p className="text-slate-600">{addressLine}</p>
+      ) : null}
+      {postalCity ? (
+        <p className="text-[12px] text-slate-500">{postalCity}</p>
+      ) : null}
+      <Link
+        to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
+        className="inline-block pt-0.5 text-sky-600 underline decoration-sky-600/40 underline-offset-2 hover:text-sky-700"
+      >
+        Einheit öffnen
+      </Link>
+    </div>
+  );
+}
+
 function PortfolioMapSection({ loading, error, data }) {
+  const [activeUnitId, setActiveUnitId] = useState(null);
+
   const plottedItems = useMemo(() => {
     const items = data?.items;
     if (!Array.isArray(items)) return [];
@@ -219,20 +302,8 @@ function PortfolioMapSection({ loading, error, data }) {
     );
   }, [data]);
 
-  const mapCenter = useMemo(() => {
-    if (plottedItems.length === 0) return [46.8, 8.2];
-    const sum = plottedItems.reduce(
-      (acc, it) => {
-        acc[0] += Number(it.latitude);
-        acc[1] += Number(it.longitude);
-        return acc;
-      },
-      [0, 0]
-    );
-    return [sum[0] / plottedItems.length, sum[1] / plottedItems.length];
-  }, [plottedItems]);
-
-  const mapZoom = plottedItems.length === 1 ? 13 : plottedItems.length ? 8 : 7;
+  const defaultMapCenter = [46.8, 8.2];
+  const defaultMapZoom = 7;
 
   if (loading) {
     return (
@@ -305,8 +376,8 @@ function PortfolioMapSection({ loading, error, data }) {
             style={{ height: 380 }}
           >
             <MapContainer
-              center={mapCenter}
-              zoom={mapZoom}
+              center={defaultMapCenter}
+              zoom={defaultMapZoom}
               style={{ height: "100%", width: "100%" }}
               scrollWheelZoom={false}
             >
@@ -314,37 +385,30 @@ function PortfolioMapSection({ loading, error, data }) {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
+              <PortfolioMapFitBounds items={plottedItems} />
               {plottedItems.map((it) => {
                 const style = portfolioMapCircleStyle(it.map_status);
+                const isActive = activeUnitId === it.unit_id;
                 return (
                   <CircleMarker
                     key={it.unit_id}
                     center={[Number(it.latitude), Number(it.longitude)]}
-                    radius={10}
+                    radius={isActive ? 13 : 10}
                     pathOptions={{
                       ...style,
-                      fillOpacity: 0.9,
-                      weight: 2,
+                      fillOpacity: isActive ? 1 : 0.88,
+                      weight: isActive ? 3 : 2,
+                    }}
+                    eventHandlers={{
+                      click: () => setActiveUnitId(it.unit_id),
                     }}
                   >
-                    <Popup>
-                      <div className="min-w-[200px] text-[13px] text-[#0f172a]">
-                        <p className="font-semibold text-sky-700">
-                          {it.short_unit_id || it.unit_id}
-                        </p>
-                        <p className="mt-1 text-slate-600">
-                          {[it.address, [it.postal_code, it.city].filter(Boolean).join(" ")]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                        <p className="mt-2 font-medium text-slate-800">{it.map_status_label}</p>
-                        <Link
-                          to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
-                          className="mt-2 inline-block text-sky-600 underline"
-                        >
-                          Einheit öffnen
-                        </Link>
-                      </div>
+                    <Popup
+                      eventHandlers={{
+                        remove: () => setActiveUnitId(null),
+                      }}
+                    >
+                      <PortfolioMapPopupBody it={it} />
                     </Popup>
                   </CircleMarker>
                 );
