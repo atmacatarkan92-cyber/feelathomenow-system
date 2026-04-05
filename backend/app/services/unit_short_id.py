@@ -15,6 +15,16 @@ from sqlmodel import Session, select
 from db.models import Unit
 
 
+def _exec(session, stmt):
+    """SQLModel Session uses .exec(); SQLAlchemy Session (e.g. Alembic) uses .execute()."""
+    if hasattr(session, "exec"):
+        return session.exec(stmt)
+    res = session.execute(stmt)
+    if hasattr(res, "scalars"):
+        return res.scalars()
+    return res
+
+
 def unit_type_to_prefix(unit_type: Optional[str]) -> str:
     """
     Map unit.type to a short prefix. Align with product rules:
@@ -42,7 +52,7 @@ def format_short_unit_code(prefix: str, seq: int) -> str:
 
 def _max_seq_for_prefix_in_org(session: Session, org_id: str, prefix: str) -> int:
     stmt = select(Unit).where(Unit.organization_id == org_id)
-    rows = session.exec(stmt).all()
+    rows = _exec(session, stmt).all()
     pat = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
     m = 0
     for u in rows:
@@ -68,7 +78,10 @@ def backfill_all_units(session: Session) -> None:
     stable order: created_at, id.
     """
     units = list(
-        session.exec(select(Unit).order_by(Unit.organization_id, Unit.created_at, Unit.id)).all()
+        _exec(
+            session,
+            select(Unit).order_by(Unit.organization_id, Unit.created_at, Unit.id),
+        ).all()
     )
     from collections import defaultdict
 
