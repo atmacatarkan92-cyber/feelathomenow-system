@@ -139,8 +139,6 @@ def admin_create_property(
         status=(body.status or "active").strip() or "active",
         notes=body.notes,
     )
-    session.add(prop)
-    session.flush()
     geo = apply_property_geocoding(session, prop, address_changed=True)
     session.commit()
     session.refresh(prop)
