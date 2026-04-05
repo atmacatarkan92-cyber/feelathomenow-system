@@ -1619,6 +1619,31 @@ export async function createPlatformOrganization(body) {
   return text ? JSON.parse(text) : null;
 }
 
+/** Shared query string for platform audit list + CSV export (filters only). */
+function buildPlatformAuditLogFilterParams({
+  q,
+  action,
+  entityType,
+  organizationId,
+  actor,
+  dateFrom,
+  dateTo,
+}) {
+  const params = new URLSearchParams();
+  if (q != null && String(q).trim() !== "") params.set("q", String(q).trim());
+  if (action != null && String(action).trim() !== "") params.set("action", String(action).trim());
+  if (entityType != null && String(entityType).trim() !== "") {
+    params.set("entity_type", String(entityType).trim());
+  }
+  if (organizationId != null && String(organizationId).trim() !== "") {
+    params.set("organization_id", String(organizationId).trim());
+  }
+  if (actor != null && String(actor).trim() !== "") params.set("actor", String(actor).trim());
+  if (dateFrom != null && String(dateFrom).trim() !== "") params.set("date_from", String(dateFrom).trim());
+  if (dateTo != null && String(dateTo).trim() !== "") params.set("date_to", String(dateTo).trim());
+  return params;
+}
+
 /** GET /api/platform/audit-logs — platform_admin only; paginated + filterable audit feed. */
 export async function fetchPlatformAuditLogs({
   page = 1,
@@ -1631,20 +1656,17 @@ export async function fetchPlatformAuditLogs({
   dateFrom,
   dateTo,
 } = {}) {
-  const params = new URLSearchParams();
+  const params = buildPlatformAuditLogFilterParams({
+    q,
+    action,
+    entityType,
+    organizationId,
+    actor,
+    dateFrom,
+    dateTo,
+  });
   params.set("page", String(page));
   params.set("page_size", String(pageSize));
-  if (q != null && String(q).trim() !== "") params.set("q", String(q).trim());
-  if (action != null && String(action).trim() !== "") params.set("action", String(action).trim());
-  if (entityType != null && String(entityType).trim() !== "") {
-    params.set("entity_type", String(entityType).trim());
-  }
-  if (organizationId != null && String(organizationId).trim() !== "") {
-    params.set("organization_id", String(organizationId).trim());
-  }
-  if (actor != null && String(actor).trim() !== "") params.set("actor", String(actor).trim());
-  if (dateFrom != null && String(dateFrom).trim() !== "") params.set("date_from", String(dateFrom).trim());
-  if (dateTo != null && String(dateTo).trim() !== "") params.set("date_to", String(dateTo).trim());
   const res = await fetch(`${API_BASE_URL}/api/platform/audit-logs?${params.toString()}`, {
     headers: getApiHeaders(),
     credentials: "include",
@@ -1653,6 +1675,35 @@ export async function fetchPlatformAuditLogs({
     throw new Error(await parseAdminErrorResponse(res));
   }
   return res.json();
+}
+
+/** GET /api/platform/audit-logs/export — all rows matching current filters (CSV). */
+export async function exportPlatformAuditLogs({
+  q,
+  action,
+  entityType,
+  organizationId,
+  actor,
+  dateFrom,
+  dateTo,
+} = {}) {
+  const params = buildPlatformAuditLogFilterParams({
+    q,
+    action,
+    entityType,
+    organizationId,
+    actor,
+    dateFrom,
+    dateTo,
+  });
+  const res = await fetch(`${API_BASE_URL}/api/platform/audit-logs/export?${params.toString()}`, {
+    headers: getApiHeaders(),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.blob();
 }
 
 /** POST /api/platform/impersonate/{organizationId} — platform_admin only; returns new access_token (support mode). */

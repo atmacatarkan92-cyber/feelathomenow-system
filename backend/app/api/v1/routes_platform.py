@@ -7,12 +7,16 @@ table or related reads, revisit session/context so platform-admin queries remain
 without weakening customer org isolation for normal routes.
 """
 
+import csv
+import io
+import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from starlette.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import and_, cast, desc, func, or_, String
 from sqlalchemy.orm import Session
@@ -307,6 +311,33 @@ def _platform_audit_where(
     return conds
 
 
+def _json_compact_for_csv(value: Optional[dict]) -> str:
+    if value is None:
+        return ""
+    try:
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return ""
+
+
+def _dt_csv_iso(dt: Optional[datetime]) -> str:
+    if dt is None:
+        return ""
+    try:
+        return dt.isoformat()
+    except Exception:
+        return str(dt)
+
+
+def _audit_csv_summary(row: AuditLog) -> str:
+    """Short human-readable hint (action · entity_type · entity_id); no frontend formatter dependency."""
+    try:
+        parts = [(row.action or "").strip(), (row.entity_type or "").strip(), (row.entity_id or "").strip()]
+        return " · ".join(p for p in parts if p)
+    except Exception:
+        return ""
+
+
 @router.get("/organizations", response_model=list[OrganizationListItem])
 def list_organizations(
     _: User = Depends(require_platform_admin),
@@ -364,6 +395,85 @@ def list_platform_audit_logs(
         total_count=int(total_count),
         page=page,
         page_size=page_size,
+    )
+
+
+@router.get("/audit-logs/export")
+def export_platform_audit_logs_csv(
+    q: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    entity_type: Optional[str] = Query(None),
+    organization_id: Optional[str] = Query(None),
+    actor: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    _: User = Depends(require_platform_admin),
+    session: Session = Depends(get_db_session),
+) -> Response:
+    """All matching audit rows as CSV (same filters as list; no pagination). GeoIP not applied."""
+    apply_pg_platform_audit_full_read(session)
+    conds = _platform_audit_where(
+        q=q,
+        action=action,
+        entity_type=entity_type,
+        organization_id=organization_id,
+        actor=actor,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    list_stmt = select(AuditLog).order_by(desc(AuditLog.created_at))
+    if conds:
+        list_stmt = list_stmt.where(and_(*conds))
+    rows = session.exec(list_stmt).all()
+    org_ids = {str(r.organization_id) for r in rows}
+    org_names: dict[str, str] = {}
+    for oid in org_ids:
+        o = session.get(Organization, oid)
+        if o is not None:
+            org_names[oid] = o.name or ""
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(
+        [
+            "created_at",
+            "actor_email",
+            "actor_user_id",
+            "action",
+            "organization_name",
+            "organization_id",
+            "entity_type",
+            "entity_id",
+            "summary",
+            "old_values",
+            "new_values",
+            "metadata",
+        ]
+    )
+    for r in rows:
+        oid = str(r.organization_id)
+        writer.writerow(
+            [
+                _dt_csv_iso(getattr(r, "created_at", None)),
+                r.actor_email or "",
+                r.actor_user_id or "",
+                r.action or "",
+                org_names.get(oid, "") or "",
+                oid,
+                r.entity_type or "",
+                r.entity_id or "",
+                _audit_csv_summary(r),
+                _json_compact_for_csv(r.old_values),
+                _json_compact_for_csv(r.new_values),
+                _json_compact_for_csv(r.extra_metadata),
+            ]
+        )
+
+    body = buffer.getvalue().encode("utf-8-sig")
+    return Response(
+        content=body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="audit_logs_export.csv"'},
     )
 
 

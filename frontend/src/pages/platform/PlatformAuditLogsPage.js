@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchPlatformAuditLogs, fetchPlatformOrganizations } from "../../api/adminData";
+import {
+  exportPlatformAuditLogs,
+  fetchPlatformAuditLogs,
+  fetchPlatformOrganizations,
+} from "../../api/adminData";
 import { auditActionLabel, formatAuditLog, formatAuditTimestamp } from "../../utils/auditDisplay";
 import { AuditChangeRows } from "../../components/admin/AuditLogVisual";
 import { buildLoginDeviceStatusMap, loginDeviceStatusLabel } from "../../utils/loginDeviceAuditStatus";
@@ -114,6 +118,7 @@ function PlatformAuditLogsPage() {
   const [actor, setActor] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -202,6 +207,34 @@ function PlatformAuditLogsPage() {
     setDateFrom("");
     setDateTo("");
     setPage(1);
+  };
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    setError("");
+    try {
+      const blob = await exportPlatformAuditLogs({
+        q,
+        action,
+        entityType,
+        organizationId,
+        actor,
+        dateFrom,
+        dateTo,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "audit_logs_export.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message || "Export fehlgeschlagen.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const loginDeviceStatusById = useMemo(() => buildLoginDeviceStatusMap(rows), [rows]);
@@ -402,14 +435,29 @@ function PlatformAuditLogsPage() {
         </div>
       ) : null}
 
-      <div className="mb-6">
-        <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">
-          Vantio Platform
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">
+            Vantio Platform
+          </div>
+          <h1 className="text-[22px] font-bold tracking-[-0.02em]">Audit-Protokoll</h1>
+          <p className="mt-2 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+            Audit-Protokoll (plattformweit)
+          </p>
         </div>
-        <h1 className="text-[22px] font-bold tracking-[-0.02em]">Audit-Protokoll</h1>
-        <p className="mt-2 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
-          Audit-Protokoll (plattformweit)
-        </p>
+        <div className="flex min-w-[200px] flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={exporting}
+            className="rounded-[8px] border border-black/10 bg-white px-3 py-2 text-[12px] font-semibold text-[#0f172a] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#141824] dark:text-[#eef2ff]"
+          >
+            {exporting ? "Export läuft…" : "Export CSV"}
+          </button>
+          <p className="max-w-[280px] text-right text-[11px] text-[#64748b] dark:text-[#94a3b8]">
+            Exportiert die aktuell gefilterten Audit-Einträge
+          </p>
+        </div>
       </div>
 
       {error && (
