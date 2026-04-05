@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
+  Area,
   Line,
   CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   BarChart,
   Bar,
+  Cell,
 } from "recharts";
 import { API_BASE_URL, getApiHeaders } from "../../config";
 import {
@@ -22,7 +23,6 @@ import {
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
-import OccupancyMap from "../../components/OccupancyMap";
 import {
   getRoomOccupancyStatus,
   parseIsoDate,
@@ -319,74 +319,59 @@ function buildWarnings(units, rankedUnits, profitByUnitId) {
   return warnings.slice(0, 6);
 }
 
+/** Design-token KPI tile (Live / Forecast). */
 function HeroCard({
   title,
   value,
   subtitle,
-  accent = "orange",
+  accent: _accent,
   trend = null,
+  children = null,
 }) {
-  const styles = {
-    orange: {
-      card: "border-t-orange-500",
-      value: "text-[#fb923c]",
-      dot: "bg-orange-500",
-    },
-    green: {
-      card: "border-t-green-500",
-      value: "text-[#4ade80]",
-      dot: "bg-green-500",
-    },
-    slate: {
-      card: "border-t-slate-500",
-      value: "text-[#0f172a] dark:text-[#eef2ff]",
-      dot: "bg-slate-500",
-    },
-    rose: {
-      card: "border-t-rose-500",
-      value: "text-[#f87171]",
-      dot: "bg-rose-500",
-    },
-    blue: {
-      card: "border-t-blue-500",
-      value: "text-[#7aaeff]",
-      dot: "bg-blue-500",
-    },
-    amber: {
-      card: "border-t-amber-500",
-      value: "text-[#fbbf24]",
-      dot: "bg-amber-500",
-    },
+  const cfgByTitle = {
+    "Aktueller Umsatz": { bar: "#3ddc84", valueClass: "text-[20px] text-[#3ddc84]", tag: "live" },
+    "Gewinn aktuell": { bar: "#3ddc84", valueClass: "text-[20px] text-[#3ddc84]", tag: "live" },
+    "Mögliche Ausgaben": { bar: "#f5a623", valueClass: "text-[20px] text-[#f5a623]", tag: "live" },
+    "Belegt in %": { bar: "#5b9cf6", valueClass: "text-[20px] text-[#5b9cf6]", tag: "live" },
+    "Forecast Umsatz": { bar: "#5b9cf6", valueClass: "text-[20px] text-[#5b9cf6]", tag: "forecast" },
+    "Forecast Gewinn": { bar: "#3ddc84", valueClass: "text-[20px] text-[#3ddc84]", tag: "forecast" },
+    "Forecast Reserve": { bar: "#f5a623", valueClass: "text-[20px] text-[#f5a623]", tag: "forecast" },
+    "Forecast Belegung %": { bar: "#5b9cf6", valueClass: "text-[20px] text-[#5b9cf6]", tag: "forecast" },
+    "Kritische Units": { bar: "#ff5f6d", valueClass: "text-[20px] text-[#ff5f6d]", tag: "forecast" },
   };
-
-  const style = styles[accent] || styles.orange;
+  const cfg = cfgByTitle[title] || {
+    bar: "#f5a623",
+    valueClass: "text-[20px] text-[#edf0f7]",
+    tag: "live",
+  };
+  const tagCls =
+    cfg.tag === "forecast"
+      ? "border border-[rgba(91,156,246,0.25)] bg-[rgba(91,156,246,0.12)] text-[#5b9cf6]"
+      : "border border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.12)] text-[#3ddc84]";
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-[14px] border border-black/10 dark:border-white/[0.07] border-t-4 bg-white dark:bg-[#141824] p-5 ${style.card}`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">{title}</p>
-          </div>
-          <p className={`mt-2 text-2xl font-bold tracking-tight ${style.value}`}>
-            {value}
-          </p>
-          <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
+    <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+      <div
+        className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px]"
+        style={{ background: cfg.bar }}
+      />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{title}</p>
+          <p className={`mb-[4px] font-mono font-medium leading-none ${cfg.valueClass}`}>{value}</p>
+          <p className="text-[10px] leading-[1.4] text-[#4a5070]">{subtitle}</p>
+          {children}
         </div>
-
-        <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-2.5 py-1 text-xs font-semibold text-[#64748b] dark:text-[#6b7a9a]">
-            Live
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className={`rounded-full px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] ${tagCls}`}>
+            {cfg.tag === "forecast" ? "Forecast" : "Live"}
           </span>
           {trend ? (
             <span
-              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+              className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold ${
                 trend.positive
-                  ? "border-green-500/20 bg-green-500/10 text-green-400"
-                  : "border-red-500/20 bg-red-500/10 text-red-400"
+                  ? "border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.1)] text-[#3ddc84]"
+                  : "border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.1)] text-[#ff5f6d]"
               }`}
             >
               {trend.label}
@@ -400,27 +385,27 @@ function HeroCard({
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
-    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-5">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
+    <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+      <div className="flex items-start justify-between gap-3 border-b border-[#1c2035] px-[16px] py-[13px]">
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-medium text-[#edf0f7]">{title}</h3>
           {subtitle ? (
-            <p className="mt-1 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
+            <p className="mt-[2px] text-[10px] text-[#4a5070]">{subtitle}</p>
           ) : null}
         </div>
         {rightSlot}
       </div>
-      {children}
+      <div className="px-[14px] py-[12px]">{children}</div>
     </div>
   );
 }
 
-function SmallStatCard({ label, value, hint }) {
+function SmallStatCard({ label, value, hint, valueClassName = "text-[#edf0f7]" }) {
   return (
-    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-[#0f172a] dark:text-[#eef2ff]">{value}</p>
-      {hint ? <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
+    <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
+      <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{label}</p>
+      <p className={`font-mono text-[16px] font-medium ${valueClassName}`}>{value}</p>
+      {hint ? <p className="mt-[3px] text-[9px] leading-[1.4] text-[#4a5070]">{hint}</p> : null}
     </div>
   );
 }
@@ -430,59 +415,38 @@ function ProgressRow({
   value,
   count,
   colorClass,
-  trackClass = "bg-slate-100 dark:bg-[#111520]",
+  labelClass = "text-[#3ddc84]",
+  pctClass = "text-[#3ddc84]",
+  badgeClass = "border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.12)] text-[#3ddc84]",
 }) {
   const safeValue = Math.max(0, Math.min(Number(value || 0), 100));
 
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">{label}</p>
-          <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-2 py-0.5 text-xs font-semibold text-[#64748b] dark:text-[#6b7a9a]">
-            {count}
-          </span>
-        </div>
-        <p className="text-sm font-semibold text-[#0f172a] dark:text-[#eef2ff]">
-          {formatPercent(safeValue)}
-        </p>
+    <div className="flex items-center gap-[10px] border-b border-[#1c2035] py-[7px] last:border-b-0">
+      <p className={`w-[80px] shrink-0 text-[11px] ${labelClass}`}>{label}</p>
+      <span
+        className={`mr-[4px] rounded-[4px] px-[6px] py-[1px] text-[9px] font-semibold ${badgeClass}`}
+      >
+        {count}
+      </span>
+      <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-[#191c28]">
+        <div className={`h-full rounded-full ${colorClass}`} style={{ width: `${safeValue}%` }} />
       </div>
-      <div className={`h-3 w-full overflow-hidden rounded-full ${trackClass}`}>
-        <div
-          className={`h-full rounded-full ${colorClass}`}
-          style={{ width: `${safeValue}%` }}
-        />
-      </div>
+      <p className={`w-[42px] shrink-0 text-right font-mono text-[11px] ${pctClass}`}>
+        {formatPercent(safeValue)}
+      </p>
     </div>
-  );
-}
-
-function RankingBadge({ value, type }) {
-  const styles = {
-    success: "border-green-500/20 bg-green-500/10 text-green-400",
-    warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
-    danger: "border-red-500/20 bg-red-500/10 text-red-400",
-    neutral: "border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] text-[#64748b] dark:text-[#6b7a9a]",
-    blue: "border-blue-500/20 bg-blue-500/10 text-[#7aaeff]",
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${styles[type]}`}
-    >
-      {value}
-    </span>
   );
 }
 
 function FilterSelect({ label, value, onChange, children }) {
   return (
-    <div className="min-w-[180px]">
-      <label className="mb-2 block text-xs font-medium text-[#64748b] dark:text-[#6b7a9a]">{label}</label>
+    <div className="flex min-w-[160px] flex-col gap-[3px]">
+      <label className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{label}</label>
       <select
         value={value}
         onChange={onChange}
-        className="w-full rounded-lg border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
+        className="w-full cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none"
       >
         {children}
       </select>
@@ -874,69 +838,58 @@ function AdminCoLivingDashboardPage() {
   const occupancyTrend = null;
 
   return (
-    <div className="-m-6 min-h-screen bg-[#f8fafc] p-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark] md:p-8">
-      <div className="mx-auto max-w-[1800px] space-y-6">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
-              Vantio
-            </p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-[#0f172a] dark:text-[#eef2ff]">
-              Co-Living Dashboard
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm text-[#64748b] dark:text-[#6b7a9a]">
-              Übersicht über aktuelle Belegung, Kosten, Umsatz, Gewinn und die
-              wichtigsten operativen Signale deiner Co-Living Units.
-            </p>
-
-            <div className="mt-4">
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="rounded-lg border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff]"
-              >
-                <option value="month">Dieser Monat</option>
-                <option value="lastMonth">Letzter Monat</option>
-                <option value="year">Dieses Jahr</option>
-                <option value="all">Alle Zeit</option>
-              </select>
-            </div>
-          </div>
-
-          {activeMonth > startOfMonth(new Date()) && (
-            <div className="rounded-[10px] border border-amber-500/[0.15] bg-amber-500/[0.06] px-4 py-3 text-[13px] text-[#fbbf24]">
-              Zukunftsmonat gewählt: Diese Werte sind eine Prognose auf Basis
-              aktueller Belegungen, Reservierungen und bekannter Kosten.
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#64748b] dark:text-[#6b7a9a]">
-              Live KPI
-            </span>
-            <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#64748b] dark:text-[#6b7a9a]">
-              Co-Living only
-            </span>
-          </div>
+    <div className="min-h-screen bg-[#080a0f] text-[#edf0f7]">
+      <header className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <span className="text-[14px] font-semibold text-[#edf0f7]">
+            Van<span className="text-[#5b9cf6]">tio</span>
+          </span>
+          <span className="text-[#4a5070]">·</span>
+          <span className="truncate text-[14px] font-medium text-[#edf0f7]">Co-Living Dashboard</span>
         </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-3 py-1 font-mono text-[12px] text-[#edf0f7] outline-none"
+          >
+            <option value="month">Dieser Monat</option>
+            <option value="lastMonth">Letzter Monat</option>
+            <option value="year">Dieses Jahr</option>
+            <option value="all">Alle Zeit</option>
+          </select>
+          <span className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-3 py-1 text-[11px] text-[#8892b0]">
+            Live API
+          </span>
+          <span className="inline-flex cursor-default items-center rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]">
+            Co-Einzug
+          </span>
+        </div>
+      </header>
 
-        <SectionCard
-          title="Global Filter"
-          subtitle="Filtere das Dashboard nach Zeitraum, Ort und einzelner Unit"
-        >
-          <div className="flex flex-col lg:flex-row gap-4">
-            <FilterSelect
-              label="Zeitraum"
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-            >
-              <option value="lastMonth">Letzter Monat</option>
-              <option value="thisMonth">Dieser Monat</option>
-              <option value="nextMonth">Nächster Monat</option>
-              <option value="customMonth">Monat auswählen</option>
-            </FilterSelect>
+      <div className="mx-auto max-w-[1800px] space-y-5 px-6 py-5">
+        {activeMonth > startOfMonth(new Date()) && (
+          <div className="rounded-[10px] border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.06)] px-4 py-3 text-[13px] text-[#f5a623]">
+            Zukunftsmonat gewählt: Diese Werte sind eine Prognose auf Basis aktueller Belegungen,
+            Reservierungen und bekannter Kosten.
+          </div>
+        )}
 
-            {selectedPeriod === "customMonth" && (
+        <div className="flex flex-wrap items-center gap-[12px] rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[16px] py-[12px]">
+          <FilterSelect
+            label="Zeitraum"
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+          >
+            <option value="lastMonth">Letzter Monat</option>
+            <option value="thisMonth">Dieser Monat</option>
+            <option value="nextMonth">Nächster Monat</option>
+            <option value="customMonth">Monat auswählen</option>
+          </FilterSelect>
+
+          {selectedPeriod === "customMonth" && (
+            <>
+              <div className="hidden h-[32px] w-px bg-[#1c2035] sm:block" />
               <FilterSelect
                 label="Monat"
                 value={selectedMonth}
@@ -956,52 +909,72 @@ function AdminCoLivingDashboardPage() {
                 <option value="2026-11">Nov 2026</option>
                 <option value="2026-12">Dez 2026</option>
               </FilterSelect>
-            )}
+            </>
+          )}
 
-            <FilterSelect
-              label="Ort"
-              value={selectedPlace}
-              onChange={(e) => {
-                setSelectedPlace(e.target.value);
-                setSelectedUnitId("all");
-              }}
-            >
-              <option value="all">Alle Orte</option>
-              {placeOptions.map((place) => (
-                <option key={place} value={place}>
-                  {place}
+          <div className="hidden h-[32px] w-px bg-[#1c2035] md:block" />
+
+          <FilterSelect
+            label="Ort"
+            value={selectedPlace}
+            onChange={(e) => {
+              setSelectedPlace(e.target.value);
+              setSelectedUnitId("all");
+            }}
+          >
+            <option value="all">Alle Orte</option>
+            {placeOptions.map((place) => (
+              <option key={place} value={place}>
+                {place}
+              </option>
+            ))}
+          </FilterSelect>
+
+          <div className="hidden h-[32px] w-px bg-[#1c2035] lg:block" />
+
+          <FilterSelect
+            label="Unit"
+            value={selectedUnitId}
+            onChange={(e) => setSelectedUnitId(e.target.value)}
+          >
+            <option value="all">Alle Units</option>
+            {allCoLivingUnits
+              .filter((unit) => selectedPlace === "all" || unit.place === selectedPlace)
+              .map((unit) => (
+                <option key={unit.unitId} value={unit.unitId}>
+                  {unit.unitId}
                 </option>
               ))}
-            </FilterSelect>
+          </FilterSelect>
 
-            <FilterSelect
-              label="Unit"
-              value={selectedUnitId}
-              onChange={(e) => setSelectedUnitId(e.target.value)}
-            >
-              <option value="all">Alle Units</option>
-              {allCoLivingUnits
-                .filter(
-                  (unit) =>
-                    selectedPlace === "all" || unit.place === selectedPlace
-                )
-                .map((unit) => (
-                  <option key={unit.unitId} value={unit.unitId}>
-                    {unit.unitId}
-                  </option>
-                ))}
-            </FilterSelect>
+          <div className="ml-auto flex items-center gap-[6px]">
+            <span className="h-[6px] w-[6px] rounded-full bg-[#3ddc84]" />
+            <span className="text-[11px] text-[#4a5070]">Live</span>
           </div>
-        </SectionCard>
+        </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mb-[10px] flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Aktuell · Live</span>
+          <div className="h-px flex-1 bg-[#1c2035]" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <HeroCard
             title="Aktueller Umsatz"
             value={formatChfOrDash(heroCurrentRevenueBackend)}
             subtitle="Prorierter Mietumsatz (Backend) für den gewählten Monat"
             accent="orange"
             trend={revenueTrend}
-          />
+          >
+            <div className="mt-[10px] flex gap-[6px] border-t border-[#1c2035] pt-[10px]">
+              <span className="rounded-[6px] border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]">
+                Belegt {dashboardDisplay.occupiedRooms}
+              </span>
+              <span className="rounded-[6px] border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]">
+                Reserviert {dashboardDisplay.reservedRooms}
+              </span>
+            </div>
+          </HeroCard>
           <HeroCard
             title="Gewinn aktuell"
             value={formatChfOrDash(dashboard.currentProfit)}
@@ -1010,7 +983,7 @@ function AdminCoLivingDashboardPage() {
             trend={profitTrend}
           />
           <HeroCard
-            title="Aktuelle Ausgaben"
+            title="Mögliche Ausgaben"
             value={formatChfOrDash(dashboard.runningCosts)}
             subtitle="Miete an Vermieter, Nebenkosten und Reinigung"
             accent="slate"
@@ -1022,382 +995,515 @@ function AdminCoLivingDashboardPage() {
             subtitle="Aktuelle Auslastung über alle Rooms"
             accent="rose"
             trend={occupancyTrend}
+          >
+            <div className="mt-[8px] mb-[4px] h-[3px] rounded-full bg-[#191c28]">
+              <div
+                className="h-full rounded-full bg-[#5b9cf6]"
+                style={{ width: `${Math.min(100, Math.max(0, Number(dashboardDisplay.occupiedRate) || 0))}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-[#5b9cf6]">Auslastung</p>
+          </HeroCard>
+        </div>
+
+        <div className="mb-[10px] flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Forecast · Hochrechnung</span>
+          <div className="h-px flex-1 bg-[#1c2035]" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          <HeroCard
+            title="Forecast Umsatz"
+            value={formatChfOrDash(forecast.forecastRevenue)}
+            subtitle="Erwarteter Umsatz im gewählten Zeitraum"
+            accent="blue"
+          />
+          <HeroCard
+            title="Forecast Gewinn"
+            value={formatChfOrDash(forecast.forecastProfit)}
+            subtitle="Erwarteter Gewinn nach Kosten"
+            accent="green"
+          />
+          <HeroCard
+            title="Forecast Reserve"
+            value={formatChfOrDash(forecast.forecastCosts)}
+            subtitle="Erwartete laufende Kosten im gewählten Zeitraum"
+            accent="slate"
+          />
+          <HeroCard
+            title="Forecast Belegung %"
+            value={formatPercent(forecast.expectedOccupancyRate)}
+            subtitle="Belegt + gewichtete Reservierungen"
+            accent="amber"
+          >
+            <div className="mt-[8px] mb-[4px] h-[3px] rounded-full bg-[#191c28]">
+              <div
+                className="h-full rounded-full bg-[#5b9cf6]"
+                style={{ width: `${Math.min(100, Math.max(0, Number(forecast.expectedOccupancyRate) || 0))}%` }}
+              />
+            </div>
+          </HeroCard>
+          <HeroCard
+            title="Kritische Units"
+            value={forecast.criticalUnits}
+            subtitle="Negativer Gewinn oder tiefe erwartete Belegung"
+            accent="rose"
           />
         </div>
 
-        <SectionCard
-          title="Forecast"
-          subtitle="Vorausschau basierend auf belegten Rooms, Reservierungen und laufenden Kosten"
-          rightSlot={<RankingBadge value={selectedPeriod} type="blue" />}
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <HeroCard
-              title="Forecast Umsatz"
-              value={formatChfOrDash(forecast.forecastRevenue)}
-              subtitle="Erwarteter Umsatz im gewählten Zeitraum"
-              accent="blue"
-            />
-            <HeroCard
-              title="Forecast Gewinn"
-              value={formatChfOrDash(forecast.forecastProfit)}
-              subtitle="Erwarteter Gewinn nach Kosten"
-              accent="green"
-            />
-            <HeroCard
-              title="Forecast Kosten"
-              value={formatChfOrDash(forecast.forecastCosts)}
-              subtitle="Erwartete laufende Kosten im gewählten Zeitraum"
-              accent="slate"
-            />
-            <HeroCard
-              title="Forecast Belegung %"
-              value={formatPercent(forecast.expectedOccupancyRate)}
-              subtitle="Belegt + gewichtete Reservierungen"
-              accent="amber"
-            />
-            <HeroCard
-              title="Kritische Units"
-              value={forecast.criticalUnits}
-              subtitle="Negativer Gewinn oder tiefe erwartete Belegung"
-              accent="rose"
-            />
-          </div>
-        </SectionCard>
-
-        {firstFilteredUnit && (
-          <SectionCard
-            title="Raumstatus (Karte)"
-            subtitle={`Belegung: ${firstFilteredUnit.place || firstFilteredUnit.unitId || "Unit"} – Belegt (grün), Reserviert (gelb), Frei (rot)`}
-          >
-            <OccupancyMap
-              unit={firstFilteredUnit}
-              rooms={rooms}
-              occupancyData={occupancyRoomsMap}
-            />
-          </SectionCard>
-        )}
-
-        <SectionCard
-          title="Automatische Warnungen"
-          subtitle="Früherkennung für Leerstand, Risiken und schwache Units"
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {dashboardWarnings.map((warning, index) => (
-              <div
-                key={`${warning.title}-${index}`}
-                className={`rounded-[10px] border p-4 ${
-                  warning.type === "danger"
-                    ? "border-red-500/20 bg-red-500/10"
-                    : "border-amber-200 bg-amber-50 dark:border-amber-400/20 dark:bg-amber-500/10"
-                }`}
-              >
-                <p
-                  className={`text-[13px] font-semibold ${
-                    warning.type === "danger"
-                      ? "text-red-400"
-                      : "text-amber-700 dark:text-amber-300"
-                  }`}
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
+          {firstFilteredUnit ? (
+            <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1c2035] px-[16px] py-[13px]">
+                <div>
+                  <h3 className="text-[13px] font-medium text-[#edf0f7]">Raumstatus</h3>
+                  <p className="mt-[2px] text-[10px] text-[#4a5070]">
+                    {firstFilteredUnit.place || firstFilteredUnit.unitId || "Unit"} · Belegt, Reserviert, Frei
+                  </p>
+                </div>
+                <select
+                  value={selectedUnitId}
+                  onChange={(e) => setSelectedUnitId(e.target.value)}
+                  className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#4a5070] outline-none"
                 >
-                  {warning.title}
-                </p>
-                <p
-                  className={`mt-2 text-sm font-medium ${
-                    warning.type === "danger"
-                      ? "text-[#64748b] dark:text-[#6b7a9a]"
-                      : "text-amber-800/90 dark:text-amber-200/90"
-                  }`}
-                >
-                  {warning.text}
-                </p>
+                  <option value="all">Alle Units</option>
+                  {allCoLivingUnits
+                    .filter((unit) => selectedPlace === "all" || unit.place === selectedPlace)
+                    .map((unit) => (
+                      <option key={unit.unitId} value={unit.unitId}>
+                        {unit.unitId}
+                      </option>
+                    ))}
+                </select>
               </div>
-            ))}
-
-            {dashboardWarnings.length === 0 && (
-              <div className="rounded-[10px] border border-green-500/20 bg-green-500/10 p-4">
-                <p className="text-[13px] font-semibold text-green-400">
-                  Keine kritischen Warnungen
-                </p>
-                <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">
-                  Aktuell wurden keine dringenden Risiken erkannt.
-                </p>
+              <div className="flex flex-wrap gap-[12px] border-b border-[#1c2035] px-[16px] py-[8px]">
+                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#3ddc84]" /> Belegt
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#f5a623]" /> Reserviert
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#ff5f6d]" /> Frei
+                </span>
               </div>
-            )}
-          </div>
-        </SectionCard>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <SectionCard
-            title="Leerstand 7 Tage"
-            subtitle="Geschätzter Leerstand über alle gefilterten Rooms"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SmallStatCard
-                label="Leerstandstage gesamt"
-                value="—"
-                hint="Nicht berechnet"
-              />
-              <SmallStatCard
-                label="Umsatzverlust 7 Tage"
-                value={formatChfOrDash(dashboard.lostRevenue7Days)}
-                hint="Nicht berechnet"
-              />
+              <div className="flex flex-wrap gap-[8px] px-[14px] py-[12px]">
+                {rooms
+                  .filter(
+                    (room) =>
+                      String(room.unitId || room.unit_id) ===
+                      String(firstFilteredUnit.unitId ?? firstFilteredUnit.id)
+                  )
+                  .map((room) => {
+                    const kind = getRoomOccupancyStatus(room, tenancies) || "frei";
+                    const cardCls =
+                      kind === "belegt"
+                        ? "border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.05)]"
+                        : kind === "reserviert"
+                          ? "border-[rgba(245,166,35,0.18)] bg-[rgba(245,166,35,0.05)]"
+                          : "border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.05)]";
+                    const dotCls =
+                      kind === "belegt"
+                        ? "bg-[#3ddc84]"
+                        : kind === "reserviert"
+                          ? "bg-[#f5a623]"
+                          : "bg-[#ff5f6d]";
+                    const statusColor =
+                      kind === "belegt"
+                        ? "text-[#3ddc84]"
+                        : kind === "reserviert"
+                          ? "text-[#f5a623]"
+                          : "text-[#ff5f6d]";
+                    const statusLabel =
+                      kind === "belegt" ? "Belegt" : kind === "reserviert" ? "Reserviert" : "Frei";
+                    return (
+                      <div
+                        key={String(room.id ?? room.roomId ?? room.name)}
+                        className={`min-w-[130px] flex-1 rounded-[9px] border p-[11px_13px] ${cardCls}`}
+                      >
+                        <div className="mb-[6px] flex items-center gap-[6px] text-[12px] font-medium text-[#edf0f7]">
+                          <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${dotCls}`} />
+                          {room.name || room.roomName || "Zimmer"}
+                        </div>
+                        <div className="mb-[3px] flex items-baseline justify-between">
+                          <span className="text-[10px] text-[#4a5070]">Status</span>
+                          <span className={`font-mono text-[11px] font-medium ${statusColor}`}>{statusLabel}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-[10px] text-[#4a5070]">Preis</span>
+                          <span className="font-mono text-[11px] text-[#8892b0]">
+                            {room.price != null && room.price !== ""
+                              ? formatChfOrDash(Number(room.price))
+                              : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Kurze Room-Status-Zusammenfassung"
-            subtitle="Kompakter Überblick über den aktuellen Bestand"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <SmallStatCard
-                label="Belegt"
-                value={dashboardDisplay.occupiedRooms}
-                hint={`${formatPercent(dashboardDisplay.occupiedRate)} Auslastung`}
-              />
-              <SmallStatCard
-                label="Reserviert"
-                value={dashboardDisplay.reservedRooms}
-                hint={`${formatPercent(dashboardDisplay.reservedRate)} reserviert`}
-              />
-              <SmallStatCard
-                label="Frei"
-                value={dashboardDisplay.freeRooms}
-                hint={`${formatPercent(dashboardDisplay.freeRate)} frei`}
-              />
+          ) : (
+            <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] px-[16px] py-[24px] text-center text-[11px] text-[#4a5070]">
+              Keine Unit für Raumstatus ausgewählt.
             </div>
-          </SectionCard>
-        </div>
+          )}
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-          <div className="xl:col-span-5">
-            <SectionCard
-              title="Auslastung auf einen Blick"
-              subtitle="So verteilt sich dein aktueller Room-Status"
-              rightSlot={
-                <RankingBadge
-                  value={`${dashboardDisplay.totalRooms} Rooms`}
-                  type="neutral"
-                />
-              }
-            >
-              <div className="space-y-5">
-                <ProgressRow
-                  label="Belegt"
-                  value={dashboardDisplay.occupiedRate}
-                  count={`${dashboardDisplay.occupiedRooms} Rooms`}
-                  colorClass="bg-emerald-500"
-                />
-                <ProgressRow
-                  label="Reserviert"
-                  value={dashboardDisplay.reservedRate}
-                  count={`${dashboardDisplay.reservedRooms} Rooms`}
-                  colorClass="bg-amber-400"
-                />
-                <ProgressRow
-                  label="Frei"
-                  value={dashboardDisplay.freeRate}
-                  count={`${dashboardDisplay.freeRooms} Rooms`}
-                  colorClass="bg-rose-500"
-                />
-              </div>
-            </SectionCard>
-          </div>
-
-          <div className="xl:col-span-3">
-            <SectionCard
-              title="Bestand & Kapazität"
-              subtitle="Grundstruktur deiner Co-Living Einheiten"
-            >
-              <div className="grid grid-cols-1 gap-4">
-                <SmallStatCard
-                  label="Co-Living Units"
-                  value={dashboard.unitsCount}
-                  hint="Alle aktiven Co-Living Einheiten"
-                />
-                <SmallStatCard
-                  label="Rooms gesamt"
-                  value={dashboardDisplay.totalRooms}
-                  hint="Gesamte Zimmerkapazität"
-                />
-                <SmallStatCard
-                  label="Vollbelegte Units"
-                  value={dashboard.fullUnits}
-                  hint="Alle Rooms belegt"
-                />
-                <SmallStatCard
-                  label="Teilbelegte Units"
-                  value={dashboard.partialUnits}
-                  hint="Mindestens 1 Room belegt"
-                />
-              </div>
-            </SectionCard>
-          </div>
-
-          <div className="xl:col-span-4">
-            <SectionCard
-              title="Potenzial & Qualität"
-              subtitle="Was heute schon läuft und was noch offen ist"
-            >
-              <div className="grid grid-cols-1 gap-4">
-                <SmallStatCard
-                  label="Vollbelegung Umsatz"
-                  value={formatChfOrDash(dashboard.fullRevenue)}
-                  hint="Maximum bei 100% Auslastung"
-                />
-                <SmallStatCard
-                  label="Leerstand"
-                  value={formatChfOrDash(dashboard.vacancyLoss)}
-                  hint="Fehlender Umsatz durch freie Rooms"
-                />
-                <SmallStatCard
-                  label="Ø Umsatz pro Room"
-                  value={formatChfOrDash(dashboard.averageRevenuePerRoom)}
-                  hint="Aktueller Durchschnitt über alle Rooms"
-                />
-                <SmallStatCard
-                  label="Ø Gewinn pro Unit"
-                  value={formatChfOrDash(dashboard.averageProfitPerUnit)}
-                  hint="Aktueller Durchschnitt über alle Co-Living Units"
-                />
-              </div>
-            </SectionCard>
-          </div>
-        </div>
-
-        <SectionCard
-          title="Monatlicher Umsatz-Forecast"
-          subtitle="Voraussichtlicher Umsatz und freie Kapazität auf Basis sicherer, reservierter und risikobehafteter Monate"
-        >
-          <div className="overflow-x-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824]">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-slate-100 dark:bg-[#111520]">
-                <tr className="text-left">
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
-                    Monat
-                  </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
-                    Sicher
-                  </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
-                    Reserviert
-                  </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
-                    Risiko
-                  </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
-                    Offenes Potenzial
-                  </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
-                    Forecast Umsatz
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthlyRevenueForecast.map((row) => (
-                  <tr
-                    key={row.month}
-                    className="border-b border-black/10 text-sm text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]"
+          <div className="flex flex-col gap-[10px]">
+            <div className="rounded-[12px] border border-[rgba(245,166,35,0.14)] bg-[rgba(245,166,35,0.04)] p-[14px_16px]">
+              <h3 className="text-[12px] font-medium text-[#f5a623]">Warnungen</h3>
+              <p className="mb-[10px] mt-[2px] text-[10px] text-[#4a5070]">
+                Früherkennung für Leerstand, Risiken und schwache Units
+              </p>
+              <ul className="m-0 list-none p-0">
+                {dashboardWarnings.map((warning, index) => (
+                  <li
+                    key={`${warning.title}-${index}`}
+                    className="flex items-start gap-[8px] border-b border-[rgba(245,166,35,0.07)] py-[7px] last:border-b-0"
                   >
-                    <td className="py-4 pr-4 font-semibold text-[#0f172a] dark:text-[#eef2ff]">
-                      {row.month}
-                    </td>
-                    <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                      {formatChfOrDash(row.secureRevenue)}
-                    </td>
-                    <td className="py-4 pr-4 font-semibold text-sky-600 dark:text-sky-400">
-                      {formatChfOrDash(row.reservedRevenue)}
-                    </td>
-                    <td className="py-4 pr-4 font-semibold text-amber-600 dark:text-amber-400">
-                      {formatChfOrDash(row.riskRevenue)}
-                    </td>
-                    <td className="py-4 pr-4 font-semibold text-rose-600 dark:text-rose-400">
-                      {formatChfOrDash(row.freeRevenue)}
-                    </td>
-                    <td className="py-4 pr-4 font-bold text-[#0f172a] dark:text-[#eef2ff]">
-                      {formatChfOrDash(row.forecastRevenue)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-          <div className="xl:col-span-8">
-            <SectionCard
-              title="Monatsverlauf"
-              subtitle="Berechnet auf Basis des gewählten Monatsfilters und der Room-Daten."
-            >
-              <div className="h-[420px] w-full text-[#64748b] dark:text-[#6b7a9a] [&_.recharts-cartesian-grid_line]:stroke-[#e2e8f0] dark:[&_.recharts-cartesian-grid_line]:stroke-[rgba(255,255,255,0.08)]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyChartData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="currentColor"
-                      vertical={false}
+                    <span
+                      className={`mt-[5px] h-[5px] w-[5px] shrink-0 rounded-full ${
+                        warning.type === "danger" ? "bg-[#ff5f6d]" : "bg-[#f5a623]"
+                      }`}
                     />
+                    <p className="flex-1 text-[11px] leading-[1.5] text-[#8892b0]">
+                      <strong className="font-medium text-[#edf0f7]">{warning.title}</strong>: {warning.text}
+                    </p>
+                    {warning.type === "danger" ? (
+                      <span className="shrink-0 rounded-[4px] border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.12)] px-[6px] py-[2px] text-[9px] font-semibold text-[#ff5f6d]">
+                        Hoch
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-[4px] border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.12)] px-[6px] py-[2px] text-[9px] font-semibold text-[#f5a623]">
+                        Mittel
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {dashboardWarnings.length === 0 ? (
+                <p className="text-[11px] text-[#8892b0]">Keine Warnungen — aktuell keine dringenden Risiken.</p>
+              ) : null}
+            </div>
+
+            <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+              <div className="border-b border-[#1c2035] px-[16px] py-[12px]">
+                <h3 className="text-[13px] font-medium text-[#edf0f7]">Leerstand 7 Tage</h3>
+                <p className="mt-[2px] text-[10px] text-[#4a5070]">Geschätzt über alle gefilterten Rooms</p>
+              </div>
+              <div className="grid grid-cols-2 gap-[8px] px-[14px] py-[12px]">
+                <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
+                  <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                    Leerstandstage gesamt
+                  </p>
+                  <p className="font-mono text-[16px] font-medium text-[#4a5070]">—</p>
+                  <p className="mt-[3px] text-[9px] text-[#4a5070]">Nicht berechnet</p>
+                </div>
+                <div className="rounded-[8px] bg-[#141720] p-[10px_12px]">
+                  <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                    Umsatzverlust 7 Tage
+                  </p>
+                  <p className="font-mono text-[16px] font-medium text-[#f5a623]">
+                    {formatChfOrDash(dashboard.lostRevenue7Days)}
+                  </p>
+                  <p className="mt-[3px] text-[9px] text-[#4a5070]">Nicht berechnet</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-[10px] mt-2 flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">
+            Auslastung · Bestand · Potenzial
+          </span>
+          <div className="h-px flex-1 bg-[#1c2035]" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[2fr_1fr_1fr]">
+          <SectionCard
+            title="Auslastung auf einen Blick"
+            subtitle="So verteilt sich dein aktueller Room-Status"
+            rightSlot={
+              <span className="rounded-[6px] border border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.12)] px-2 py-[3px] text-[9px] font-semibold text-[#3ddc84]">
+                Live
+              </span>
+            }
+          >
+            <div>
+              <ProgressRow
+                label="Belegt"
+                value={dashboardDisplay.occupiedRate}
+                count={`${dashboardDisplay.occupiedRooms}`}
+                colorClass="bg-[#3ddc84]"
+                labelClass="text-[#3ddc84]"
+                pctClass="text-[#3ddc84]"
+                badgeClass="border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.12)] text-[#3ddc84]"
+              />
+              <ProgressRow
+                label="Reserviert"
+                value={dashboardDisplay.reservedRate}
+                count={`${dashboardDisplay.reservedRooms}`}
+                colorClass="bg-[#f5a623]"
+                labelClass="text-[#f5a623]"
+                pctClass="text-[#f5a623]"
+                badgeClass="border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.12)] text-[#f5a623]"
+              />
+              <ProgressRow
+                label="Frei"
+                value={dashboardDisplay.freeRate}
+                count={`${dashboardDisplay.freeRooms}`}
+                colorClass="bg-[#ff5f6d]"
+                labelClass="text-[#ff5f6d]"
+                pctClass="text-[#ff5f6d]"
+                badgeClass="border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.12)] text-[#ff5f6d]"
+              />
+            </div>
+            <div className="mt-[14px] grid grid-cols-2 gap-[8px]">
+              <div className="rounded-[8px] bg-[#141720] p-[10px_12px] text-center">
+                <p className="font-mono text-[16px] font-medium text-[#3ddc84]">{dashboardDisplay.occupiedRooms}</p>
+                <p className="text-[9px] text-[#4a5070]">Belegt</p>
+              </div>
+              <div className="rounded-[8px] bg-[#141720] p-[10px_12px] text-center">
+                <p className="font-mono text-[16px] font-medium text-[#f5a623]">{dashboardDisplay.reservedRooms}</p>
+                <p className="text-[9px] text-[#4a5070]">Reserviert</p>
+              </div>
+              <div className="rounded-[8px] bg-[#141720] p-[10px_12px] text-center">
+                <p className="font-mono text-[16px] font-medium text-[#ff5f6d]">{dashboardDisplay.freeRooms}</p>
+                <p className="text-[9px] text-[#4a5070]">Frei</p>
+              </div>
+              <div className="rounded-[8px] bg-[#141720] p-[10px_12px] text-center">
+                <p className="font-mono text-[16px] font-medium text-[#edf0f7]">{dashboardDisplay.totalRooms}</p>
+                <p className="text-[9px] text-[#4a5070]">Gesamt</p>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Bestand & Kapazität" subtitle="Grundstruktur deiner Co-Living Einheiten">
+            <div className="flex flex-col gap-[8px]">
+              <SmallStatCard
+                label="Co-Living Units"
+                value={dashboard.unitsCount}
+                hint="Alle aktiven Co-Living Einheiten"
+                valueClassName="text-[#5b9cf6]"
+              />
+              <SmallStatCard
+                label="Rooms gesamt"
+                value={dashboardDisplay.totalRooms}
+                hint="Gesamte Zimmerkapazität"
+                valueClassName="text-[#edf0f7]"
+              />
+              <SmallStatCard
+                label="Vollbelegte Units"
+                value={dashboard.fullUnits}
+                hint="Alle Rooms belegt"
+                valueClassName="text-[#3ddc84]"
+              />
+              <SmallStatCard
+                label="Teilbelegte Units"
+                value={dashboard.partialUnits}
+                hint="Mindestens 1 Room belegt"
+                valueClassName="text-[#f5a623]"
+              />
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Potenzial & Qualität" subtitle="Was heute schon läuft und was noch offen ist">
+            <div className="flex flex-col gap-[8px]">
+              <SmallStatCard
+                label="Vollbelegung Umsatz"
+                value={formatChfOrDash(dashboard.fullRevenue)}
+                hint="Maximum bei 100% Auslastung"
+                valueClassName="text-[#3ddc84]"
+              />
+              <SmallStatCard
+                label="Leerstand"
+                value={formatChfOrDash(dashboard.vacancyLoss)}
+                hint="Fehlender Umsatz durch freie Rooms"
+                valueClassName="text-[#ff5f6d]"
+              />
+              <SmallStatCard
+                label="Ø Umsatz pro Room"
+                value={formatChfOrDash(dashboard.averageRevenuePerRoom)}
+                hint="Aktueller Durchschnitt über alle Rooms"
+                valueClassName="text-[#5b9cf6]"
+              />
+              <SmallStatCard
+                label="Ø Gewinn pro Unit"
+                value={formatChfOrDash(dashboard.averageProfitPerUnit)}
+                hint="Aktueller Durchschnitt über alle Co-Living Units"
+                valueClassName="text-[#9d7cf4]"
+              />
+            </div>
+          </SectionCard>
+        </div>
+
+        <div className="mb-[10px] flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Forecast · Tabelle &amp; Charts</span>
+          <div className="h-px flex-1 bg-[#1c2035]" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.4fr_1fr]">
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="border-b border-[#1c2035] px-[16px] py-[13px]">
+              <h3 className="text-[13px] font-medium text-[#edf0f7]">Monatlicher Umsatz-Forecast</h3>
+              <p className="mt-[2px] text-[10px] text-[#4a5070]">
+                Voraussichtlicher Umsatz und freie Kapazität auf Basis sicherer, reservierter und risikobehafteter Monate
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr>
+                    <th className="border-b border-[#1c2035] px-[14px] py-[7px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Monat
+                    </th>
+                    <th className="border-b border-[#1c2035] px-[14px] py-[7px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Sicher
+                    </th>
+                    <th className="border-b border-[#1c2035] px-[14px] py-[7px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Reserviert
+                    </th>
+                    <th className="border-b border-[#1c2035] px-[14px] py-[7px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Risiko
+                    </th>
+                    <th className="border-b border-[#1c2035] px-[14px] py-[7px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Offenes Potenzial
+                    </th>
+                    <th className="border-b border-[#1c2035] px-[14px] py-[7px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Forecast Umsatz
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlyRevenueForecast.map((row, fIdx) => (
+                    <tr
+                      key={row.month}
+                      className={`border-b border-[#1c2035] text-[11px] font-mono transition-colors hover:bg-[#141720] ${
+                        fIdx === 2 ? "border-l-2 border-l-[#5b9cf6] bg-[rgba(91,156,246,0.04)]" : ""
+                      }`}
+                    >
+                      <td
+                        className={`px-[14px] py-[9px] font-medium ${
+                          fIdx === 2 ? "text-[#5b9cf6]" : "text-[#edf0f7]"
+                        }`}
+                      >
+                        {fIdx === 2 ? <span className="mr-1 text-[#5b9cf6]">●</span> : null}
+                        {row.month}
+                      </td>
+                      <td className="px-[14px] py-[9px] text-[#3ddc84]">{formatChfOrDash(row.secureRevenue)}</td>
+                      <td className="px-[14px] py-[9px] text-[#f5a623]">{formatChfOrDash(row.reservedRevenue)}</td>
+                      <td className="px-[14px] py-[9px] text-[#ff5f6d]">{formatChfOrDash(row.riskRevenue)}</td>
+                      <td className="px-[14px] py-[9px] text-[#ff5f6d]">{formatChfOrDash(row.freeRevenue)}</td>
+                      <td className="px-[14px] py-[9px] font-medium text-[#edf0f7]">
+                        {row.forecastRevenue == null ? (
+                          <span className="text-[#4a5070]">—</span>
+                        ) : (
+                          formatChfOrDash(row.forecastRevenue)
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-[10px]">
+            <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+              <div className="border-b border-[#1c2035] px-[16px] py-[13px]">
+                <h3 className="text-[13px] font-medium text-[#edf0f7]">Monatsverlauf</h3>
+                <p className="mt-[2px] text-[10px] text-[#4a5070]">
+                  Berechnet auf Basis des gewählten Monatsfilters und der Room-Daten.
+                </p>
+              </div>
+              <div className="h-[420px] w-full px-[16px] py-[14px] text-[#4a5070]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthlyChartData}>
+                    <defs>
+                      <linearGradient id="coLinGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgba(245,166,35,0.25)" />
+                        <stop offset="100%" stopColor="rgba(245,166,35,0)" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="#1c2035" strokeWidth={0.5} strokeDasharray="3 4" vertical={false} />
                     <XAxis
                       dataKey="month"
-                      tick={{ fill: "currentColor", fontSize: 12 }}
+                      tick={{ fill: "#4a5070", fontSize: 9, fontFamily: "DM Sans, ui-sans-serif, system-ui" }}
                     />
-                    <YAxis tick={{ fill: "currentColor", fontSize: 12 }} />
+                    <YAxis tick={{ fill: "#4a5070", fontSize: 9, fontFamily: "DM Sans, ui-sans-serif, system-ui" }} />
                     <Tooltip
                       formatter={(value) =>
-                        value === null || value === undefined
-                          ? "-"
-                          : formatCurrency(value)
+                        value === null || value === undefined ? "-" : formatCurrency(value)
                       }
-                      wrapperClassName="rounded-lg border border-black/10 bg-white !text-[#0f172a] shadow-sm dark:border-white/10 dark:bg-[#141824] dark:!text-[#eef2ff]"
+                      contentStyle={{
+                        background: "#10121a",
+                        border: "1px solid #1c2035",
+                        borderRadius: 8,
+                        color: "#edf0f7",
+                        fontSize: 11,
+                      }}
                     />
-                    <Legend wrapperClassName="text-[#64748b] dark:text-[#6b7a9a]" />
+                    <Area
+                      type="monotone"
+                      dataKey="umsatz"
+                      stroke="none"
+                      fill="url(#coLinGrad)"
+                    />
                     <Line
                       type="monotone"
                       dataKey="umsatz"
                       name="Umsatz"
-                      stroke="#f97316"
-                      strokeWidth={4}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 6 }}
+                      stroke="#f5a623"
+                      strokeWidth={1.8}
+                      dot={{ r: 3, fill: "#f5a623" }}
+                      activeDot={{ r: 5 }}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
-            </SectionCard>
-          </div>
+            </div>
 
-          <div className="xl:col-span-4">
-            <SectionCard
-              title="Room-Status aktuell"
-              subtitle="Live aus deinen Co-Living Rooms berechnet"
-            >
-              <div className="h-[420px] w-full text-[#64748b] dark:text-[#6b7a9a] [&_.recharts-cartesian-grid_line]:stroke-[#e2e8f0] dark:[&_.recharts-cartesian-grid_line]:stroke-[rgba(255,255,255,0.08)]">
+            <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+              <div className="border-b border-[#1c2035] px-[16px] py-[13px]">
+                <h3 className="text-[13px] font-medium text-[#edf0f7]">Room-Status aktuell</h3>
+                <p className="mt-[2px] text-[10px] text-[#4a5070]">Live aus deinen Co-Living Rooms berechnet</p>
+              </div>
+              <div className="h-[420px] w-full px-[16px] py-[14px] text-[#4a5070]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={roomStatusChartData} barCategoryGap={28}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="currentColor"
-                      vertical={false}
-                    />
+                    <CartesianGrid stroke="#1c2035" strokeWidth={0.5} strokeDasharray="3 4" vertical={false} />
                     <XAxis
                       dataKey="name"
-                      tick={{ fill: "currentColor", fontSize: 12 }}
+                      tick={{ fill: "#4a5070", fontSize: 9, fontFamily: "DM Sans, ui-sans-serif, system-ui" }}
                     />
                     <YAxis
                       allowDecimals={false}
-                      tick={{ fill: "currentColor", fontSize: 12 }}
+                      tick={{ fill: "#4a5070", fontSize: 9, fontFamily: "DM Sans, ui-sans-serif, system-ui" }}
                     />
-                    <Tooltip wrapperClassName="rounded-lg border border-black/10 bg-white !text-[#0f172a] shadow-sm dark:border-white/10 dark:bg-[#141824] dark:!text-[#eef2ff]" />
-                    <Bar
-                      dataKey="value"
-                      name="Anzahl Rooms"
-                      fill="#f97316"
-                      radius={[12, 12, 0, 0]}
+                    <Tooltip
+                      contentStyle={{
+                        background: "#10121a",
+                        border: "1px solid #1c2035",
+                        borderRadius: 8,
+                        color: "#edf0f7",
+                        fontSize: 11,
+                      }}
                     />
+                    <Bar dataKey="value" name="Anzahl Rooms" radius={[3, 3, 0, 0]}>
+                      {roomStatusChartData.map((entry, i) => (
+                        <Cell
+                          key={entry.name}
+                          fill={["#3ddc84", "#f5a623", "#ff5f6d"][i]}
+                          fillOpacity={Number(entry.value) === 0 ? 0.3 : 1}
+                        />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </SectionCard>
+            </div>
           </div>
         </div>
 
