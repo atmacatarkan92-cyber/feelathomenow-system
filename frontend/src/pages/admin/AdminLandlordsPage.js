@@ -58,6 +58,16 @@ function landlordSearchBlob(l) {
   }
 }
 
+function companyInitials(name) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+}
+
 function AdminLandlordsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkHandled = useRef(false);
@@ -275,218 +285,230 @@ function AdminLandlordsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
+      <div className="min-h-screen bg-[#080a0f] p-6 text-[#4a5070]">
         Lade Verwaltungen …
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
-      <h2 className="mb-6 text-[22px] font-bold">Verwaltungen / Vermieter (Landlords)</h2>
-
-      <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#7aaeff] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Verwaltungen gesamt</p>
-          <p className="mt-2 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{kpiSummary.total}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Alle erfassten Verwaltungen</p>
+    <div className="-m-6 min-h-screen bg-[#080a0f]">
+      <div className="sticky top-0 z-30 flex h-[50px] items-center justify-end border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+        <div className="mr-auto flex items-center gap-3">
+          <span className="font-semibold text-[#edf0f7]">
+            Van<span className="text-[#5b9cf6]">tio</span>
+          </span>
+          <span className="text-[#4a5070]">·</span>
+          <span className="text-[14px] font-medium text-[#edf0f7]">Verwaltungen / Vermieter</span>
         </div>
-
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#4ade80] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Aktiv</p>
-          <p className="mt-2 text-[24px] font-bold text-[#4ade80]">{kpiSummary.active}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Status aktiv, nicht archiviert</p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#fb923c] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Archiviert</p>
-          <p className="mt-2 text-[24px] font-bold text-[#fb923c]">{kpiSummary.archived}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Soft-deleted / archiviert</p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#a78bfa] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Mit Objekten</p>
-          <p className="mt-2 text-[24px] font-bold text-[#7aaeff]">{kpiSummary.withProperties}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Mit Liegenschaft verknüpft</p>
-        </div>
+        <button
+          type="button"
+          onClick={openCreate}
+          className="rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]"
+        >
+          + Neue Verwaltung
+        </button>
       </div>
 
-      {error && (
-        <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
-      )}
+      <div className="mx-auto flex max-w-[min(1400px,100%)] flex-col gap-4 px-6 py-5">
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Übersicht</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#5b9cf6]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Verwaltungen gesamt</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#5b9cf6]">{kpiSummary.total}</p>
+              <p className="text-[10px] text-[#4a5070]">Alle erfassten Verwaltungen</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#3ddc84]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Aktiv</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#3ddc84]">{kpiSummary.active}</p>
+              <p className="text-[10px] text-[#4a5070]">Status aktiv, nicht archiviert</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#f5a623]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Archiviert</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#f5a623]">{kpiSummary.archived}</p>
+              <p className="text-[10px] text-[#4a5070]">Soft-deleted / archiviert</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#9d7cf4]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Mit Objekten</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#9d7cf4]">{kpiSummary.withProperties}</p>
+              <p className="text-[10px] text-[#4a5070]">Mit Liegenschaft verknüpft</p>
+            </div>
+          </div>
+        </div>
 
-      <div className="mb-5 rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex min-w-0 flex-[1_1_280px] flex-wrap items-end gap-4">
-            <div className="min-w-0 flex-[1_1_220px]">
-              <label
-                htmlFor="admin-landlords-search"
-                className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]"
-              >
-                Suche
-              </label>
+        {error ? (
+          <p className="rounded-[8px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] px-4 py-3 text-[14px] text-[#ff5f6d]">{error}</p>
+        ) : null}
+
+        <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+          <div className="flex items-center gap-[10px] border-b border-[#1c2035] px-[18px] py-[13px]">
+            <h3 className="text-[13px] font-medium text-[#edf0f7]">Verwaltungsübersicht</h3>
+            <div className="ml-auto flex items-center gap-[8px]">
               <input
                 id="admin-landlords-search"
                 type="search"
                 autoComplete="off"
-                placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
+                placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="box-border h-11 w-full rounded-[8px] border border-black/10 bg-slate-100 px-3.5 text-sm text-[#0f172a] placeholder:text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
+                className="box-border w-[280px] rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none placeholder:text-[#4a5070]"
               />
-            </div>
-            <div className="min-w-[min(100%,160px)] flex-[0_1_180px]">
-              <label
-                htmlFor="admin-landlords-anzeige"
-                className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]"
-              >
-                Anzeige
-              </label>
               <select
                 id="admin-landlords-anzeige"
                 value={listFilter}
                 onChange={(e) => setListFilter(e.target.value)}
-                className="box-border h-11 w-full min-w-[160px] rounded-[8px] border border-black/10 bg-slate-100 px-3 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                className="cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#8892b0]"
                 aria-label="Anzeige"
               >
                 <option value="active">Aktiv</option>
                 <option value="archived">Archiviert</option>
                 <option value="all">Alle</option>
               </select>
+              <span className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#4a5070]">
+                {displayLandlords.length}
+              </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="h-11 cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-[18px] text-sm font-semibold text-white"
-          >
-            + Neue Verwaltung
-          </button>
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824]">
-        <table className="w-full border-collapse text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
-        <thead className="bg-slate-100 dark:bg-[#111520]">
-          <tr>
-            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-              Firma / Name
-            </th>
-            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-              Adresse
-            </th>
-            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-              E-Mail
-            </th>
-            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-              Status
-            </th>
-            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-              Aktionen
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredLandlords.length === 0 ? (
-            <tr>
-              <td
-                colSpan={5}
-                className="border-b border-black/10 px-3 py-3 text-[13px] text-[#64748b] dark:border-white/[0.05] dark:text-[#6b7a9a]"
-              >
-                Noch keine Einträge. Erstellen Sie eine neue Verwaltung.
-              </td>
-            </tr>
-          ) : displayLandlords.length === 0 ? (
-            <tr>
-              <td
-                colSpan={5}
-                className="border-b border-black/10 px-3 py-3 text-[13px] text-[#64748b] dark:border-white/[0.05] dark:text-[#6b7a9a]"
-              >
-                Keine Verwaltungen für diese Suche gefunden.
-              </td>
-            </tr>
-          ) : (
-            displayLandlords.map((row) => {
-              const addrDisplay = formatLandlordAddressLine(row);
-              const canOpenMap = addrDisplay !== "—";
-              return (
-                <tr key={row.id} className="border-b border-black/10 dark:border-white/[0.05]">
-                  <td className="px-3 py-3 align-top">
-                    <Link
-                      to={`/admin/landlords/${row.id}`}
-                      className="text-[13px] font-medium text-blue-700 no-underline hover:underline dark:text-blue-400"
-                    >
-                      {row.company_name?.trim() || row.contact_name?.trim() || "—"}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                    <div className="inline-flex max-w-full flex-wrap items-center gap-1">
-                      <span className="min-w-0">{addrDisplay}</span>
-                      {canOpenMap ? (
-                        <button
-                          type="button"
-                          title="In Google Maps öffnen"
-                          aria-label="In Google Maps öffnen"
-                          onClick={() =>
-                            window.open(
-                              buildGoogleMapsSearchUrl(row.address_line1, row.postal_code, row.city),
-                              "_blank",
-                              "noopener,noreferrer"
-                            )
-                          }
-                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-black/10 bg-transparent p-0.5 text-[#64748b] dark:border-white/[0.1] dark:text-[#8090b0]"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden
-                          >
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                    {row.email || "—"}
-                  </td>
-                  <td className="px-3 py-3 align-top">
-                    {row.deleted_at ? (
-                      <span className="text-[13px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
-                        Archiviert
-                      </span>
-                    ) : row.status === "inactive" ? (
-                      <span className="text-[13px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
-                        Inaktiv
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-                        Aktiv
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3 align-top">
-                    <Link
-                      to={`/admin/landlords/${row.id}`}
-                      className="inline-block rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#64748b] no-underline hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
-                    >
-                      Öffnen
-                    </Link>
+          <table className="w-full border-collapse text-[11px] text-[#8892b0]">
+            <thead>
+              <tr>
+                <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                  Firma / Name
+                </th>
+                <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                  Adresse
+                </th>
+                <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                  E-Mail
+                </th>
+                <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                  Status
+                </th>
+                <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                  Aktionen
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLandlords.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="border-b-0 px-[18px] py-[13px] align-middle text-[11px] text-[#8892b0]"
+                  >
+                    Noch keine Einträge. Erstellen Sie eine neue Verwaltung.
                   </td>
                 </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+              ) : displayLandlords.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="border-b-0 px-[18px] py-[13px] align-middle text-[11px] text-[#8892b0]"
+                  >
+                    Keine Verwaltungen für diese Suche gefunden.
+                  </td>
+                </tr>
+              ) : (
+                displayLandlords.map((row, rowIdx) => {
+                  const addrDisplay = formatLandlordAddressLine(row);
+                  const canOpenMap = addrDisplay !== "—";
+                  const displayName = row.company_name?.trim() || row.contact_name?.trim() || "—";
+                  const initials = companyInitials(displayName === "—" ? "" : displayName);
+                  const isLast = rowIdx === displayLandlords.length - 1;
+                  const cellB = isLast ? "border-b-0" : "border-b border-[#1c2035]";
+                  return (
+                    <tr key={row.id} className="cursor-pointer transition-colors hover:bg-[#141720]">
+                      <td className={`px-[18px] py-[13px] align-middle text-[11px] text-[#8892b0] ${cellB}`}>
+                        <Link
+                          to={`/admin/landlords/${row.id}`}
+                          className="flex items-center gap-[10px] no-underline"
+                        >
+                          <div className="flex h-[32px] w-[32px] flex-shrink-0 items-center justify-center rounded-[8px] border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] text-[11px] font-semibold text-[#5b9cf6]">
+                            {initials}
+                          </div>
+                          <span className="font-medium text-[12px] text-[#5b9cf6]">{displayName}</span>
+                        </Link>
+                      </td>
+                      <td className={`px-[18px] py-[13px] align-middle text-[11px] text-[#8892b0] ${cellB}`}>
+                        <div className="inline-flex max-w-full flex-wrap items-center gap-[4px] text-[11px] text-[#8892b0]">
+                          <span className="text-[9px]" aria-hidden>
+                            📍
+                          </span>
+                          <span className="min-w-0">{addrDisplay}</span>
+                          {canOpenMap ? (
+                            <button
+                              type="button"
+                              title="In Google Maps öffnen"
+                              aria-label="In Google Maps öffnen"
+                              onClick={() =>
+                                window.open(
+                                  buildGoogleMapsSearchUrl(row.address_line1, row.postal_code, row.city),
+                                  "_blank",
+                                  "noopener,noreferrer"
+                                )
+                              }
+                              className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[6px] border border-[#1c2035] bg-transparent p-0.5 text-[#4a5070] transition-colors hover:border-[#242840] hover:text-[#8892b0]"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden
+                              >
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                <circle cx="12" cy="10" r="3" />
+                              </svg>
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className={`px-[18px] py-[13px] align-middle text-[11px] text-[#8892b0] ${cellB}`}>
+                        {row.email || "—"}
+                      </td>
+                      <td className={`px-[18px] py-[13px] align-middle ${cellB}`}>
+                        {row.deleted_at ? (
+                          <span className="inline-flex items-center rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]">
+                            Archiviert
+                          </span>
+                        ) : row.status === "inactive" ? (
+                          <span className="inline-flex items-center rounded-full border border-[#1c2035] bg-[#191c28] px-2 py-[2px] text-[9px] font-semibold text-[#4a5070]">
+                            Inaktiv
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]">
+                            Aktiv
+                          </span>
+                        )}
+                      </td>
+                      <td className={`px-[18px] py-[13px] align-middle ${cellB}`}>
+                        <Link
+                          to={`/admin/landlords/${row.id}`}
+                          className="inline-block cursor-pointer rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[4px] text-[11px] text-[#8892b0] no-underline transition-all duration-150 hover:border-[#3b5fcf] hover:bg-[#1a1e2c] hover:text-[#edf0f7]"
+                        >
+                          Öffnen →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {formOpen && (
