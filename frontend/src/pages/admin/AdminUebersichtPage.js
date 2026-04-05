@@ -28,6 +28,7 @@ import {
   getPortfolioMetrics,
   getPortfolioUnitLabel,
 } from "../../utils/adminPortfolioMetrics";
+import PortfolioMapSection from "../../components/admin/PortfolioMapSection";
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -565,6 +566,10 @@ export default function AdminUebersichtPage() {
             </span>
           </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <PortfolioMapSection />
       </div>
 
       {portfolio && (

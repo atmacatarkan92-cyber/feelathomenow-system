@@ -158,14 +158,18 @@ def build_portfolio_map_payload(
             missing_coord += 1
 
         sid = getattr(u, "short_unit_id", None) or ""
+        utype = (getattr(u, "type", None) or "").strip()
         items.append(
             {
                 "unit_id": uid,
                 "short_unit_id": sid,
+                "type": utype,
                 "title": getattr(u, "title", "") or "",
                 "address": getattr(u, "address", "") or "",
                 "postal_code": getattr(u, "postal_code", None) or "",
                 "city": getattr(u, "city", "") or "",
+                "rooms": int(getattr(u, "rooms", 0) or 0),
+                "occupied_rooms": int(getattr(u, "occupied_rooms", 0) or 0),
                 "latitude": lat,
                 "longitude": lng,
                 "has_coordinates": has_coords,

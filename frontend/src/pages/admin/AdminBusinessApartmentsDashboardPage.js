@@ -1,14 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import L from "leaflet";
-import {
-  MapContainer,
-  TileLayer,
-  CircleMarker,
-  Popup,
-  useMap,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import {
   ResponsiveContainer,
   CartesianGrid,
@@ -24,7 +15,6 @@ import {
   fetchAdminRooms,
   fetchAdminTenanciesAll,
   fetchAdminProfit,
-  fetchAdminPortfolioMap,
   normalizeUnit,
   normalizeRoom,
   sanitizeClientErrorMessage,
@@ -197,230 +187,6 @@ function RankingBadge({ value, type }) {
   );
 }
 
-/** Leaflet circle colors — backend map_status keys */
-function portfolioMapCircleStyle(mapStatus) {
-  switch (mapStatus) {
-    case "occupied":
-      return { color: "#166534", fillColor: "#22c55e" };
-    case "vacant":
-      return { color: "#b91c1c", fillColor: "#ef4444" };
-    case "notice":
-      return { color: "#a16207", fillColor: "#eab308" };
-    case "landlord_ended":
-      return { color: "#475569", fillColor: "#94a3b8" };
-    default:
-      return { color: "#64748b", fillColor: "#cbd5e1" };
-  }
-}
-
-function portfolioMapStatusEmoji(mapStatus) {
-  switch (mapStatus) {
-    case "occupied":
-      return "🟢";
-    case "vacant":
-      return "🔴";
-    case "notice":
-      return "🟡";
-    case "landlord_ended":
-      return "⚫";
-    default:
-      return "•";
-  }
-}
-
-/** Fits all markers on load/update; single marker gets a fixed zoom. */
-function PortfolioMapFitBounds({ items }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!items?.length) return;
-    if (items.length === 1) {
-      const it = items[0];
-      map.setView([Number(it.latitude), Number(it.longitude)], 14, {
-        animate: false,
-      });
-      return;
-    }
-    const b = L.latLngBounds(
-      items.map((it) => [Number(it.latitude), Number(it.longitude)])
-    );
-    map.fitBounds(b, { padding: [36, 36], maxZoom: 15, animate: false });
-  }, [map, items]);
-  return null;
-}
-
-function PortfolioMapPopupBody({ it }) {
-  const shortId = String(it.short_unit_id || it.unit_id || "").trim() || "—";
-  const city = String(it.city || "").trim();
-  const line1 =
-    shortId !== "—" && city
-      ? `${shortId} · ${city}`
-      : shortId !== "—"
-        ? shortId
-        : city || "—";
-
-  const addressLine = String(it.address || "").trim();
-  const postal = String(it.postal_code || "").trim();
-  const postalCity = [postal, city].filter(Boolean).join(" ");
-
-  return (
-    <div className="min-w-[200px] max-w-[260px] space-y-2 text-[13px] leading-snug text-[#0f172a]">
-      <p className="font-semibold text-slate-900">{line1}</p>
-      <div className="flex items-center gap-1.5">
-        <span className="text-[15px] leading-none" aria-hidden>
-          {portfolioMapStatusEmoji(it.map_status)}
-        </span>
-        <span className="font-medium text-slate-800">{it.map_status_label}</span>
-      </div>
-      {addressLine ? (
-        <p className="text-slate-600">{addressLine}</p>
-      ) : null}
-      {postalCity ? (
-        <p className="text-[12px] text-slate-500">{postalCity}</p>
-      ) : null}
-      <Link
-        to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
-        className="inline-block pt-0.5 text-sky-600 underline decoration-sky-600/40 underline-offset-2 hover:text-sky-700"
-      >
-        Einheit öffnen
-      </Link>
-    </div>
-  );
-}
-
-function PortfolioMapSection({ loading, error, data }) {
-  const [activeUnitId, setActiveUnitId] = useState(null);
-
-  const plottedItems = useMemo(() => {
-    const items = data?.items;
-    if (!Array.isArray(items)) return [];
-    return items.filter(
-      (it) =>
-        it &&
-        it.has_coordinates &&
-        it.latitude != null &&
-        it.longitude != null
-    );
-  }, [data]);
-
-  const defaultMapCenter = [46.8, 8.2];
-  const defaultMapZoom = 7;
-
-  if (loading) {
-    return (
-      <SectionCard
-        title="Portfolio-Karte"
-        subtitle="Standorte aus Liegenschaftskoordinaten (V1)"
-      >
-        <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Karte wird geladen…</p>
-      </SectionCard>
-    );
-  }
-
-  if (error) {
-    return (
-      <SectionCard
-        title="Portfolio-Karte"
-        subtitle="Standorte aus Liegenschaftskoordinaten (V1)"
-      >
-        <p className="py-4 text-sm text-[#f87171]">{error}</p>
-      </SectionCard>
-    );
-  }
-
-  const summary = data?.summary || {};
-  const total = Number(summary.total_units) || 0;
-  const plotted = Number(summary.plotted_units) || 0;
-  const missing = Number(summary.missing_coordinates) || 0;
-
-  return (
-    <SectionCard
-      title="Portfolio-Karte"
-      subtitle="Business Apartments mit Statusfarbe (Belegt, Leerstand, Gekündigt, Vertrag beendet). Nur Einheiten mit Koordinaten an der Liegenschaft erscheinen als Marker."
-    >
-      <div className="mb-4 flex flex-wrap gap-3 text-sm text-[#64748b] dark:text-[#6b7a9a]">
-        <span>
-          <strong className="text-[#0f172a] dark:text-[#eef2ff]">{total}</strong>{" "}
-          Einheiten gesamt
-        </span>
-        <span className="text-black/20 dark:text-white/15">|</span>
-        <span>
-          <strong className="text-[#0f172a] dark:text-[#eef2ff]">{plotted}</strong>{" "}
-          auf der Karte
-        </span>
-        <span className="text-black/20 dark:text-white/15">|</span>
-        <span>
-          <strong className="text-[#0f172a] dark:text-[#eef2ff]">{missing}</strong>{" "}
-          ohne Koordinaten
-        </span>
-      </div>
-
-      {total === 0 ? (
-        <p className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-6 text-sm text-[#64748b] dark:text-[#6b7a9a]">
-          Keine Business Apartments für die Karte vorhanden.
-        </p>
-      ) : plotted === 0 ? (
-        <p className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-6 text-sm text-[#64748b] dark:text-[#6b7a9a]">
-          Für diese Einheiten sind noch keine Koordinaten vorhanden. Bitte pflegen Sie die
-          Koordinaten an der zugehörigen Liegenschaft (Admin → Liegenschaften).
-        </p>
-      ) : (
-        <>
-          {missing > 0 ? (
-            <p className="mb-3 text-sm text-[#64748b] dark:text-[#6b7a9a]">
-              {missing} Einheiten haben noch keine Koordinaten und werden derzeit nicht auf der
-              Karte angezeigt.
-            </p>
-          ) : null}
-          <div
-            className="overflow-hidden rounded-[12px] border border-black/10 dark:border-white/[0.08] [&_.leaflet-container]:bg-slate-200 [&_.leaflet-container]:dark:bg-[#0f1219]"
-            style={{ height: 380 }}
-          >
-            <MapContainer
-              center={defaultMapCenter}
-              zoom={defaultMapZoom}
-              style={{ height: "100%", width: "100%" }}
-              scrollWheelZoom={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <PortfolioMapFitBounds items={plottedItems} />
-              {plottedItems.map((it) => {
-                const style = portfolioMapCircleStyle(it.map_status);
-                const isActive = activeUnitId === it.unit_id;
-                return (
-                  <CircleMarker
-                    key={it.unit_id}
-                    center={[Number(it.latitude), Number(it.longitude)]}
-                    radius={isActive ? 13 : 10}
-                    pathOptions={{
-                      ...style,
-                      fillOpacity: isActive ? 1 : 0.88,
-                      weight: isActive ? 3 : 2,
-                    }}
-                    eventHandlers={{
-                      click: () => setActiveUnitId(it.unit_id),
-                    }}
-                  >
-                    <Popup
-                      eventHandlers={{
-                        remove: () => setActiveUnitId(null),
-                      }}
-                    >
-                      <PortfolioMapPopupBody it={it} />
-                    </Popup>
-                  </CircleMarker>
-                );
-              })}
-            </MapContainer>
-          </div>
-        </>
-      )}
-    </SectionCard>
-  );
-}
-
 function FilterSelect({ label, value, onChange, children }) {
   return (
     <div className="min-w-[180px]">
@@ -530,27 +296,6 @@ function AdminBusinessApartmentsDashboardPage() {
   const [financeChartData, setFinanceChartData] = useState([]);
   const [occupancyChartData, setOccupancyChartData] = useState([]);
   const [latestUnitProfit, setLatestUnitProfit] = useState({});
-  const [portfolioMap, setPortfolioMap] = useState(null);
-  const [portfolioMapLoading, setPortfolioMapLoading] = useState(true);
-  const [portfolioMapError, setPortfolioMapError] = useState("");
-
-  useEffect(() => {
-    fetchAdminPortfolioMap({ businessApartmentsOnly: true })
-      .then((data) => {
-        setPortfolioMap(data);
-        setPortfolioMapError("");
-      })
-      .catch((e) => {
-        setPortfolioMap(null);
-        setPortfolioMapError(
-          sanitizeClientErrorMessage(
-            e?.message,
-            "Portfolio-Karte konnte nicht geladen werden."
-          )
-        );
-      })
-      .finally(() => setPortfolioMapLoading(false));
-  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -910,12 +655,6 @@ function AdminBusinessApartmentsDashboardPage() {
             </FilterSelect>
           </div>
         </SectionCard>
-
-        <PortfolioMapSection
-          loading={portfolioMapLoading}
-          error={portfolioMapError}
-          data={portfolioMap}
-        />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <HeroCard
