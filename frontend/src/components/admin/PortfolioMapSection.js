@@ -15,6 +15,7 @@ import {
 } from "@vis.gl/react-google-maps";
 
 import { fetchAdminPortfolioMap, sanitizeClientErrorMessage } from "../../api/adminData";
+import { useTheme } from "../../contexts/ThemeContext";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 /** Portfolio map filter query keys (namespaced; avoids clashes on Unternehmensübersicht). */
@@ -90,21 +91,6 @@ function SectionCard({ title, subtitle, children, rightSlot = null, hideHeader =
   );
 }
 
-function portfolioMapStatusEmoji(mapStatus) {
-  switch (mapStatus) {
-    case "occupied":
-      return "🟢";
-    case "vacant":
-      return "🔴";
-    case "notice":
-      return "🟡";
-    case "landlord_ended":
-      return "⚫";
-    default:
-      return "•";
-  }
-}
-
 function portfolioMapTypeLabel(apiType) {
   const t = String(apiType || "").trim();
   if (t === "Business Apartment") return "Business Apartment";
@@ -146,22 +132,60 @@ function portfolioMapClusterSecondaryLine(it) {
   return String(it.map_status_label || "").trim() || "—";
 }
 
-function PortfolioMapUnitTypeBadge({ apiType }) {
+function PortfolioMapUnitTypeBadge({ apiType, theme }) {
   const label = portfolioMapTypeLabel(apiType);
+  const isDark = theme === "dark";
   return (
-    <span className="inline-flex max-w-full shrink-0 items-center rounded-md border border-slate-200/90 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-slate-700 dark:border-white/[0.12] dark:bg-white/[0.08] dark:text-[#c8d4f0]">
+    <span
+      className={
+        isDark
+          ? "inline-flex max-w-full shrink-0 items-center rounded-md border border-white/[0.14] bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#e2ebff]"
+          : "inline-flex max-w-full shrink-0 items-center rounded-md border border-slate-200/90 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-slate-700"
+      }
+    >
       {label}
     </span>
   );
 }
 
-function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit }) {
+/** Stops map from receiving clicks (closes InfoWindow); bubble phase so buttons/links still work. */
+function PortfolioMapInfowindowChrome({ theme, children }) {
+  const isDark = theme === "dark";
   return (
-    <div className="pointer-events-auto max-w-[min(340px,92vw)] select-text text-[13px] leading-snug text-[#0f172a] dark:text-[#f1f5ff]">
-      <div className="mb-3 rounded-lg border border-slate-200/95 bg-white px-3 py-2.5 shadow-sm dark:border-white/[0.16] dark:bg-[#0f172a]">
-        <p className="text-[13px] font-bold leading-tight tracking-tight text-slate-950 dark:text-white">
-          {units.length} Einheiten an diesem Standort
-        </p>
+    <div
+      className={
+        isDark
+          ? "pointer-events-auto max-w-[min(360px,92vw)] select-text rounded-lg border border-white/[0.12] bg-[#0c1220] p-3 text-[13px] leading-snug text-[#f1f5ff] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+          : "pointer-events-auto max-w-[min(360px,92vw)] select-text rounded-lg border border-slate-200/95 bg-white p-3 text-[13px] leading-snug text-slate-900 shadow-md"
+      }
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit, theme }) {
+  const isDark = theme === "dark";
+  const headCls = isDark
+    ? "mb-3 border-b border-white/[0.12] pb-3"
+    : "mb-3 border-b border-slate-200/90 pb-3";
+  const titleCls = isDark ? "text-[14px] font-bold leading-tight text-white" : "text-[14px] font-bold leading-tight text-slate-950";
+  const cardCls = isDark
+    ? "rounded-lg border border-white/[0.1] bg-[#111a2a] p-2.5 transition-colors hover:border-sky-400/35 hover:bg-[#141f33]"
+    : "rounded-lg border border-slate-200/90 bg-slate-50 p-2.5 transition-colors hover:border-sky-400/50 hover:bg-white";
+  const idCls = isDark ? "font-semibold text-[#f8fafc]" : "font-semibold text-slate-900";
+  const secCls = isDark ? "text-[12px] font-medium text-[#e2e8fb]" : "text-[12px] font-medium text-slate-800";
+  const locCls = isDark ? "mt-1 text-[11px] text-[#a8b8d8]" : "mt-1 text-[11px] text-slate-600";
+  const btnCls = isDark
+    ? "mt-2 w-full cursor-pointer rounded-md border border-sky-500/30 bg-sky-950/25 px-2 py-1.5 text-left text-[12px] font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-950/50"
+    : "mt-2 w-full cursor-pointer rounded-md border border-sky-200/90 bg-sky-50/80 px-2 py-1.5 text-left text-[12px] font-semibold text-sky-800 transition-colors hover:border-sky-300 hover:bg-sky-100";
+
+  return (
+    <PortfolioMapInfowindowChrome theme={theme}>
+      <div className={headCls}>
+        <p className={titleCls}>{units.length} Einheiten an diesem Standort</p>
       </div>
       <div className="max-h-[min(260px,55vh)] overflow-y-auto overscroll-contain pr-0.5">
         <ul className="space-y-2.5">
@@ -172,25 +196,21 @@ function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit }) {
               <li
                 key={it.unit_id}
                 data-portfolio-map-unit={it.unit_id}
-                className="rounded-lg border border-slate-200/90 bg-slate-50/95 p-2.5 shadow-sm transition-colors hover:border-sky-400/50 hover:bg-white dark:border-white/[0.12] dark:bg-[#141b2a] dark:hover:border-sky-400/40 dark:hover:bg-[#1a2235]"
+                className={cardCls}
                 onMouseEnter={() => onHoverUnit?.(it.unit_id)}
               >
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="font-semibold text-slate-900 dark:text-[#f1f5ff]">{shortId}</span>
-                  <span className="text-slate-400 dark:text-[#7c8aad]" aria-hidden>
+                  <span className={idCls}>{shortId}</span>
+                  <span className={isDark ? "text-[#647896]" : "text-slate-400"} aria-hidden>
                     ·
                   </span>
-                  <span className="text-[12px] font-medium text-slate-800 dark:text-[#e2e8fb]">
-                    {portfolioMapClusterSecondaryLine(it)}
-                  </span>
-                  <PortfolioMapUnitTypeBadge apiType={it.type} />
+                  <span className={secCls}>{portfolioMapClusterSecondaryLine(it)}</span>
+                  <PortfolioMapUnitTypeBadge apiType={it.type} theme={theme} />
                 </div>
-                {loc ? (
-                  <p className="mt-1 text-[11px] text-slate-600 dark:text-[#a8b8d8]">{loc}</p>
-                ) : null}
+                {loc ? <p className={locCls}>{loc}</p> : null}
                 <button
                   type="button"
-                  className="mt-2 w-full cursor-pointer rounded-md border border-transparent px-2 py-1.5 text-left text-[12px] font-semibold text-sky-700 transition-colors hover:border-sky-300/80 hover:bg-sky-50 dark:text-sky-300 dark:hover:border-sky-500/50 dark:hover:bg-sky-950/40"
+                  className={btnCls}
                   onClick={(e) => {
                     e.stopPropagation();
                     onOpenUnit(it.unit_id);
@@ -203,7 +223,7 @@ function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit }) {
           })}
         </ul>
       </div>
-    </div>
+    </PortfolioMapInfowindowChrome>
   );
 }
 
@@ -236,31 +256,38 @@ const portfolioMapClusterRenderer = {
   },
 };
 
-/** SVG circle markers: white ring + soft shadow; active state adds a subtle outer ring. */
-function buildUnitMarkerIcon(it, activeUnitId, hoverUnitId) {
+/**
+ * Property-style pin (status-colored body + subtle building glyph). Anchor at pin tip.
+ * Status colors unchanged: occupied / vacant / notice / landlord_ended.
+ */
+function buildPropertyMarkerIcon(it, activeUnitId, hoverUnitId) {
   const fill = portfolioMapMarkerFill(it.map_status);
   const uid = it.unit_id;
   const active = activeUnitId === uid;
   const hover = hoverUnitId === uid;
-  const rid = `pum_${String(uid).replace(/\W/g, "_").slice(0, 48)}`;
-  const rInner = active ? 12.75 : hover ? 11.5 : 10.25;
-  const sw = active ? 3.5 : hover ? 3.15 : 2.85;
+  const rid = `pmp_${String(uid).replace(/\W/g, "_").slice(0, 40)}`;
+  const scale = active ? 1.1 : hover ? 1.05 : 1;
   const ring = active
-    ? `<circle cx="28" cy="28" r="17.5" fill="none" stroke="#0f172a" stroke-width="2" stroke-opacity="0.22"/>`
+    ? `<ellipse cx="24" cy="21" rx="19" ry="19" fill="none" stroke="#0f172a" stroke-width="2" stroke-opacity="0.22"/>`
     : "";
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">
-      <defs>
-        <filter id="${rid}_sh" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="2.25" flood-color="#0f172a" flood-opacity="0.3"/>
-        </filter>
-      </defs>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 56" width="48" height="56">
+    <defs>
+      <filter id="${rid}_sh" x="-45%" y="-45%" width="190%" height="190%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2.75" flood-color="#0f172a" flood-opacity="0.34"/>
+      </filter>
+    </defs>
+    <g transform="translate(24 26) scale(${scale}) translate(-24 -26)" filter="url(#${rid}_sh)">
       ${ring}
-      <circle cx="28" cy="28" r="${rInner}" fill="${fill}" stroke="#ffffff" stroke-width="${sw}" filter="url(#${rid}_sh)"/>
-    </svg>`;
+      <path d="M24 3C14.06 3 7 10.06 7 19c0 10.5 17 31 17 31s17-20.5 17-31C41 10.06 33.94 3 24 3z" fill="${fill}" stroke="#ffffff" stroke-width="2.5"/>
+      <path d="M17 19h14v11H17z" fill="#ffffff" fill-opacity="0.95"/>
+      <path d="M15 19l9-6.5 9 6.5" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="21" y="23" width="6" height="7" rx="0.6" fill="${fill}" fill-opacity="0.45"/>
+    </g>
+  </svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new globalThis.google.maps.Size(36, 36),
-    anchor: new globalThis.google.maps.Point(18, 18),
+    scaledSize: new globalThis.google.maps.Size(40, 46),
+    anchor: new globalThis.google.maps.Point(20, 44),
   };
 }
 
@@ -281,9 +308,22 @@ function PortfolioMapMarkersAndCluster({
   const clustererRef = useRef(null);
   const markersRef = useRef([]);
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const [singleInfo, setSingleInfo] = useState(null);
   const [clusterInfo, setClusterInfo] = useState(null);
+
+  const iwStyleSingle = useMemo(() => ({ padding: 0, maxWidth: 300 }), []);
+  const iwStyleCluster = useMemo(() => ({ padding: 0, maxWidth: 384 }), []);
+
+  const handleClusterOpenUnit = useCallback(
+    (unitId) => {
+      setClusterInfo(null);
+      onClusterPopupClose();
+      navigate(`/admin/units/${encodeURIComponent(unitId)}`);
+    },
+    [navigate, onClusterPopupClose]
+  );
 
   const clearPopups = useCallback(() => {
     setSingleInfo(null);
@@ -329,13 +369,14 @@ function PortfolioMapMarkersAndCluster({
           lng: Number(it.longitude),
         },
         map: null,
-        icon: buildUnitMarkerIcon(it, null, null),
+        icon: buildPropertyMarkerIcon(it, null, null),
         cursor: preview ? undefined : "pointer",
         zIndex: 1,
       });
       marker.set("portfolioUnit", it);
       if (!preview) {
-        marker.addListener("click", () => {
+        marker.addListener("click", (ev) => {
+          ev?.stop?.();
           const pos = marker.getPosition();
           if (!pos) return;
           setClusterInfo(null);
@@ -357,7 +398,8 @@ function PortfolioMapMarkersAndCluster({
       renderer: portfolioMapClusterRenderer,
       onClusterClick: preview
         ? () => {}
-        : (_event, c) => {
+        : (event, c) => {
+            event?.stop?.();
             setSingleInfo(null);
             onSinglePopupClose();
             onHoverClear();
@@ -403,7 +445,7 @@ function PortfolioMapMarkersAndCluster({
     markersRef.current.forEach((m) => {
       const it = m.get("portfolioUnit");
       if (!it) return;
-      m.setIcon(buildUnitMarkerIcon(it, activeUnitId, clusterListHoverUnitId));
+      m.setIcon(buildPropertyMarkerIcon(it, activeUnitId, clusterListHoverUnitId));
       m.setZIndex(
         activeUnitId === it.unit_id ? 200 : clusterListHoverUnitId === it.unit_id ? 80 : 1
       );
@@ -442,13 +484,13 @@ function PortfolioMapMarkersAndCluster({
           position={singleInfo.position}
           shouldFocus={false}
           disableAutoPan
-          pixelOffset={[0, -12]}
+          pixelOffset={[0, -14]}
           className="portfolio-map-iw"
-          style={{ padding: 14, maxWidth: 288 }}
+          style={iwStyleSingle}
           onClose={closeSinglePopup}
           onCloseClick={closeSinglePopup}
         >
-          <PortfolioMapPopupBody it={singleInfo.unit} />
+          <PortfolioMapPopupBody it={singleInfo.unit} theme={theme} />
         </InfoWindow>
       ) : null}
       {!preview && clusterInfo ? (
@@ -456,20 +498,17 @@ function PortfolioMapMarkersAndCluster({
           position={clusterInfo.position}
           shouldFocus={false}
           disableAutoPan
-          pixelOffset={[0, -12]}
+          pixelOffset={[0, -14]}
           className="portfolio-map-iw"
-          style={{ padding: 14, maxWidth: 368 }}
+          style={iwStyleCluster}
           onClose={closeClusterPopup}
           onCloseClick={closeClusterPopup}
         >
           <PortfolioClusterListContent
             units={clusterInfo.units}
-            onOpenUnit={(unitId) => {
-              setClusterInfo(null);
-              onClusterPopupClose();
-              navigate(`/admin/units/${encodeURIComponent(unitId)}`);
-            }}
+            onOpenUnit={handleClusterOpenUnit}
             onHoverUnit={onHoverUnit}
+            theme={theme}
           />
         </InfoWindow>
       ) : null}
@@ -477,7 +516,8 @@ function PortfolioMapMarkersAndCluster({
   );
 }
 
-function PortfolioMapPopupBody({ it }) {
+function PortfolioMapPopupBody({ it, theme }) {
+  const isDark = theme === "dark";
   const shortId = String(it.short_unit_id || it.unit_id || "").trim() || "—";
   const city = String(it.city || "").trim();
   const line1 =
@@ -488,40 +528,78 @@ function PortfolioMapPopupBody({ it }) {
         : city || "—";
 
   const coLivingExtra = portfolioMapCoLivingOccSummary(it);
+  const coLiving = isCoLivingType(it.type);
 
   const addressLine = String(it.address || "").trim();
   const postal = String(it.postal_code || "").trim();
   const postalCity = [postal, city].filter(Boolean).join(" ");
 
+  const titleCls = isDark ? "text-[15px] font-bold leading-snug text-white" : "text-[15px] font-bold leading-snug text-slate-950";
+  const statusFill = portfolioMapMarkerFill(it.map_status);
+  const statusRowCls = isDark
+    ? "flex items-center gap-2.5 rounded-md border border-white/[0.1] bg-[#111a2a] px-2.5 py-2"
+    : "flex items-center gap-2.5 rounded-md border border-slate-200/90 bg-slate-50 px-2.5 py-2";
+  const statusLabelCls = isDark ? "text-[13px] font-semibold text-[#f1f5ff]" : "text-[13px] font-semibold text-slate-900";
+  const addrCls = isDark ? "text-[13px] font-medium leading-snug text-[#c8d4ee]" : "text-[13px] font-medium leading-snug text-slate-700";
+  const postalCls = isDark ? "text-[12px] text-[#94a3c8]" : "text-[12px] text-slate-600";
+  const linkCls = isDark
+    ? "mt-2 inline-flex w-full cursor-pointer items-center justify-center rounded-md border border-sky-500/35 bg-sky-950/30 px-2 py-2 text-[12px] font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-950/50"
+    : "mt-2 inline-flex w-full cursor-pointer items-center justify-center rounded-md border border-sky-200 bg-sky-50 px-2 py-2 text-[12px] font-semibold text-sky-800 transition-colors hover:border-sky-300 hover:bg-sky-100";
+
   return (
-    <div className="pointer-events-auto min-w-[200px] max-w-[260px] select-text space-y-1.5 text-[13px] leading-snug text-[#0f172a] dark:text-[#f1f5ff]">
-      <p className="font-semibold text-slate-950 dark:text-white">{line1}</p>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <PortfolioMapUnitTypeBadge apiType={it.type} />
+    <PortfolioMapInfowindowChrome theme={theme}>
+      <div className="min-w-[220px] max-w-[280px] space-y-2.5">
+        <p className={titleCls}>{line1}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <PortfolioMapUnitTypeBadge apiType={it.type} theme={theme} />
+        </div>
+        {coLivingExtra ? (
+          <div
+            className={
+              isDark
+                ? "rounded-md border border-white/[0.1] bg-[#111a2a] px-2.5 py-2"
+                : "rounded-md border border-slate-200/90 bg-slate-50 px-2.5 py-2"
+            }
+          >
+            {coLiving ? (
+              <p className={isDark ? "text-[10px] font-semibold uppercase tracking-wide text-[#8b9cc4]" : "text-[10px] font-semibold uppercase tracking-wide text-slate-500"}>
+                Belegung
+              </p>
+            ) : null}
+            <p
+              className={
+                coLiving
+                  ? isDark
+                    ? "mt-0.5 text-[13px] font-semibold tabular-nums text-[#f8fafc]"
+                    : "mt-0.5 text-[13px] font-semibold tabular-nums text-slate-900"
+                  : isDark
+                    ? "text-[13px] font-semibold text-[#f1f5ff]"
+                    : "text-[13px] font-semibold text-slate-900"
+              }
+            >
+              {coLivingExtra}
+            </p>
+          </div>
+        ) : null}
+        <div className={statusRowCls}>
+          <span
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ring-2 ${isDark ? "ring-white/25" : "ring-white shadow-sm"}`}
+            style={{ backgroundColor: statusFill }}
+            aria-hidden
+          />
+          <span className={statusLabelCls}>{it.map_status_label}</span>
+        </div>
+        {addressLine ? <p className={addrCls}>{addressLine}</p> : null}
+        {postalCity ? <p className={postalCls}>{postalCity}</p> : null}
+        <Link
+          to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
+          className={linkCls}
+          onClick={(e) => e.stopPropagation()}
+        >
+          Einheit öffnen
+        </Link>
       </div>
-      {coLivingExtra ? (
-        <p className="text-[12px] text-slate-600 dark:text-[#9aaccc]">{coLivingExtra}</p>
-      ) : null}
-      <div className="flex items-center gap-1.5 pt-0.5">
-        <span className="text-[15px] leading-none" aria-hidden>
-          {portfolioMapStatusEmoji(it.map_status)}
-        </span>
-        <span className="font-medium text-slate-800 dark:text-[#dbe4fb]">{it.map_status_label}</span>
-      </div>
-      {addressLine ? (
-        <p className="pt-0.5 text-slate-600 dark:text-[#b6c4e3]">{addressLine}</p>
-      ) : null}
-      {postalCity ? (
-        <p className="text-[12px] text-slate-500 dark:text-[#8b9ab8]">{postalCity}</p>
-      ) : null}
-      <Link
-        to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
-        className="mt-1 inline-flex w-full cursor-pointer items-center rounded-md border border-transparent px-2 py-1.5 text-[12px] font-semibold text-sky-700 transition-colors hover:border-sky-300/80 hover:bg-sky-50 dark:text-sky-300 dark:hover:border-sky-500/50 dark:hover:bg-sky-950/40"
-        onClick={(e) => e.stopPropagation()}
-      >
-        Einheit öffnen
-      </Link>
-    </div>
+    </PortfolioMapInfowindowChrome>
   );
 }
 
