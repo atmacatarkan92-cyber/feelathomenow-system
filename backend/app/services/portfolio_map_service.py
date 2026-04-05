@@ -105,6 +105,24 @@ def _property_coords(prop: Optional[Property]) -> Tuple[Optional[float], Optiona
     return la, lo
 
 
+def resolve_portfolio_map_coordinates(
+    unit: Unit,
+    prop: Optional[Property],
+) -> Tuple[Optional[float], Optional[float], str]:
+    """
+    Resolve map pin coordinates for one portfolio row.
+
+    Target model (when schema allows): unit-first, then property fallback, else none.
+    Current behavior: same as historical logic — Property.lat / Property.lng only.
+    The ``unit`` argument is reserved for a future unit-level coordinate branch.
+    """
+    _ = unit  # reserved for unit lat/lng once persisted on Unit
+    lat, lng = _property_coords(prop)
+    if lat is not None and lng is not None:
+        return lat, lng, "property"
+    return None, None, "none"
+
+
 def build_portfolio_map_payload(
     session: Session,
     org_id: str,
@@ -150,7 +168,7 @@ def build_portfolio_map_payload(
         summary_status[mstatus] = summary_status.get(mstatus, 0) + 1
 
         prop = properties_by_id.get(str(u.property_id)) if u.property_id else None
-        lat, lng = _property_coords(prop)
+        lat, lng, coord_src = resolve_portfolio_map_coordinates(u, prop)
         has_coords = lat is not None and lng is not None
         if has_coords:
             plotted += 1
@@ -173,7 +191,7 @@ def build_portfolio_map_payload(
                 "latitude": lat,
                 "longitude": lng,
                 "has_coordinates": has_coords,
-                "coordinate_source": "property" if has_coords else "none",
+                "coordinate_source": coord_src,
                 "map_status": mstatus,
                 "map_status_label": MAP_STATUS_LABELS_DE.get(mstatus, mstatus),
             }
