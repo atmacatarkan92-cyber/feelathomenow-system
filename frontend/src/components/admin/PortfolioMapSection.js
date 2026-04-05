@@ -15,7 +15,6 @@ import {
 } from "@vis.gl/react-google-maps";
 
 import { fetchAdminPortfolioMap, sanitizeClientErrorMessage } from "../../api/adminData";
-import { useTheme } from "../../contexts/ThemeContext";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 /** Portfolio map filter query keys (namespaced; avoids clashes on Unternehmensübersicht). */
@@ -38,6 +37,19 @@ const DEFAULT_ZOOM = 7;
 /** Stable references — @vis.gl InfoWindow re-runs open/close effect when pixelOffset identity changes; inline arrays cause close on every parent re-render (e.g. cluster list hover). */
 const PORTFOLIO_MAP_IW_PIXEL_OFFSET_SINGLE = Object.freeze([0, -14]);
 const PORTFOLIO_MAP_IW_PIXEL_OFFSET_CLUSTER = Object.freeze([0, -10]);
+
+/** Google Maps dark basemap (portfolio map visual only). */
+const PORTFOLIO_MAP_DARK_STYLES = Object.freeze([
+  { elementType: "geometry", stylers: [{ color: "#0d1018" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#2a3250" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0d1018" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1a2038" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#1e2840" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0a1525" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#1e2738" }] },
+]);
 
 /**
  * Cluster list sort: operational priority (backend map_status today: vacant | notice | occupied | landlord_ended).
@@ -73,15 +85,15 @@ function portfolioMapStopMapMouseEvent(event) {
   if (raw && typeof raw.preventDefault === "function") raw.preventDefault();
 }
 
-/** Marker fill colors (Google circle symbols). */
+/** Marker status colors (map pins / UI — visual palette). */
 function portfolioMapMarkerFill(mapStatus) {
   switch (mapStatus) {
     case "occupied":
-      return "#22c55e";
+      return "#4ade80";
     case "vacant":
-      return "#ef4444";
+      return "#f87171";
     case "notice":
-      return "#f59e0b";
+      return "#fbbf24";
     case "landlord_ended":
       return "#6b7280";
     default:
@@ -89,15 +101,45 @@ function portfolioMapMarkerFill(mapStatus) {
   }
 }
 
+function portfolioMapMarkerPinBackdrop(mapStatus) {
+  switch (mapStatus) {
+    case "occupied":
+      return "#0d2218";
+    case "vacant":
+      return "#1a0808";
+    case "notice":
+      return "#1a1500";
+    case "landlord_ended":
+      return "#141824";
+    default:
+      return "#141824";
+  }
+}
+
+function portfolioMapPinLabelAbbrev(mapStatus) {
+  switch (mapStatus) {
+    case "occupied":
+      return "BL";
+    case "vacant":
+      return "FR";
+    case "notice":
+      return "BF";
+    case "landlord_ended":
+      return "VB";
+    default:
+      return "—";
+  }
+}
+
 function SectionCard({ title, subtitle, children, rightSlot = null, hideHeader = false }) {
   return (
-    <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+    <div className="rounded-[14px] border border-[#1e2130] bg-[#11131a] p-5">
       {!hideHeader ? (
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
+            <h3 className="text-lg font-semibold text-[#c5cbe0]">{title}</h3>
             {subtitle ? (
-              <p className="mt-1 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
+              <p className="mt-1 text-sm text-[#6b7a9a]">{subtitle}</p>
             ) : null}
           </div>
           {rightSlot}
@@ -149,32 +191,20 @@ function portfolioMapClusterSecondaryLine(it) {
   return String(it.map_status_label || "").trim() || "—";
 }
 
-function PortfolioMapUnitTypeBadge({ apiType, theme }) {
+function PortfolioMapUnitTypeBadge({ apiType }) {
   const label = portfolioMapTypeLabel(apiType);
-  const isDark = theme === "dark";
   return (
-    <span
-      className={
-        isDark
-          ? "inline-flex max-w-full shrink-0 items-center rounded-md border border-white/[0.14] bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#e2ebff]"
-          : "inline-flex max-w-full shrink-0 items-center rounded-md border border-slate-200/90 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-slate-700"
-      }
-    >
+    <span className="inline-flex max-w-full shrink-0 items-center rounded-[20px] border border-[#1e2738] bg-[#181c28] px-2 py-0.5 text-[10px] font-semibold leading-none text-[#c5cbe0]">
       {label}
     </span>
   );
 }
 
 /** Stops map from receiving clicks (closes InfoWindow); bubble phase so buttons/links still work. */
-function PortfolioMapInfowindowChrome({ theme, children }) {
-  const isDark = theme === "dark";
+function PortfolioMapInfowindowChrome({ children }) {
   return (
     <div
-      className={
-        isDark
-          ? "pointer-events-auto max-w-[min(360px,92vw)] select-text rounded-lg border border-white/[0.12] bg-[#0c1220] p-3 text-[13px] leading-snug text-[#f1f5ff] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
-          : "pointer-events-auto max-w-[min(360px,92vw)] select-text rounded-lg border border-slate-200/95 bg-white p-3 text-[13px] leading-snug text-slate-900 shadow-md"
-      }
+      className="pointer-events-auto max-w-[min(360px,92vw)] select-text rounded-[12px] border border-[#2a3250] bg-[#181c28] p-4 text-[13px] leading-snug text-[#c5cbe0] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
@@ -183,24 +213,19 @@ function PortfolioMapInfowindowChrome({ theme, children }) {
   );
 }
 
-function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit, theme }) {
-  const isDark = theme === "dark";
-  const headCls = isDark
-    ? "mb-3 border-b border-white/[0.12] pb-3"
-    : "mb-3 border-b border-slate-200/90 pb-3";
-  const titleCls = isDark ? "text-[14px] font-bold leading-tight text-white" : "text-[14px] font-bold leading-tight text-slate-950";
-  const cardCls = isDark
-    ? "rounded-lg border border-white/[0.1] bg-[#111a2a] p-2.5 transition-colors hover:border-sky-400/35 hover:bg-[#141f33]"
-    : "rounded-lg border border-slate-200/90 bg-slate-50 p-2.5 transition-colors hover:border-sky-400/50 hover:bg-white";
-  const idCls = isDark ? "font-semibold text-[#f8fafc]" : "font-semibold text-slate-900";
-  const secCls = isDark ? "text-[12px] font-medium text-[#e2e8fb]" : "text-[12px] font-medium text-slate-800";
-  const locCls = isDark ? "mt-1 text-[11px] text-[#a8b8d8]" : "mt-1 text-[11px] text-slate-600";
-  const btnCls = isDark
-    ? "mt-2 w-full cursor-pointer rounded-md border border-sky-500/30 bg-sky-950/25 px-2 py-1.5 text-left text-[12px] font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-950/50"
-    : "mt-2 w-full cursor-pointer rounded-md border border-sky-200/90 bg-sky-50/80 px-2 py-1.5 text-left text-[12px] font-semibold text-sky-800 transition-colors hover:border-sky-300 hover:bg-sky-100";
+function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit }) {
+  const headCls = "mb-3 border-b border-[#1e2130] pb-3";
+  const titleCls = "text-[14px] font-bold leading-tight text-[#c5cbe0]";
+  const cardCls =
+    "rounded-[10px] border border-[#1e2738] bg-[#181c28] p-3 transition-colors hover:border-[#2a3250] hover:bg-[#1d2235]";
+  const idCls = "font-semibold text-[#c5cbe0]";
+  const secCls = "text-[12px] font-medium text-[#c5cbe0]";
+  const locCls = "mt-1 text-[11px] text-[#4b5563]";
+  const btnCls =
+    "mt-2 w-full cursor-pointer rounded-md border border-[#3b5fcf]/40 bg-[#1a2140]/50 px-2 py-2 text-left text-[12px] font-semibold text-[#60a5fa] transition-colors hover:border-[#5b8cf8]/60 hover:bg-[#1a2140]";
 
   return (
-    <PortfolioMapInfowindowChrome theme={theme}>
+    <PortfolioMapInfowindowChrome>
       <div className={headCls}>
         <p className={titleCls}>{units.length} Einheiten an diesem Standort</p>
       </div>
@@ -218,11 +243,11 @@ function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit, theme }) 
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className={idCls}>{shortId}</span>
-                  <span className={isDark ? "text-[#647896]" : "text-slate-400"} aria-hidden>
+                  <span className="text-[#4b5563]" aria-hidden>
                     ·
                   </span>
                   <span className={secCls}>{portfolioMapClusterSecondaryLine(it)}</span>
-                  <PortfolioMapUnitTypeBadge apiType={it.type} theme={theme} />
+                  <PortfolioMapUnitTypeBadge apiType={it.type} />
                 </div>
                 {loc ? <p className={locCls}>{loc}</p> : null}
                 <button
@@ -244,29 +269,29 @@ function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit, theme }) 
   );
 }
 
-/** Cluster badge: strong border/shadow/count for visibility on light maps (restrained, not cartoonish). */
+/** Cluster count badge (dark map). */
 const portfolioMapClusterRenderer = {
   render(cluster, _stats, _map) {
     const count = cluster.count;
     const position = cluster.position;
     const fid = `pmc_${count}_${Math.round(position.lat() * 1e5)}_${Math.round(position.lng() * 1e5)}`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
       <defs>
-        <filter id="${fid}" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#0f172a" flood-opacity="0.42"/>
+        <filter id="${fid}" x="-45%" y="-45%" width="190%" height="190%">
+          <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.55"/>
         </filter>
       </defs>
-      <circle cx="48" cy="48" r="28" fill="#0f172a" opacity="0.12"/>
-      <circle cx="48" cy="48" r="26" fill="#ffffff" stroke="#0f172a" stroke-width="3.25" filter="url(#${fid})"/>
-      <text x="48" y="56" text-anchor="middle" font-size="18" font-weight="800" fill="#0f172a" font-family="system-ui,-apple-system,sans-serif">${count}</text>
+      <circle cx="50" cy="50" r="32" fill="#11131a" stroke="#1e2130" stroke-width="2.5" filter="url(#${fid})"/>
+      <circle cx="50" cy="50" r="27" fill="#181c28" stroke="#2a3250" stroke-width="2"/>
+      <text x="50" y="59" text-anchor="middle" font-size="20" font-weight="800" fill="#c5cbe0" font-family="ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace">${count}</text>
     </svg>`;
     return new globalThis.google.maps.Marker({
       position,
       cursor: "pointer",
       icon: {
         url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-        scaledSize: new globalThis.google.maps.Size(52, 52),
-        anchor: new globalThis.google.maps.Point(26, 26),
+        scaledSize: new globalThis.google.maps.Size(54, 54),
+        anchor: new globalThis.google.maps.Point(27, 27),
       },
       zIndex: Number(globalThis.google.maps.Marker.MAX_ZINDEX) + count,
       title: `${count} Einheiten`,
@@ -275,37 +300,41 @@ const portfolioMapClusterRenderer = {
 };
 
 /**
- * Property-style pin (status-colored body + subtle building glyph). Anchor at pin tip.
- * Status colors unchanged: occupied / vacant / notice / landlord_ended.
+ * Property-style pin: dark pin body, pulsing status dot, label pill (visual only).
  */
 function buildPropertyMarkerIcon(it, activeUnitId, hoverUnitId) {
   const fill = portfolioMapMarkerFill(it.map_status);
+  const backdrop = portfolioMapMarkerPinBackdrop(it.map_status);
+  const abbrev = portfolioMapPinLabelAbbrev(it.map_status);
   const uid = it.unit_id;
   const active = activeUnitId === uid;
   const hover = hoverUnitId === uid;
   const rid = `pmp_${String(uid).replace(/\W/g, "_").slice(0, 40)}`;
-  const scale = active ? 1.1 : hover ? 1.05 : 1;
+  const scale = active ? 1.08 : hover ? 1.04 : 1;
   const ring = active
-    ? `<ellipse cx="24" cy="21" rx="19" ry="19" fill="none" stroke="#0f172a" stroke-width="2" stroke-opacity="0.22"/>`
+    ? `<circle cx="24" cy="19" r="20" fill="none" stroke="#3b5fcf" stroke-width="2" opacity="0.9"/>`
     : "";
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 56" width="48" height="56">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 70" width="48" height="70">
     <defs>
-      <filter id="${rid}_sh" x="-45%" y="-45%" width="190%" height="190%">
-        <feDropShadow dx="0" dy="2" stdDeviation="2.75" flood-color="#0f172a" flood-opacity="0.34"/>
+      <filter id="${rid}_sh" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.45"/>
       </filter>
     </defs>
-    <g transform="translate(24 26) scale(${scale}) translate(-24 -26)" filter="url(#${rid}_sh)">
+    <g transform="translate(24 22) scale(${scale}) translate(-24 -22)" filter="url(#${rid}_sh)">
       ${ring}
-      <path d="M24 3C14.06 3 7 10.06 7 19c0 10.5 17 31 17 31s17-20.5 17-31C41 10.06 33.94 3 24 3z" fill="${fill}" stroke="#ffffff" stroke-width="2.5"/>
-      <path d="M17 19h14v11H17z" fill="#ffffff" fill-opacity="0.95"/>
-      <path d="M15 19l9-6.5 9 6.5" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
-      <rect x="21" y="23" width="6" height="7" rx="0.6" fill="${fill}" fill-opacity="0.45"/>
+      <path d="M24 3C14.06 3 7 10.06 7 19c0 10.5 17 31 17 31s17-20.5 17-31C41 10.06 33.94 3 24 3z" fill="${backdrop}" stroke="${fill}" stroke-width="2.5"/>
+      <circle cx="24" cy="19" r="7.5" fill="${fill}" stroke="#0d1018" stroke-width="1">
+        <animate attributeName="opacity" values="0.72;1;0.72" dur="1.6s" repeatCount="indefinite"/>
+      </circle>
+      <rect x="20" y="22" width="8" height="9" rx="1" fill="#0d1018" opacity="0.45"/>
     </g>
+    <rect x="7" y="52" width="34" height="15" rx="7.5" fill="#181c28" stroke="#1e2738" stroke-width="1"/>
+    <text x="24" y="63" text-anchor="middle" font-size="9" font-weight="800" fill="${fill}" font-family="system-ui,sans-serif">${abbrev}</text>
   </svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new globalThis.google.maps.Size(40, 46),
-    anchor: new globalThis.google.maps.Point(20, 44),
+    scaledSize: new globalThis.google.maps.Size(44, 64),
+    anchor: new globalThis.google.maps.Point(22, 62),
   };
 }
 
@@ -326,7 +355,6 @@ function PortfolioMapMarkersAndCluster({
   const clustererRef = useRef(null);
   const markersRef = useRef([]);
   const navigate = useNavigate();
-  const { theme } = useTheme();
 
   const [singleInfo, setSingleInfo] = useState(null);
   const [clusterInfo, setClusterInfo] = useState(null);
@@ -508,7 +536,7 @@ function PortfolioMapMarkersAndCluster({
           onClose={closeSinglePopup}
           onCloseClick={closeSinglePopup}
         >
-          <PortfolioMapPopupBody it={singleInfo.unit} theme={theme} />
+          <PortfolioMapPopupBody it={singleInfo.unit} />
         </InfoWindow>
       ) : null}
       {!preview && clusterInfo ? (
@@ -526,7 +554,6 @@ function PortfolioMapMarkersAndCluster({
             units={clusterInfo.units}
             onOpenUnit={handleClusterOpenUnit}
             onHoverUnit={onHoverUnit}
-            theme={theme}
           />
         </InfoWindow>
       ) : null}
@@ -534,8 +561,20 @@ function PortfolioMapMarkersAndCluster({
   );
 }
 
-function PortfolioMapPopupBody({ it, theme }) {
-  const isDark = theme === "dark";
+function portfolioMapPopupStatusBadgeClasses(mapStatus) {
+  switch (mapStatus) {
+    case "occupied":
+      return "border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.1)] text-[#4ade80]";
+    case "notice":
+      return "border border-[rgba(251,191,36,0.2)] bg-[rgba(251,191,36,0.1)] text-[#fbbf24]";
+    case "vacant":
+      return "border border-[rgba(248,113,113,0.2)] bg-[rgba(248,113,113,0.1)] text-[#f87171]";
+    default:
+      return "border border-[#1e2738] bg-[#181c28] text-[#94a3b8]";
+  }
+}
+
+function PortfolioMapPopupBody({ it }) {
   const shortId = String(it.short_unit_id || it.unit_id || "").trim() || "—";
   const city = String(it.city || "").trim();
   const line1 =
@@ -552,66 +591,39 @@ function PortfolioMapPopupBody({ it, theme }) {
   const postal = String(it.postal_code || "").trim();
   const postalCity = [postal, city].filter(Boolean).join(" ");
 
-  const titleCls = isDark ? "text-[15px] font-bold leading-snug text-white" : "text-[15px] font-bold leading-snug text-slate-950";
-  const statusFill = portfolioMapMarkerFill(it.map_status);
-  const statusRowCls = isDark
-    ? "flex items-center gap-2.5 rounded-md border border-white/[0.1] bg-[#111a2a] px-2.5 py-2"
-    : "flex items-center gap-2.5 rounded-md border border-slate-200/90 bg-slate-50 px-2.5 py-2";
-  const statusLabelCls = isDark ? "text-[13px] font-semibold text-[#f1f5ff]" : "text-[13px] font-semibold text-slate-900";
-  const addrCls = isDark ? "text-[13px] font-medium leading-snug text-[#c8d4ee]" : "text-[13px] font-medium leading-snug text-slate-700";
-  const postalCls = isDark ? "text-[12px] text-[#94a3c8]" : "text-[12px] text-slate-600";
-  const linkCls = isDark
-    ? "mt-2 inline-flex w-full cursor-pointer items-center justify-center rounded-md border border-sky-500/35 bg-sky-950/30 px-2 py-2 text-[12px] font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-950/50"
-    : "mt-2 inline-flex w-full cursor-pointer items-center justify-center rounded-md border border-sky-200 bg-sky-50 px-2 py-2 text-[12px] font-semibold text-sky-800 transition-colors hover:border-sky-300 hover:bg-sky-100";
+  const badgeCls = `inline-flex max-w-full items-center rounded-[20px] px-2 py-0.5 text-[10px] font-semibold ${portfolioMapPopupStatusBadgeClasses(it.map_status)}`;
 
   return (
-    <PortfolioMapInfowindowChrome theme={theme}>
-      <div className="min-w-[220px] max-w-[280px] space-y-2.5">
-        <p className={titleCls}>{line1}</p>
+    <PortfolioMapInfowindowChrome>
+      <div className="min-w-[220px] max-w-[280px] space-y-3">
+        <p className="text-[15px] font-bold leading-snug text-[#c5cbe0]">{line1}</p>
         <div className="flex flex-wrap items-center gap-1.5">
-          <PortfolioMapUnitTypeBadge apiType={it.type} theme={theme} />
+          <PortfolioMapUnitTypeBadge apiType={it.type} />
         </div>
         {coLivingExtra ? (
-          <div
-            className={
-              isDark
-                ? "rounded-md border border-white/[0.1] bg-[#111a2a] px-2.5 py-2"
-                : "rounded-md border border-slate-200/90 bg-slate-50 px-2.5 py-2"
-            }
-          >
+          <div className="rounded-[10px] border border-[#1e2130] bg-[#141824] px-3 py-2">
             {coLiving ? (
-              <p className={isDark ? "text-[10px] font-semibold uppercase tracking-wide text-[#8b9cc4]" : "text-[10px] font-semibold uppercase tracking-wide text-slate-500"}>
-                Belegung
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#4b5563]">Belegung</p>
             ) : null}
-            <p
-              className={
-                coLiving
-                  ? isDark
-                    ? "mt-0.5 text-[13px] font-semibold tabular-nums text-[#f8fafc]"
-                    : "mt-0.5 text-[13px] font-semibold tabular-nums text-slate-900"
-                  : isDark
-                    ? "text-[13px] font-semibold text-[#f1f5ff]"
-                    : "text-[13px] font-semibold text-slate-900"
-              }
-            >
-              {coLivingExtra}
-            </p>
+            <p className="mt-0.5 font-mono text-[12px] font-semibold tabular-nums text-[#c5cbe0]">{coLivingExtra}</p>
           </div>
         ) : null}
-        <div className={statusRowCls}>
-          <span
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ring-2 ${isDark ? "ring-white/25" : "ring-white shadow-sm"}`}
-            style={{ backgroundColor: statusFill }}
-            aria-hidden
-          />
-          <span className={statusLabelCls}>{it.map_status_label}</span>
+        <div className="border-t border-[#1e2130] pt-3">
+          <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">Status</p>
+          <span className={`mt-1.5 ${badgeCls}`}>{it.map_status_label}</span>
         </div>
-        {addressLine ? <p className={addrCls}>{addressLine}</p> : null}
-        {postalCity ? <p className={postalCls}>{postalCity}</p> : null}
+        {addressLine ? (
+          <div className="border-t border-[#1e2130] pt-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">Adresse</p>
+            <p className="mt-1 font-mono text-[12px] leading-snug text-[#c5cbe0]">{addressLine}</p>
+          </div>
+        ) : null}
+        {postalCity ? (
+          <p className="font-mono text-[12px] text-[#c5cbe0]">{postalCity}</p>
+        ) : null}
         <Link
           to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
-          className={linkCls}
+          className="mt-1 inline-flex w-full cursor-pointer items-center justify-center rounded-[10px] border border-[#3b5fcf]/40 bg-[#1a2140]/60 px-3 py-2.5 text-[12px] font-semibold text-[#60a5fa] transition-colors hover:border-[#5b8cf8]/55 hover:bg-[#1a2140]"
           onClick={(e) => e.stopPropagation()}
         >
           Einheit öffnen
@@ -672,8 +684,9 @@ function PortfolioMapGoogleInner({
       defaultCenter={DEFAULT_CENTER}
       defaultZoom={DEFAULT_ZOOM}
       gestureHandling={preview ? "none" : "greedy"}
-      colorScheme={ColorScheme.LIGHT}
+      colorScheme={ColorScheme.DARK}
       renderingType="VECTOR"
+      styles={PORTFOLIO_MAP_DARK_STYLES}
       style={{ width: "100%", height: "100%" }}
       disableDefaultUI={preview}
       mapTypeControl={false}
@@ -812,7 +825,7 @@ export default function PortfolioMapSection({
             : "Globale Übersicht aller Einheiten · Standorte aus Liegenschaftskoordinaten"
         }
       >
-        <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Karte wird geladen…</p>
+        <p className="py-8 text-sm text-[#94a3b8]">Karte wird geladen…</p>
       </SectionCard>
     );
   }
@@ -832,7 +845,7 @@ export default function PortfolioMapSection({
         {preview ? (
           <Link
             to="/admin/portfolio-map"
-            className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+            className="mt-3 inline-flex rounded-[7px] border border-[#1e2738] bg-[#181c28] px-4 py-2 text-sm font-semibold text-[#c5cbe0] no-underline transition-colors hover:border-[#2a3250] hover:bg-[#1d2235]"
           >
             Portfolio-Karte öffnen
           </Link>
@@ -847,35 +860,88 @@ export default function PortfolioMapSection({
   const missing = Number(summary.missing_coordinates) || 0;
 
   const mapShellClass =
-    "overflow-hidden rounded-[12px] border border-slate-200/90 bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] ring-1 ring-slate-900/[0.06] dark:border-white/[0.12] dark:bg-[#1a1f2c] dark:shadow-none dark:ring-white/[0.06]";
+    "overflow-hidden rounded-[12px] border border-[#1e2130] bg-[#0d1018] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]";
 
   const mapBlock = (
     <div
-      className={preview ? `${mapShellClass} pointer-events-none` : mapShellClass}
+      className={preview ? `${mapShellClass} pointer-events-none` : `${mapShellClass} relative`}
       style={{ height: mapHeightPx }}
     >
       {!apiKey ? (
-        <div className="flex h-full items-center justify-center px-4 text-center text-sm text-amber-900 dark:text-amber-100">
-          <div className="max-w-md rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
-            <p className="font-semibold">Kartenansicht nicht verfügbar</p>
-            <p className="mt-2 text-[13px] leading-relaxed opacity-95">
-              Für die Karte wird <code className="rounded bg-black/10 px-1">REACT_APP_GOOGLE_MAPS_API_KEY</code> in der
+        <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[#fbbf24]">
+          <div className="max-w-md rounded-[10px] border border-[#fbbf24]/30 bg-[#1a1500]/40 p-4">
+            <p className="font-semibold text-[#c5cbe0]">Kartenansicht nicht verfügbar</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-[#94a3b8]">
+              Für die Karte wird <code className="rounded bg-[#181c28] px-1 text-[#c5cbe0]">REACT_APP_GOOGLE_MAPS_API_KEY</code> in der
               Frontend-Konfiguration benötigt (Maps JavaScript API). Bitte Schlüssel setzen und Anwendung neu starten.
             </p>
           </div>
         </div>
       ) : (
-        <APIProvider apiKey={apiKey} language="de" region="CH">
-          <PortfolioMapGoogleInner
-            plottedItems={plottedItems}
-            plottedItemsKey={plottedItemsKey}
-            preview={preview}
-            activeUnitId={activeUnitId}
-            clusterListHoverUnitId={clusterListHoverUnitId}
-            setActiveUnitId={setActiveUnitId}
-            setClusterListHoverUnitId={setClusterListHoverUnitId}
-          />
-        </APIProvider>
+        <>
+          <div className="h-full w-full">
+            <APIProvider apiKey={apiKey} language="de" region="CH">
+              <PortfolioMapGoogleInner
+                plottedItems={plottedItems}
+                plottedItemsKey={plottedItemsKey}
+                preview={preview}
+                activeUnitId={activeUnitId}
+                clusterListHoverUnitId={clusterListHoverUnitId}
+                setActiveUnitId={setActiveUnitId}
+                setClusterListHoverUnitId={setClusterListHoverUnitId}
+              />
+            </APIProvider>
+          </div>
+          {!preview ? (
+            <>
+              <div className="pointer-events-none absolute bottom-3 left-3 z-[2] max-w-[200px] rounded-[10px] border border-[#1e2130] bg-[rgba(17,19,26,0.92)] px-4 py-3 text-[11px] text-[#c5cbe0] shadow-lg backdrop-blur-[8px]">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.5px] text-[#4b5563]">Legende</p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#4ade80]" />
+                    <span>Belegt</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#fbbf24]" />
+                    <span>Bald frei</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#f87171]" />
+                    <span>Frei</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#6b7280]" />
+                    <span>Sonstige</span>
+                  </div>
+                </div>
+              </div>
+              <div className="pointer-events-none absolute left-1/2 top-3 z-[2] -translate-x-1/2">
+                <div className="flex items-center gap-3 rounded-[20px] border border-[#1e2130] bg-[rgba(17,19,26,0.9)] px-4 py-2 text-[11px] font-medium text-[#c5cbe0] shadow-lg backdrop-blur-sm">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#4ade80]" />
+                    <span className="font-mono tabular-nums text-[#4ade80]">
+                      {filteredItems.filter((u) => u.map_status === "occupied").length}
+                    </span>
+                  </span>
+                  <span className="text-[#1e2130]">|</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#fbbf24]" />
+                    <span className="font-mono tabular-nums text-[#fbbf24]">
+                      {filteredItems.filter((u) => u.map_status === "notice").length}
+                    </span>
+                  </span>
+                  <span className="text-[#1e2130]">|</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#f87171]" />
+                    <span className="font-mono tabular-nums text-[#f87171]">
+                      {filteredItems.filter((u) => u.map_status === "vacant").length}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </>
       )}
     </div>
   );
@@ -890,110 +956,127 @@ export default function PortfolioMapSection({
           : "Alle Einheitstypen · Statusfarben · nur Marker mit Koordinaten an der Liegenschaft"
       }
     >
-      <p className="mb-4 text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">
-        {total} Einheiten · {plotted} auf Karte · {missing} ohne Koordinaten
-      </p>
-
-      {!preview && hasActiveFilters && (
-        <p className="mb-3 text-xs text-[#64748b] dark:text-[#6b7a9a]">
-          Nach Filter: {filteredItems.length} Einheiten · {plottedItems.length} Marker
-        </p>
-      )}
-
-      {!preview ? (
-        <div className="mb-4 flex flex-wrap gap-3">
-          <div className="min-w-[140px] flex-1">
-            <label className="mb-1 block text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
-              Typ
-            </label>
-            <select
-              value={filterType}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSearchParams(
-                  (prev) => {
-                    const next = new URLSearchParams(prev);
-                    if (v === "all") next.delete(PM_QS_TYPE);
-                    else next.set(PM_QS_TYPE, v);
-                    return next;
-                  },
-                  { replace: true }
-                );
-              }}
-              className="w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
-            >
-              <option value="all">Alle</option>
-              <option value="apartments">Apartments</option>
-              <option value="coliving">Co-Living</option>
-            </select>
+      <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-8">
+        <aside className="w-full min-w-0 shrink-0 space-y-4 border-[#1e2130] xl:w-[min(100%,380px)] xl:border-r xl:pr-8">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-[8px] border border-[#1e2738] bg-[#181c28] px-3 py-2.5">
+              <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">Einheiten</p>
+              <p className="mt-1 font-mono text-[18px] font-medium leading-none text-[#4ade80]">{total}</p>
+            </div>
+            <div className="rounded-[8px] border border-[#1e2738] bg-[#181c28] px-3 py-2.5">
+              <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">Auf Karte</p>
+              <p className="mt-1 font-mono text-[18px] font-medium leading-none text-[#fbbf24]">{plotted}</p>
+            </div>
+            <div className="rounded-[8px] border border-[#1e2738] bg-[#181c28] px-3 py-2.5">
+              <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">Auslastung</p>
+              <p className="mt-1 font-mono text-[18px] font-medium leading-none text-[#60a5fa]">
+                {total > 0 ? Math.round((plotted / total) * 100) : 0}%
+              </p>
+            </div>
           </div>
-          <div className="min-w-[140px] flex-1">
-            <label className="mb-1 block text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
-              Status
-            </label>
-            <select
-              value={filterStatus}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSearchParams(
-                  (prev) => {
-                    const next = new URLSearchParams(prev);
-                    if (v === "all") next.delete(PM_QS_STATUS);
-                    else next.set(PM_QS_STATUS, v);
-                    return next;
-                  },
-                  { replace: true }
-                );
-              }}
-              className="w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
-            >
-              <option value="all">Alle</option>
-              <option value="occupied">Belegt</option>
-              <option value="vacant">Leerstand</option>
-              <option value="notice">Gekündigt</option>
-              <option value="landlord_ended">Vertrag beendet</option>
-            </select>
-          </div>
-          <div className="min-w-[160px] flex-1">
-            <label className="mb-1 block text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
-              Ort
-            </label>
-            <select
-              value={filterCity}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSearchParams(
-                  (prev) => {
-                    const next = new URLSearchParams(prev);
-                    if (v === "all") next.delete(PM_QS_CITY);
-                    else next.set(PM_QS_CITY, v);
-                    return next;
-                  },
-                  { replace: true }
-                );
-              }}
-              className="w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
-            >
-              <option value="all">Alle</option>
-              {cityOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      ) : null}
 
+          {!preview && hasActiveFilters && (
+            <p className="text-xs text-[#6b7a9a]">
+              Nach Filter: {filteredItems.length} Einheiten · {plottedItems.length} Marker
+            </p>
+          )}
+
+          {!preview ? (
+            <div className="flex flex-col gap-3">
+              <div className="min-w-0">
+                <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">
+                  Typ
+                </label>
+                <select
+                  value={filterType}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSearchParams(
+                      (prev) => {
+                        const next = new URLSearchParams(prev);
+                        if (v === "all") next.delete(PM_QS_TYPE);
+                        else next.set(PM_QS_TYPE, v);
+                        return next;
+                      },
+                      { replace: true }
+                    );
+                  }}
+                  className="w-full rounded-[7px] border border-[#1e2738] bg-[#181c28] px-3 py-2 text-[13px] text-[#c5cbe0] outline-none focus:border-[#2a3250]"
+                >
+                  <option value="all">Alle</option>
+                  <option value="apartments">Apartments</option>
+                  <option value="coliving">Co-Living</option>
+                </select>
+              </div>
+              <div className="min-w-0">
+                <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">
+                  Status
+                </label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSearchParams(
+                      (prev) => {
+                        const next = new URLSearchParams(prev);
+                        if (v === "all") next.delete(PM_QS_STATUS);
+                        else next.set(PM_QS_STATUS, v);
+                        return next;
+                      },
+                      { replace: true }
+                    );
+                  }}
+                  className="w-full rounded-[7px] border border-[#1e2738] bg-[#181c28] px-3 py-2 text-[13px] text-[#c5cbe0] outline-none focus:border-[#2a3250]"
+                >
+                  <option value="all">Alle</option>
+                  <option value="occupied">Belegt</option>
+                  <option value="vacant">Leerstand</option>
+                  <option value="notice">Gekündigt</option>
+                  <option value="landlord_ended">Vertrag beendet</option>
+                </select>
+              </div>
+              <div className="min-w-0">
+                <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.5px] text-[#4b5563]">
+                  Ort
+                </label>
+                <select
+                  value={filterCity}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSearchParams(
+                      (prev) => {
+                        const next = new URLSearchParams(prev);
+                        if (v === "all") next.delete(PM_QS_CITY);
+                        else next.set(PM_QS_CITY, v);
+                        return next;
+                      },
+                      { replace: true }
+                    );
+                  }}
+                  className="w-full rounded-[7px] border border-[#1e2738] bg-[#181c28] px-3 py-2 text-[13px] text-[#c5cbe0] outline-none focus:border-[#2a3250]"
+                >
+                  <option value="all">Alle</option>
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : null}
+        </aside>
+
+        <div className="min-w-0 flex-1 space-y-4">
       {total === 0 ? (
         <>
-          <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
+          <p className="rounded-[10px] border border-[#1e2738] bg-[#181c28] px-4 py-6 text-sm text-[#94a3b8]">
             Keine Einheiten vorhanden.
           </p>
           {preview ? (
             <Link
               to="/admin/portfolio-map"
-              className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+              className="mt-3 inline-flex rounded-[7px] border border-[#1e2738] bg-[#181c28] px-4 py-2 text-sm font-semibold text-[#c5cbe0] no-underline transition-colors hover:border-[#2a3250] hover:bg-[#1d2235]"
             >
               Portfolio-Karte öffnen
             </Link>
@@ -1001,7 +1084,7 @@ export default function PortfolioMapSection({
         </>
       ) : plotted === 0 ? (
         <>
-          <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
+          <p className="rounded-[10px] border border-[#1e2738] bg-[#181c28] px-4 py-6 text-sm text-[#94a3b8]">
             {preview
               ? "Noch keine Koordinaten an den Liegenschaften — Details und Pflege auf der Portfolio-Karte."
               : "Für diese Einheiten sind noch keine Koordinaten vorhanden. Bitte pflegen Sie die Koordinaten an der zugehörigen Liegenschaft (Admin → Liegenschaften)."}
@@ -1009,26 +1092,26 @@ export default function PortfolioMapSection({
           {preview ? (
             <Link
               to="/admin/portfolio-map"
-              className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+              className="mt-3 inline-flex rounded-[7px] border border-[#1e2738] bg-[#181c28] px-4 py-2 text-sm font-semibold text-[#c5cbe0] no-underline transition-colors hover:border-[#2a3250] hover:bg-[#1d2235]"
             >
               Portfolio-Karte öffnen
             </Link>
           ) : null}
         </>
       ) : plottedItems.length === 0 && hasActiveFilters ? (
-        <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
+        <p className="rounded-[10px] border border-[#1e2738] bg-[#181c28] px-4 py-6 text-sm text-[#94a3b8]">
           Keine Marker passen zu den aktuellen Filtern.
         </p>
       ) : (
         <>
           {missing > 0 && !hasActiveFilters && !preview ? (
-            <p className="mb-3 text-sm text-[#64748b] dark:text-[#6b7a9a]">
+            <p className="mb-3 text-sm text-[#94a3b8]">
               {missing} Einheiten haben noch keine Koordinaten und werden derzeit nicht auf der
               Karte angezeigt.
             </p>
           ) : null}
           {missing > 0 && !hasActiveFilters && preview ? (
-            <p className="mb-3 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
+            <p className="mb-3 text-[11px] text-[#94a3b8]">
               {missing} ohne Koordinaten (nicht in der Vorschau).
             </p>
           ) : null}
@@ -1036,14 +1119,14 @@ export default function PortfolioMapSection({
             <>
               <Link
                 to="/admin/portfolio-map"
-                className="group block rounded-[12px] no-underline outline-none ring-offset-2 ring-offset-white transition-shadow focus-visible:ring-2 focus-visible:ring-sky-500/60 dark:ring-offset-[#141824]"
+                className="group block rounded-[12px] no-underline outline-none ring-offset-2 ring-offset-[#0d0f14] transition-shadow focus-visible:ring-2 focus-visible:ring-[#3b5fcf]/50"
                 aria-label="Zur vollständigen Portfolio-Karte mit Filtern"
               >
                 {mapBlock}
               </Link>
               <Link
                 to="/admin/portfolio-map"
-                className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+                className="mt-3 inline-flex rounded-[7px] border border-[#1e2738] bg-[#181c28] px-4 py-2 text-sm font-semibold text-[#c5cbe0] no-underline transition-colors hover:border-[#2a3250] hover:bg-[#1d2235]"
               >
                 Portfolio-Karte öffnen
               </Link>
@@ -1053,6 +1136,8 @@ export default function PortfolioMapSection({
           )}
         </>
       )}
+        </div>
+      </div>
     </SectionCard>
   );
 }
