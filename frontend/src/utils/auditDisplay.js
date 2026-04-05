@@ -302,7 +302,7 @@ function buildUnitFlatFieldChangesFixed(entry, resolvers) {
   const oldV =
     rawOld != null && typeof rawOld === "object" && !Array.isArray(rawOld) ? rawOld : {};
   const newV =
-    rawNew != null && typeof rawNew === "object" && !Array.isArray(rawNew) ? newV : {};
+    rawNew != null && typeof rawNew === "object" && !Array.isArray(rawNew) ? rawNew : {};
   const hasOld = rawOld != null && typeof rawOld === "object" && !Array.isArray(rawOld);
   const hasNew = rawNew != null && typeof rawNew === "object" && !Array.isArray(rawNew);
   if (!hasOld || !hasNew) return [];
