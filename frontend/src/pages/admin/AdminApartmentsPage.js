@@ -23,7 +23,6 @@ import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDispla
 import {
   getUnitOccupancyStatus,
   formatOccupancyStatusDe,
-  occupancyStatusBadgeClassName,
   isLandlordContractLeaseStarted,
   sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
@@ -342,15 +341,45 @@ function calculateApartmentProfit(unit, unitCostsRows) {
 }
 
 function SectionCard({ title, subtitle, children }) {
+  const isApartment = title.includes("Business Apartments");
   return (
-    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6">
-      <div className="mb-5">
-        <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
-        {subtitle ? <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p> : null}
+    <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+      <div className="flex items-start gap-3 border-b border-[#1c2035] px-[18px] py-[14px]">
+        <div
+          className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] text-[13px] leading-none ${
+            isApartment
+              ? "border border-[rgba(157,124,244,0.2)] bg-[rgba(157,124,244,0.1)]"
+              : "border border-[rgba(34,211,238,0.2)] bg-[rgba(34,211,238,0.1)]"
+          }`}
+        >
+          {isApartment ? "🏢" : "🏠"}
+        </div>
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-[8px] text-[13px] font-medium text-[#edf0f7]">{title}</h3>
+          {subtitle ? <p className="mt-[3px] text-[10px] text-[#4a5070]">{subtitle}</p> : null}
+        </div>
       </div>
       {children}
     </div>
   );
+}
+
+/** Visual-only badge classes for admin units tables (design tokens). */
+function adminUnitsOccupancyBadgeClass(statusKey) {
+  const base = "inline-block rounded-full px-2 py-[2px] text-[9px] font-semibold ";
+  if (statusKey === "belegt") {
+    return `${base}border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] text-[#3ddc84]`;
+  }
+  if (statusKey === "frei") {
+    return `${base}border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] text-[#ff5f6d]`;
+  }
+  if (statusKey === "teilbelegt") {
+    return `${base}border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]`;
+  }
+  if (statusKey === "reserviert") {
+    return `${base}border border-[rgba(157,124,244,0.2)] bg-[rgba(157,124,244,0.1)] text-[#9d7cf4]`;
+  }
+  return `${base}border border-[#1c2035] bg-[#191c28] text-[#4a5070]`;
 }
 
 function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onDelete }) {
@@ -361,27 +390,27 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
     >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-slate-100 dark:bg-[#111520]">
+          <thead className="bg-[#10121a]">
             <tr>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Unit ID</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Ort</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">PLZ</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Typ</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Status</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Zimmer</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Umsatz (aktuell)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietkosten</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Gewinn</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Verfügbar ab</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietbeginn (Vertrag)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Aktionen</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Unit ID</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Ort</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">PLZ</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Adresse</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Typ</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Liegenschaft</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Status</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Zimmer</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Umsatz (aktuell)</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Mietkosten</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Gewinn</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Verfügbar ab</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Mietbeginn (Vertrag)</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Aktionen</th>
             </tr>
           </thead>
 
           <tbody>
-            {items.map((unit) => {
+            {items.map((unit, rowIdx) => {
               const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
               const leaseEnded =
                 String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
@@ -390,29 +419,39 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                 unitCostsByUnitId?.[String(unit.id)] ??
                 unitCostsByUnitId?.[unit.id] ??
                 [];
+              const occRooms = Number(unit.occupiedRooms) || 0;
+              const totalRooms = Number(unit.rooms) || 0;
+              let zimmerLineClass =
+                "font-mono text-[11px] text-[#4a5070]";
+              if (totalRooms > 0) {
+                if (occRooms === 0) zimmerLineClass = "font-mono text-[11px] text-[#ff5f6d]";
+                else if (occRooms === totalRooms) zimmerLineClass = "font-mono text-[11px] text-[#3ddc84]";
+                else zimmerLineClass = "font-mono text-[11px] text-[#f5a623]";
+              }
+              const profitVal = calculateApartmentProfit(unit, unitCosts);
               return (
               <tr
                 key={unit.id}
-                className={`border-b border-black/10 dark:border-white/[0.05] text-[13px] text-[#0f172a] dark:text-[#eef2ff] ${
+                className={`cursor-pointer border-b border-[#1c2035] text-[11px] text-[#8892b0] transition-colors hover:bg-[#141720] ${
                   leaseEnded ? "opacity-60" : ""
-                }`}
+                } ${rowIdx === items.length - 1 ? "border-b-0" : ""}`}
               >
-                <td className="py-4 pr-4 font-medium">
+                <td className="align-middle px-[14px] py-[11px]">
                   <Link
                     to={`/admin/units/${unit.unitId}`}
-                    className="block font-medium text-sky-700 dark:text-sky-400 hover:underline"
+                    className="block font-mono text-[11px] font-medium text-[#5b9cf6] hover:underline"
                   >
                     {getDisplayUnitId(unit)}
                   </Link>
-                  <span className="mt-0.5 block break-all text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
+                  <span className="mt-[2px] block max-w-[120px] truncate font-mono text-[8px] text-[#4a5070]">
                     {unit.unitId}
                   </span>
                 </td>
-                <td className="py-4 pr-4">{unit.place}</td>
-                <td className="py-4 pr-4">{unit.zip}</td>
-                <td className="py-4 pr-4">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-blue-700 dark:text-blue-400">{unit.address}</span>
+                <td className="align-middle px-[14px] py-[11px] text-[11px] text-[#4a5070]">{unit.place}</td>
+                <td className="align-middle px-[14px] py-[11px] text-[11px] text-[#4a5070]">{unit.zip}</td>
+                <td className="align-middle px-[14px] py-[11px]">
+                  <div className="flex items-center gap-[4px] text-[11px] text-[#5b9cf6]">
+                    <span>{unit.address}</span>
                     {unit.address ? (
                       <button
                         type="button"
@@ -423,7 +462,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                             "noopener,noreferrer"
                           )
                         }
-                        className="text-[#64748b] dark:text-[#6b7a9a] hover:text-[#0f172a] dark:hover:text-[#eef2ff]"
+                        className="text-[9px] text-[#4a5070] hover:text-[#edf0f7]"
                         title="In Google Maps öffnen"
                       >
                         📍
@@ -431,44 +470,50 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                     ) : null}
                   </div>
                 </td>
-                <td className="py-4 pr-4">{unit.type}</td>
-                <td className="py-4 pr-4">{unit.property_title || "—"}</td>
-                <td className="py-4 pr-4">
+                <td className="align-middle px-[14px] py-[11px] text-[11px] text-[#4a5070]">{unit.type}</td>
+                <td className="align-middle px-[14px] py-[11px] text-[11px] text-[#4a5070]">{unit.property_title || "—"}</td>
+                <td className="align-middle px-[14px] py-[11px]">
                   {occ == null ? (
-                    <span className="text-[#64748b] dark:text-[#6b7a9a]">—</span>
+                    <span className="text-[#4a5070]">—</span>
                   ) : (
-                    <span
-                      className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${occupancyStatusBadgeClassName(
-                        occ
-                      )}`}
-                    >
+                    <span className={adminUnitsOccupancyBadgeClass(occ)}>
                       {formatOccupancyStatusDe(occ)}
                     </span>
                   )}
                 </td>
-                <td className="py-4 pr-4">{unit.rooms}</td>
-                <td className="py-4 pr-4 font-medium text-slate-900 dark:text-[#eef2ff]">
+                <td className="align-middle px-[14px] py-[11px]">
+                  <div className={zimmerLineClass}>
+                    {occRooms} / {totalRooms}
+                  </div>
+                  <div className="mt-[2px] text-[9px] text-[#4a5070]">Zimmer belegt</div>
+                </td>
+                <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">
                   {unit.current_revenue_chf == null ? "—" : formatCurrency(unit.current_revenue_chf)}
                 </td>
-                <td className="py-4 pr-4">
+                <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">
                   {formatCurrency(runningMonthlyCostsForUnit(unit, unitCosts))}
                 </td>
-                <td className="py-4 pr-4 font-semibold text-emerald-700 dark:text-emerald-400">
-                  {(() => {
-                    const p = calculateApartmentProfit(unit, unitCosts);
-                    return p == null ? "—" : formatCurrency(p);
-                  })()}
+                <td
+                  className={`align-middle px-[14px] py-[11px] font-mono text-[11px] font-medium ${
+                    profitVal == null
+                      ? "text-[#8892b0]"
+                      : profitVal >= 0
+                        ? "text-[#3ddc84]"
+                        : "text-[#ff5f6d]"
+                  }`}
+                >
+                  {profitVal == null ? "—" : formatCurrency(profitVal)}
                 </td>
-                <td className="py-4 pr-4">{unit.availableFrom}</td>
-                <td className="py-4 pr-4">
+                <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">{unit.availableFrom}</td>
+                <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">
                   {unit.leaseStartDate || "—"}
                 </td>
-                <td className="py-4 pr-4">
+                <td className="align-middle px-[14px] py-[11px]">
                   <Link
                     to={`/admin/units/${unit.unitId}`}
-                    className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
+                    className="inline-block whitespace-nowrap rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#8892b0] transition-colors hover:border-[#242840] hover:text-[#edf0f7]"
                   >
-                    Öffnen
+                    Öffnen →
                   </Link>
                 </td>
               </tr>
@@ -477,7 +522,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
 
             {items.length === 0 && (
               <tr>
-                <td colSpan="14" className="py-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+                <td colSpan="14" className="py-8 text-center text-[11px] text-[#4a5070]">
                   Keine Apartments gefunden.
                 </td>
               </tr>
@@ -489,6 +534,16 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
   );
 }
 
+function coLivingCountCircleClass(n) {
+  const v = Number(n) || 0;
+  const base =
+    "inline-flex h-[22px] w-[22px] items-center justify-center rounded-full font-mono text-[10px] font-semibold ";
+  if (v === 0) {
+    return `${base}border border-[#1c2035] bg-[#191c28] text-[#4a5070]`;
+  }
+  return base;
+}
+
 function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onDelete }) {
   return (
     <SectionCard
@@ -497,28 +552,28 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
     >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-slate-100 dark:bg-[#111520]">
+          <thead className="bg-[#10121a]">
             <tr>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Unit ID</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Ort</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">PLZ</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Adresse</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Status</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Belegt</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Reserviert</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Frei</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Potenzial (Listen)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Einnahmen (Äquivalent)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Differenz (Listen − Äquivalent)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Deckungsbeitrag (Frontend)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietbeginn (Vertrag)</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Aktionen</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Unit ID</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Ort</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">PLZ</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Adresse</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Liegenschaft</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Status</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Belegt</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Reserviert</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Frei</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Potenzial (Listen)</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Einnahmen (Äquivalent)</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Differenz (Listen − Äquivalent)</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Deckungsbeitrag (Frontend)</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Mietbeginn (Vertrag)</th>
+              <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">Aktionen</th>
             </tr>
           </thead>
 
           <tbody>
-            {items.map((unit) => {
+            {items.map((unit, rowIdx) => {
               const metrics = getCoLivingMetrics(unit, rooms, tenancies);
               const unitCosts =
                 unitCostsByUnitId?.[String(unit.id)] ??
@@ -531,30 +586,33 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
               const leaseEnded =
                 String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
                 "ended";
+              const oc = metrics.occupiedCount;
+              const rc = metrics.reservedCount;
+              const fc = metrics.freeCount;
 
               return (
                 <tr
                   key={unit.id}
-                  className={`border-b border-black/10 dark:border-white/[0.05] text-[13px] text-[#0f172a] dark:text-[#eef2ff] ${
+                  className={`cursor-pointer border-b border-[#1c2035] text-[11px] text-[#8892b0] transition-colors hover:bg-[#141720] ${
                     leaseEnded ? "opacity-60" : ""
-                  }`}
+                  } ${rowIdx === items.length - 1 ? "border-b-0" : ""}`}
                 >
-                  <td className="py-4 pr-4 font-medium">
+                  <td className="align-middle px-[14px] py-[11px]">
                     <Link
                       to={`/admin/units/${unit.unitId}`}
-                      className="block font-medium text-sky-700 dark:text-sky-400 hover:underline"
+                      className="block font-mono text-[11px] font-medium text-[#5b9cf6] hover:underline"
                     >
                       {getDisplayUnitId(unit)}
                     </Link>
-                    <span className="mt-0.5 block break-all text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
+                    <span className="mt-[2px] block max-w-[120px] truncate font-mono text-[8px] text-[#4a5070]">
                       {unit.unitId}
                     </span>
                   </td>
-                  <td className="py-4 pr-4">{unit.place}</td>
-                <td className="py-4 pr-4">{unit.zip}</td>
-                <td className="py-4 pr-4">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-blue-700 dark:text-blue-400">{unit.address}</span>
+                  <td className="align-middle px-[14px] py-[11px] text-[11px] text-[#4a5070]">{unit.place}</td>
+                <td className="align-middle px-[14px] py-[11px] text-[11px] text-[#4a5070]">{unit.zip}</td>
+                <td className="align-middle px-[14px] py-[11px]">
+                  <div className="flex items-center gap-[4px] text-[11px] text-[#5b9cf6]">
+                    <span>{unit.address}</span>
                     {unit.address ? (
                       <button
                         type="button"
@@ -565,7 +623,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                             "noopener,noreferrer"
                           )
                         }
-                        className="text-[#64748b] dark:text-[#6b7a9a] hover:text-[#0f172a] dark:hover:text-[#eef2ff]"
+                        className="text-[9px] text-[#4a5070] hover:text-[#edf0f7]"
                         title="In Google Maps öffnen"
                       >
                         📍
@@ -573,44 +631,74 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                     ) : null}
                   </div>
                 </td>
-                <td className="py-4 pr-4">{unit.property_title || "—"}</td>
-                <td className="py-4 pr-4">
+                <td className="align-middle px-[14px] py-[11px] text-[11px] text-[#4a5070]">{unit.property_title || "—"}</td>
+                <td className="align-middle px-[14px] py-[11px]">
                   {occ == null ? (
-                    <span className="text-[#64748b] dark:text-[#6b7a9a]">—</span>
+                    <span className="text-[#4a5070]">—</span>
                   ) : (
-                    <span
-                      className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${occupancyStatusBadgeClassName(
-                        occ
-                      )}`}
-                    >
+                    <span className={adminUnitsOccupancyBadgeClass(occ)}>
                       {formatOccupancyStatusDe(occ)}
                     </span>
                   )}
                 </td>
-                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">{metrics.occupiedCount}</td>
-                  <td className="py-4 pr-4 font-semibold text-amber-600 dark:text-amber-400">{metrics.reservedCount}</td>
-                  <td className="py-4 pr-4 font-medium text-[#f87171]">{metrics.freeCount}</td>
-                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <td className="align-middle px-[14px] py-[11px]">
+                    <span
+                      className={`${coLivingCountCircleClass(oc)}${
+                        oc > 0
+                          ? " border border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.12)] text-[#3ddc84]"
+                          : ""
+                      }`}
+                    >
+                      {oc}
+                    </span>
+                  </td>
+                  <td className="align-middle px-[14px] py-[11px]">
+                    <span
+                      className={`${coLivingCountCircleClass(rc)}${
+                        rc > 0
+                          ? " border border-[rgba(157,124,244,0.25)] bg-[rgba(157,124,244,0.12)] text-[#9d7cf4]"
+                          : ""
+                      }`}
+                    >
+                      {rc}
+                    </span>
+                  </td>
+                  <td className="align-middle px-[14px] py-[11px]">
+                    <span
+                      className={`${coLivingCountCircleClass(fc)}${
+                        fc > 0
+                          ? " border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.12)] text-[#ff5f6d]"
+                          : ""
+                      }`}
+                    >
+                      {fc}
+                    </span>
+                  </td>
+                  <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">
                     {formatCurrency(metrics.fullRevenue)}
                   </td>
-                  <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">
                     {formatCurrency(metrics.currentRevenue)}
                   </td>
-                  <td className="py-4 pr-4">
+                  <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">
                     {formatCurrency(metrics.vacancyLoss)}
                   </td>
-                  <td className="py-4 pr-4 font-medium">
+                  <td
+                    className={`align-middle px-[14px] py-[11px] font-mono text-[11px] font-medium ${
+                      currentProfit >= 0 ? "text-[#3ddc84]" : "text-[#ff5f6d]"
+                    }`}
+                  >
                     {formatCurrency(currentProfit)}
                   </td>
-                  <td className="py-4 pr-4">
+                  <td className="align-middle px-[14px] py-[11px] font-mono text-[11px] text-[#edf0f7]">
                     {unit.leaseStartDate || "—"}
                   </td>
-                  <td className="py-4 pr-4">
+                  <td className="align-middle px-[14px] py-[11px]">
                     <Link
                       to={`/admin/units/${unit.unitId}`}
-                      className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
+                      className="inline-block whitespace-nowrap rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#8892b0] transition-colors hover:border-[#242840] hover:text-[#edf0f7]"
                     >
-                      Öffnen
+                      Öffnen →
                     </Link>
                   </td>
                 </tr>
@@ -619,7 +707,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
 
             {items.length === 0 && (
               <tr>
-                <td colSpan="15" className="py-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+                <td colSpan="15" className="py-8 text-center text-[11px] text-[#4a5070]">
                   Keine Co-Living Einheiten gefunden.
                 </td>
               </tr>
@@ -631,12 +719,25 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
   );
 }
 
+const KPI_VISUAL = {
+  "Units gesamt": { bar: "#5b9cf6", valueClass: "text-[20px] text-[#5b9cf6]" },
+  Apartments: { bar: "#9d7cf4", valueClass: "text-[20px] text-[#9d7cf4]" },
+  "Co-Living Units": { bar: "#22d3ee", valueClass: "text-[20px] text-[#22d3ee]" },
+  Einnahmen: { bar: "#3ddc84", valueClass: "text-[17px] text-[#edf0f7]" },
+  Deckungsbeitrag: { bar: "#f5a623", valueClass: "text-[17px] text-[#edf0f7]" },
+};
+
 function StatCard({ label, value, hint }) {
+  const cfg = KPI_VISUAL[label] || KPI_VISUAL["Units gesamt"];
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-black/10 dark:border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-white dark:bg-[#141824] p-5">
-      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
-      <p className="mt-2 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{value}</p>
-      {hint ? <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
+    <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+      <div
+        className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px]"
+        style={{ background: cfg.bar }}
+      />
+      <p className="mb-[5px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{label}</p>
+      <p className={`mb-[4px] font-mono font-medium leading-none ${cfg.valueClass}`}>{value}</p>
+      {hint ? <p className="text-[10px] leading-[1.4] text-[#4a5070]">{hint}</p> : null}
     </div>
   );
 }
@@ -1511,58 +1612,62 @@ function AdminApartmentsPage() {
     currentCoLivingRevenue - formRunningMonthlyCosts;
 
   return (
-    <div
-      data-testid="admin-apartments-page"
-      className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
-    >
-      <div className="mx-auto max-w-[min(1400px,100%)] p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
-            Apartments / Units
-          </h2>
-          <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
-            Verwalte hier alle vermietbaren Einheiten, also Apartments und
-            Co-Living Units.
+    <div data-testid="admin-apartments-page" className="min-h-screen bg-[#080a0f] text-[#edf0f7]">
+      <header className="sticky top-0 z-30 flex min-h-[50px] flex-wrap items-center justify-between gap-4 border-b border-[#1c2035] bg-[#0c0e15] px-6 py-2 backdrop-blur-md">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[14px] font-semibold text-[#edf0f7]">
+              Van<span className="text-[#5b9cf6]">tio</span>
+            </span>
+            <span className="text-[#4a5070]">·</span>
+            <span className="truncate text-[14px] font-medium text-[#edf0f7]">Apartments / Units</span>
+          </div>
+          <p className="mt-[3px] max-w-[720px] text-[10px] leading-snug text-[#4a5070]">
+            Verwalte hier alle vermietbaren Einheiten, also Apartments und Co-Living Units.
           </p>
         </div>
-
         <button
           type="button"
           onClick={handleOpenCreateModal}
-          className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-5 py-3 text-[15px] font-semibold text-white"
+          className="inline-block shrink-0 whitespace-nowrap rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]"
         >
           + Unit hinzufügen
         </button>
-      </div>
+      </header>
 
+      <div className="mx-auto max-w-[min(1400px,100%)] px-6 py-5">
       {loading && (
-        <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+        <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] p-8 text-center text-[13px] text-[#8892b0]">
           Laden…
         </div>
       )}
 
       {!loading && fetchError && (
-        <div className="rounded-[14px] border border-red-500/20 bg-red-500/10 p-8 text-center text-[#f87171]">
+        <div className="rounded-[12px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] p-8 text-center text-[13px] text-[#ff5f6d]">
           {fetchError}
         </div>
       )}
 
       {!loading && deleteError && (
-        <div className="mb-4 rounded-[10px] border border-red-500/20 bg-red-500/10 p-4 text-center text-[13px] text-[#f87171]">
+        <div className="mb-4 rounded-[10px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] p-4 text-center text-[13px] text-[#ff5f6d]">
           {deleteError}
         </div>
       )}
 
       {!loading && !fetchError && units.length === 0 && (
-        <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+        <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] p-8 text-center text-[13px] text-[#8892b0]">
           Keine Daten vorhanden
         </div>
       )}
 
       {!loading && !fetchError && units.length > 0 && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+          <div className="mb-[12px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Kennzahlen</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+
+          <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard
               label="Units gesamt"
               value={summary.totalUnits}
@@ -1579,29 +1684,49 @@ function AdminApartmentsPage() {
               hint="Mehrzimmer-Einheiten"
             />
             <StatCard
-              label="Σ Einnahmen (Mieter-Äquivalent)"
+              label="Einnahmen"
               value={formatCurrency(summary.currentRevenue)}
               hint="Summe aktiver Verträge (TenancyRevenue-Monatsäquivalent, heute). Kein Backend-KPI-Monatsumsatz."
             />
             <StatCard
-              label="Deckungsbeitrag (Übersicht)"
+              label="Deckungsbeitrag"
               value={formatCurrency(summary.currentProfit)}
               hint="Einnahmen-Äquivalent minus laufende Kosten (Frontend). Kein profit_service-Monat."
             />
           </div>
 
-          <div className="mb-6 flex flex-wrap items-center gap-4 rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6">
+          <div className="mb-[12px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Suche &amp; Filter</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+
+          <div className="mb-6 flex items-center gap-[10px] rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[16px] py-[12px]">
+            <svg
+              className="h-[14px] w-[14px] shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden
+            >
+              <path
+                d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                stroke="#4a5070"
+                strokeWidth="1.5"
+              />
+              <path d="M16.5 16.5 21 21" stroke="#4a5070" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Suche nach Unit ID, Ort, PLZ, Adresse, Typ oder Belegung…"
-              className="w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none placeholder:text-[#64748b] dark:placeholder:text-[#6b7a9a] md:w-96"
+              className="min-w-0 flex-1 border-none bg-transparent font-['DM_Sans'] text-[13px] text-[#edf0f7] outline-none placeholder:text-[#4a5070]"
             />
+            <div className="h-[20px] w-px shrink-0 bg-[#1c2035]" />
             <select
               value={propertyFilter}
               onChange={(e) => setPropertyFilter(e.target.value)}
-              className="min-w-[180px] rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-3 text-[#0f172a] dark:text-[#eef2ff] outline-none"
+              className="max-w-[min(240px,45vw)] cursor-pointer appearance-none border-none bg-transparent pr-[16px] font-['DM_Sans'] text-[12px] text-[#8892b0] outline-none"
             >
               <option value="">Alle Liegenschaften</option>
               {properties.map((p) => (
@@ -1610,7 +1735,12 @@ function AdminApartmentsPage() {
             </select>
           </div>
 
-          <div className="space-y-6">
+          <div className="mb-[12px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Business Apartments</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+
+          <div className="mb-8">
             <ApartmentTable
               items={apartmentUnits}
               rooms={rooms}
@@ -1619,7 +1749,14 @@ function AdminApartmentsPage() {
               onEdit={handleOpenEditModal}
               onDelete={handleDelete}
             />
+          </div>
 
+          <div className="mb-[12px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Co-Living Units</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+
+          <div className="space-y-6">
             <CoLivingTable
               items={coLivingUnits}
               rooms={rooms}
@@ -1631,6 +1768,7 @@ function AdminApartmentsPage() {
           </div>
         </>
       )}
+      </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -2461,7 +2599,6 @@ function AdminApartmentsPage() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
