@@ -12,77 +12,62 @@ function geocodingStatusPresentation(meta, snapshot, isCreate) {
   if (isCreate) {
     return {
       text: "Geocoding: Noch nicht berechnet",
-      className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+      className: "text-[11px] text-[#4a5070]",
     };
   }
   if (meta) {
     if (meta.status === "ok") {
       return {
         text: "Geocoding: Erfolgreich",
-        className: "text-[11px] font-medium text-emerald-600 dark:text-emerald-400",
+        className: "text-[11px] font-medium text-[#3ddc84]",
       };
     }
     if (meta.status === "skipped") {
       if (meta.reason === "unchanged") {
         return {
           text: "Geocoding: Adresse unverändert",
-          className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+          className: "text-[11px] text-[#4a5070]",
         };
       }
       if (meta.reason === "incomplete_address") {
         return {
           text: "Geocoding: Unvollständig",
-          className: "text-[11px] font-medium text-amber-600 dark:text-amber-400/95",
+          className: "text-[11px] font-medium text-[#f5a623]",
         };
       }
       if (meta.reason === "provider_unavailable") {
         return {
           text: "Geocoding: Nicht verfügbar",
-          className: "text-[11px] font-medium text-amber-700 dark:text-amber-500/90",
+          className: "text-[11px] font-medium text-[#f5a623]",
         };
       }
       return {
         text: "Geocoding: Übersprungen",
-        className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+        className: "text-[11px] text-[#4a5070]",
       };
     }
     if (meta.status === "failed") {
       return {
         text: "Geocoding: Fehlgeschlagen",
-        className: "text-[11px] font-medium text-red-600 dark:text-red-400/95",
+        className: "text-[11px] font-medium text-[#ff5f6d]",
       };
     }
   }
   if (snapshot && snapshot.lat != null && snapshot.lng != null) {
     return {
       text: "Geocoding: Koordinaten vorhanden",
-      className: "text-[11px] text-emerald-600/95 dark:text-emerald-400/85",
+      className: "text-[11px] text-[#3ddc84]",
     };
   }
   return {
     text: "Geocoding: Noch nicht berechnet",
-    className: "text-[11px] text-[#64748b] dark:text-[#6b7a9a]",
+    className: "text-[11px] text-[#4a5070]",
   };
 }
 
-const tableStyle = { width: "100%", borderCollapse: "collapse" };
-const thStyle = {
-  textAlign: "left",
-  padding: "12px 8px",
-  fontSize: "9px",
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.8px",
-};
-const thClass =
-  "border-b border-black/10 dark:border-white/[0.05] bg-slate-100 dark:bg-[#111520] text-[#64748b] dark:text-[#6b7a9a]";
-const tdStyle = {
-  padding: "12px 8px",
-};
-const tdClass = "border-b border-black/10 dark:border-white/[0.05] text-[#0f172a] dark:text-[#eef2ff]";
 const inputClass =
-  "w-full rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-2.5 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff]";
-const labelClass = "mb-1 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]";
+  "w-full rounded-[8px] border border-[#1c2035] bg-[#141720] px-2.5 py-2 text-sm text-[#edf0f7] outline-none";
+const labelClass = "mb-1 block text-[10px] font-medium text-[#4a5070]";
 
 function AdminPropertiesPage() {
   const [properties, setProperties] = useState([]);
@@ -248,81 +233,188 @@ function AdminPropertiesPage() {
 
   if (loading) {
     return (
-      <p className="min-h-[40vh] bg-[#f8fafc] px-2 py-8 text-[#64748b] dark:bg-[#07090f] dark:text-[#6b7a9a]">Lade Liegenschaften …</p>
+      <p className="min-h-[40vh] bg-[#080a0f] px-6 py-8 text-[#4a5070]">Lade Liegenschaften …</p>
     );
   }
 
+  const kpiTotal = properties.length;
+  const kpiActive = properties.filter((p) => {
+    const s = String(p.status || "").toLowerCase();
+    return s === "active" || s === "aktiv";
+  }).length;
+  const kpiInactiveArchived = properties.filter((p) => {
+    const s = String(p.status || "").toLowerCase();
+    return s === "inactive" || s === "inaktiv" || s === "archived";
+  }).length;
+
   return (
-    <div className="min-h-screen bg-[#f8fafc] px-2 py-4 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
-      <h2 className="mb-4 text-[22px] font-bold">Liegenschaften (Properties)</h2>
-      {error && (
-        <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
-      )}
-      <div className="mb-4">
+    <div className="-m-6 min-h-screen bg-[#080a0f]">
+      <div className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-[#edf0f7]">
+            Van<span className="text-[#5b9cf6]">tio</span>
+          </span>
+          <span className="text-[#4a5070]">·</span>
+          <span className="text-[14px] font-medium text-[#edf0f7]">Liegenschaften</span>
+        </div>
         <button
           type="button"
           onClick={openCreate}
-          className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 font-semibold text-white hover:opacity-95"
+          className="cursor-pointer rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]"
         >
           + Neue Liegenschaft
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824]">
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            <th className={thClass} style={thStyle}>Titel</th>
-            <th className={thClass} style={thStyle}>Adresse</th>
-            <th className={thClass} style={thStyle}>Vermieter</th>
-            <th className={thClass} style={thStyle}>Status</th>
-            <th className={thClass} style={thStyle}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {properties.length === 0 ? (
-            <tr>
-              <td colSpan={5} className={`${tdClass} text-[#64748b] dark:text-[#6b7a9a]`} style={tdStyle}>
-                Noch keine Einträge. Erstellen Sie eine neue Liegenschaft.
-              </td>
-            </tr>
-          ) : (
-            properties.map((row) => (
-              <tr key={row.id}>
-                <td className={tdClass} style={tdStyle}>{row.title || "—"}</td>
-                <td className={tdClass} style={tdStyle}>
-                  {[row.street, row.house_number, [row.zip_code, row.city].filter(Boolean).join(" ")]
-                    .filter(Boolean)
-                    .join(", ") || "—"}
-                </td>
-                <td className={tdClass} style={tdStyle}>{getLandlordLabel(row.landlord_id)}</td>
-                <td className={tdClass} style={tdStyle}>{row.status || "—"}</td>
-                <td className={tdClass} style={tdStyle}>
-                  <button
-                    type="button"
-                    onClick={() => openEdit(row)}
-                    className="cursor-pointer rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
-                  >
-                    Bearbeiten
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <div className="flex flex-col gap-4 px-6 py-5">
+        {error && (
+          <p className="text-[14px] text-[#ff5f6d]">{error}</p>
+        )}
+
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Übersicht</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#5b9cf6]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Liegenschaften gesamt
+              </p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#5b9cf6]">{kpiTotal}</p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Alle erfassten Liegenschaften</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#3ddc84]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Aktiv</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#3ddc84]">{kpiActive}</p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Aktuell aktive Liegenschaften</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#f5a623]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Inaktiv / Archiviert
+              </p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#f5a623]">
+                {kpiInactiveArchived}
+              </p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Inaktiv oder archiviert</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+          <div className="flex flex-col gap-2 border-b border-[#1c2035] px-[18px] py-[13px] sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-[13px] font-medium text-[#edf0f7]">Alle Liegenschaften</h3>
+              <p className="mt-[2px] text-[10px] text-[#4a5070]">Übersicht und Bearbeitung</p>
+            </div>
+            <span className="w-fit rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#4a5070]">
+              {properties.length} Einträge
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    Titel
+                  </th>
+                  <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    Adresse
+                  </th>
+                  <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    Vermieter
+                  </th>
+                  <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    Status
+                  </th>
+                  <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]" />
+                </tr>
+              </thead>
+              <tbody>
+                {properties.length === 0 ? (
+                  <tr className="border-b-0">
+                    <td
+                      colSpan={5}
+                      className="border-b-0 px-[18px] py-[13px] text-[12px] text-[#4a5070]"
+                    >
+                      Noch keine Einträge. Erstellen Sie eine neue Liegenschaft.
+                    </td>
+                  </tr>
+                ) : (
+                  properties.map((row, idx, arr) => {
+                    const addr = [row.street, row.house_number, [row.zip_code, row.city].filter(Boolean).join(" ")]
+                      .filter(Boolean)
+                      .join(", ");
+                    const landlord = getLandlordLabel(row.landlord_id);
+                    const st = String(row.status || "").toLowerCase();
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`cursor-pointer border-b border-[#1c2035] text-[12px] text-[#8892b0] transition-colors hover:bg-[#141720] ${
+                          idx === arr.length - 1 ? "border-b-0" : ""
+                        }`}
+                      >
+                        <td className="align-middle px-[18px] py-[13px] text-[12px] font-medium text-[#edf0f7]">
+                          {row.title || "—"}
+                        </td>
+                        <td className="align-middle px-[18px] py-[13px] text-[11px] text-[#5b9cf6]">
+                          <span className="flex items-center gap-[4px]">
+                            <span aria-hidden>📍</span>
+                            {addr || "—"}
+                          </span>
+                        </td>
+                        <td className="align-middle px-[18px] py-[13px] text-[12px] text-[#4a5070]">
+                          {landlord}
+                        </td>
+                        <td className="align-middle px-[18px] py-[13px]">
+                          {st === "archived" ? (
+                            <span className="inline-flex rounded-full border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#ff5f6d]">
+                              Archiviert
+                            </span>
+                          ) : st === "inactive" || st === "inaktiv" ? (
+                            <span className="inline-flex rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]">
+                              Inaktiv
+                            </span>
+                          ) : st === "active" || st === "aktiv" ? (
+                            <span className="inline-flex rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]">
+                              Aktiv
+                            </span>
+                          ) : (
+                            <span className="text-[12px] text-[#4a5070]">{row.status || "—"}</span>
+                          )}
+                        </td>
+                        <td className="align-middle px-[18px] py-[13px]">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(row)}
+                            className="cursor-pointer rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[4px] font-['DM_Sans'] text-[11px] text-[#8892b0] transition-all duration-150 hover:border-[#3b5fcf] hover:bg-[#1a1e2c] hover:text-[#edf0f7]"
+                          >
+                            Bearbeiten →
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {formOpen && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70"
           onClick={() => !saving && setFormOpen(false)}
         >
           <div
-            className="max-h-[90vh] w-full max-w-[420px] overflow-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6 [color-scheme:light] dark:[color-scheme:dark]"
+            className="max-h-[90vh] w-full max-w-[420px] overflow-auto rounded-[14px] border border-[#1c2035] bg-[#10121a] p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-4 text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
+            <h3 className="mb-4 text-[18px] font-bold text-[#edf0f7]">
               {editingId ? "Liegenschaft bearbeiten" : "Neue Liegenschaft"}
             </h3>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
@@ -405,7 +497,7 @@ function AdminPropertiesPage() {
                     type="button"
                     disabled={saving || geocodingRetrying}
                     onClick={handleRetryGeocode}
-                    className="rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-[12px] font-semibold text-[#0f172a] transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.12] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+                    className="rounded-[8px] border border-[#252a3a] bg-[#141720] px-3 py-2 text-[12px] font-semibold text-[#8892b0] transition-colors hover:border-[#3b5fcf] hover:bg-[#1a1e2c] hover:text-[#edf0f7] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {geocodingRetrying ? "Berechne …" : "Koordinaten erneut berechnen"}
                   </button>
@@ -436,14 +528,14 @@ function AdminPropertiesPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="rounded-[8px] border border-[rgba(91,156,246,0.35)] bg-[rgba(91,156,246,0.15)] px-4 py-2.5 font-semibold text-[#5b9cf6] hover:bg-[rgba(91,156,246,0.22)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {saving ? "Speichern …" : "Speichern"}
                 </button>
                 <button
                   type="button"
                   onClick={() => !saving && setFormOpen(false)}
-                  className="rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="rounded-[8px] border border-[#252a3a] bg-[#141720] px-4 py-2.5 font-semibold text-[#8892b0] hover:border-[#3b5fcf] hover:text-[#edf0f7]"
                 >
                   Abbrechen
                 </button>
