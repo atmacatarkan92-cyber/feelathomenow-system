@@ -9,12 +9,12 @@ without weakening customer org isolation for normal routes.
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import date, datetime, time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import desc, func
+from sqlalchemy import and_, cast, desc, func, or_, String
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
@@ -225,6 +225,88 @@ def _enrich_platform_audit_log_locations(items: list[PlatformAuditLogItem]) -> l
     return out
 
 
+def _opt_str(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return None
+    s = str(v).strip()
+    return s if s else None
+
+
+def _escape_like(s: str) -> str:
+    """Escape % and _ for LIKE/ILIKE with PostgreSQL ESCAPE '\\'."""
+    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _parse_yyyy_mm_dd(label: str, raw: str) -> date:
+    try:
+        return datetime.strptime(raw.strip(), "%Y-%m-%d").date()
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{label} must be YYYY-MM-DD",
+        ) from e
+
+
+def _platform_audit_where(
+    *,
+    q: Optional[str],
+    action: Optional[str],
+    entity_type: Optional[str],
+    organization_id: Optional[str],
+    actor: Optional[str],
+    date_from: Optional[str],
+    date_to: Optional[str],
+) -> list:
+    """Build SQLAlchemy filter conditions for platform audit list + count (same predicates)."""
+    conds: list = []
+
+    a = _opt_str(action)
+    if a is not None:
+        conds.append(AuditLog.action == a)
+
+    et = _opt_str(entity_type)
+    if et is not None:
+        conds.append(AuditLog.entity_type == et)
+
+    oid = _opt_str(organization_id)
+    if oid is not None:
+        conds.append(AuditLog.organization_id == oid)
+
+    act = _opt_str(actor)
+    if act is not None:
+        like = f"%{_escape_like(act)}%"
+        conds.append(
+            or_(
+                AuditLog.actor_email.ilike(like, escape="\\"),
+                cast(AuditLog.actor_user_id, String).ilike(like, escape="\\"),
+            )
+        )
+
+    df = _opt_str(date_from)
+    if df is not None:
+        d = _parse_yyyy_mm_dd("date_from", df)
+        conds.append(AuditLog.created_at >= datetime.combine(d, time.min))
+
+    dt = _opt_str(date_to)
+    if dt is not None:
+        d = _parse_yyyy_mm_dd("date_to", dt)
+        conds.append(AuditLog.created_at <= datetime.combine(d, time.max))
+
+    qv = _opt_str(q)
+    if qv is not None:
+        like = f"%{_escape_like(qv)}%"
+        conds.append(
+            or_(
+                AuditLog.actor_email.ilike(like, escape="\\"),
+                AuditLog.action.ilike(like, escape="\\"),
+                AuditLog.entity_type.ilike(like, escape="\\"),
+                AuditLog.entity_id.ilike(like, escape="\\"),
+            )
+        )
+
+    return conds
+
+
 @router.get("/organizations", response_model=list[OrganizationListItem])
 def list_organizations(
     _: User = Depends(require_platform_admin),
@@ -239,19 +321,36 @@ def list_organizations(
 def list_platform_audit_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
+    q: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    entity_type: Optional[str] = Query(None),
+    organization_id: Optional[str] = Query(None),
+    actor: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     _: User = Depends(require_platform_admin),
     session: Session = Depends(get_db_session),
 ) -> PlatformAuditLogsPageResponse:
     apply_pg_platform_audit_full_read(session)
-    _total_rows = session.exec(select(func.count()).select_from(AuditLog)).all()
+    conds = _platform_audit_where(
+        q=q,
+        action=action,
+        entity_type=entity_type,
+        organization_id=organization_id,
+        actor=actor,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    count_stmt = select(func.count()).select_from(AuditLog)
+    if conds:
+        count_stmt = count_stmt.where(and_(*conds))
+    _total_rows = session.exec(count_stmt).all()
     total_count = int(_total_rows[0]) if _total_rows else 0
     offset = (page - 1) * page_size
-    rows = session.exec(
-        select(AuditLog)
-        .order_by(desc(AuditLog.created_at))
-        .offset(offset)
-        .limit(page_size)
-    ).all()
+    list_stmt = select(AuditLog).order_by(desc(AuditLog.created_at))
+    if conds:
+        list_stmt = list_stmt.where(and_(*conds))
+    rows = session.exec(list_stmt.offset(offset).limit(page_size)).all()
     org_ids = {str(r.organization_id) for r in rows}
     org_names: dict[str, str] = {}
     for oid in org_ids:

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchPlatformAuditLogs } from "../../api/adminData";
+import { fetchPlatformAuditLogs, fetchPlatformOrganizations } from "../../api/adminData";
 import { auditActionLabel, formatAuditLog, formatAuditTimestamp } from "../../utils/auditDisplay";
 import { AuditChangeRows } from "../../components/admin/AuditLogVisual";
 import { buildLoginDeviceStatusMap, loginDeviceStatusLabel } from "../../utils/loginDeviceAuditStatus";
@@ -67,6 +67,31 @@ function loginDeviceBadgeClass(status) {
 const suspiciousBadgeClass =
   "inline-flex w-fit shrink-0 items-center rounded-full border border-rose-400/80 bg-rose-100 px-2 py-0.5 text-[9px] font-semibold text-rose-900 dark:border-rose-400/35 dark:bg-rose-500/15 dark:text-rose-200";
 
+const filterInputClass =
+  "min-w-0 rounded-[8px] border border-black/10 bg-slate-100 px-2.5 py-1.5 text-[12px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]";
+
+/** Common audit `action` values in this codebase (exact match filter). */
+const AUDIT_ACTION_OPTIONS = [
+  "",
+  "create",
+  "update",
+  "delete",
+  "login",
+  "impersonation_started",
+];
+
+/** Entity types used in audit writes (exact match filter). */
+const ENTITY_TYPE_OPTIONS = [
+  "",
+  "unit",
+  "tenant",
+  "owner",
+  "landlord",
+  "property_manager",
+  "inventory_item",
+  "platform",
+];
+
 /**
  * Platform admin: paginated audit log rows (cross-tenant).
  */
@@ -79,13 +104,66 @@ function PlatformAuditLogsPage() {
   const [error, setError] = useState("");
   const [selectedLog, setSelectedLog] = useState(null);
 
+  const [organizations, setOrganizations] = useState([]);
+  const [qInput, setQInput] = useState("");
+  const [q, setQ] = useState("");
+  const [action, setAction] = useState("");
+  const [entityType, setEntityType] = useState("");
+  const [organizationId, setOrganizationId] = useState("");
+  const [actorInput, setActorInput] = useState("");
+  const [actor, setActor] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchPlatformOrganizations()
+      .then((data) => {
+        if (!cancelled) setOrganizations(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setOrganizations([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const next = qInput.trim();
+      setQ(next);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(id);
+  }, [qInput]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const next = actorInput.trim();
+      setActor(next);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(id);
+  }, [actorInput]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
-    fetchPlatformAuditLogs({ page, pageSize })
+    fetchPlatformAuditLogs({
+      page,
+      pageSize,
+      q,
+      action,
+      entityType,
+      organizationId,
+      actor,
+      dateFrom,
+      dateTo,
+    })
       .then((data) => {
         if (!cancelled) {
           const items = data?.items;
@@ -102,7 +180,29 @@ function PlatformAuditLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize]);
+  }, [page, pageSize, q, action, entityType, organizationId, actor, dateFrom, dateTo]);
+
+  const hasActiveFilters =
+    qInput.trim() !== "" ||
+    action !== "" ||
+    entityType !== "" ||
+    organizationId !== "" ||
+    actorInput.trim() !== "" ||
+    dateFrom !== "" ||
+    dateTo !== "";
+
+  const resetFilters = () => {
+    setQInput("");
+    setQ("");
+    setAction("");
+    setEntityType("");
+    setOrganizationId("");
+    setActorInput("");
+    setActor("");
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+  };
 
   const loginDeviceStatusById = useMemo(() => buildLoginDeviceStatusMap(rows), [rows]);
   const suspiciousLoginById = useMemo(() => buildSuspiciousLoginAuditMap(rows), [rows]);
@@ -318,6 +418,126 @@ function PlatformAuditLogsPage() {
         </div>
       )}
 
+      <div className="mb-4 rounded-[12px] border border-black/10 bg-white p-3 dark:border-white/[0.07] dark:bg-[#141824]">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+            Filter
+          </span>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="rounded-[8px] border border-black/10 bg-[#f8fafc] px-2.5 py-1 text-[11px] font-semibold text-[#0f172a] hover:bg-black/[0.04] dark:border-white/[0.12] dark:bg-[#0c1018] dark:text-[#eef2ff] dark:hover:bg-white/[0.06]"
+          >
+            Filter zurücksetzen
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">Suche</span>
+            <input
+              type="search"
+              value={qInput}
+              onChange={(e) => setQInput(e.target.value)}
+              placeholder="Suche nach Akteur, Aktion, Entität oder ID"
+              className={filterInputClass}
+              autoComplete="off"
+            />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">Aktion</span>
+            <select
+              value={action}
+              onChange={(e) => {
+                setAction(e.target.value);
+                setPage(1);
+              }}
+              className={filterInputClass}
+            >
+              <option value="">Alle Aktionen</option>
+              {AUDIT_ACTION_OPTIONS.filter(Boolean).map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">Entitätstyp</span>
+            <select
+              value={entityType}
+              onChange={(e) => {
+                setEntityType(e.target.value);
+                setPage(1);
+              }}
+              className={filterInputClass}
+            >
+              <option value="">Alle Typen</option>
+              {ENTITY_TYPE_OPTIONS.filter(Boolean).map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">Organisation</span>
+            <select
+              value={organizationId}
+              onChange={(e) => {
+                setOrganizationId(e.target.value);
+                setPage(1);
+              }}
+              className={filterInputClass}
+            >
+              <option value="">Alle Organisationen</option>
+              {organizations.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name || o.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">Akteur</span>
+            <input
+              type="text"
+              value={actorInput}
+              onChange={(e) => setActorInput(e.target.value)}
+              placeholder="E-Mail oder User-ID"
+              className={filterInputClass}
+              autoComplete="off"
+            />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">Von Datum</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setPage(1);
+              }}
+              className={filterInputClass}
+            />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">Bis Datum</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setPage(1);
+              }}
+              className={filterInputClass}
+            />
+          </label>
+        </div>
+        {hasActiveFilters ? (
+          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#94a3b8]">Filter aktiv</p>
+        ) : null}
+      </div>
+
       {showInitialLoading ? (
         <div className="flex min-h-[120px] items-center justify-center rounded-[12px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824]">
           <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Lade …</p>
@@ -357,7 +577,7 @@ function PlatformAuditLogsPage() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-3 py-6 text-center text-[#64748b] dark:text-[#6b7a9a]">
-                    Keine Einträge.
+                    Keine Einträge gefunden
                   </td>
                 </tr>
               ) : (

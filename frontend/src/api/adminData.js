@@ -1619,12 +1619,33 @@ export async function createPlatformOrganization(body) {
   return text ? JSON.parse(text) : null;
 }
 
-/** GET /api/platform/audit-logs — platform_admin only; paginated audit feed. */
-export async function fetchPlatformAuditLogs({ page = 1, pageSize = 25 } = {}) {
-  const q = new URLSearchParams();
-  q.set("page", String(page));
-  q.set("page_size", String(pageSize));
-  const res = await fetch(`${API_BASE_URL}/api/platform/audit-logs?${q.toString()}`, {
+/** GET /api/platform/audit-logs — platform_admin only; paginated + filterable audit feed. */
+export async function fetchPlatformAuditLogs({
+  page = 1,
+  pageSize = 25,
+  q,
+  action,
+  entityType,
+  organizationId,
+  actor,
+  dateFrom,
+  dateTo,
+} = {}) {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("page_size", String(pageSize));
+  if (q != null && String(q).trim() !== "") params.set("q", String(q).trim());
+  if (action != null && String(action).trim() !== "") params.set("action", String(action).trim());
+  if (entityType != null && String(entityType).trim() !== "") {
+    params.set("entity_type", String(entityType).trim());
+  }
+  if (organizationId != null && String(organizationId).trim() !== "") {
+    params.set("organization_id", String(organizationId).trim());
+  }
+  if (actor != null && String(actor).trim() !== "") params.set("actor", String(actor).trim());
+  if (dateFrom != null && String(dateFrom).trim() !== "") params.set("date_from", String(dateFrom).trim());
+  if (dateTo != null && String(dateTo).trim() !== "") params.set("date_to", String(dateTo).trim());
+  const res = await fetch(`${API_BASE_URL}/api/platform/audit-logs?${params.toString()}`, {
     headers: getApiHeaders(),
     credentials: "include",
   });
