@@ -35,6 +35,10 @@ const PM_VALID_STATUSES = new Set([
 const DEFAULT_CENTER = { lat: 46.8, lng: 8.2 };
 const DEFAULT_ZOOM = 7;
 
+/** Stable references — @vis.gl InfoWindow re-runs open/close effect when pixelOffset identity changes; inline arrays cause close on every parent re-render (e.g. cluster list hover). */
+const PORTFOLIO_MAP_IW_PIXEL_OFFSET_SINGLE = Object.freeze([0, -14]);
+const PORTFOLIO_MAP_IW_PIXEL_OFFSET_CLUSTER = Object.freeze([0, -10]);
+
 /**
  * Cluster list sort: operational priority (backend map_status today: vacant | notice | occupied | landlord_ended).
  * "reserved" ranked for forward compatibility if ever added to map payloads.
@@ -321,7 +325,6 @@ function PortfolioMapMarkersAndCluster({
   const loaded = useApiIsLoaded();
   const clustererRef = useRef(null);
   const markersRef = useRef([]);
-  const clusterPopupOpenTimerRef = useRef(null);
   const navigate = useNavigate();
   const { theme } = useTheme();
 
@@ -423,27 +426,15 @@ function PortfolioMapMarkersAndCluster({
               .filter(Boolean);
             const sorted = [...units].sort(portfolioMapClusterSortUnits);
             const p = c.position;
-            const payload = {
+            setClusterInfo({
               position: { lat: p.lat(), lng: p.lng() },
               units: sorted,
-            };
-            if (clusterPopupOpenTimerRef.current != null) {
-              globalThis.clearTimeout(clusterPopupOpenTimerRef.current);
-            }
-            // Open after the cluster click is fully handled; otherwise the same gesture can hit the map as a click and close the InfoWindow immediately.
-            clusterPopupOpenTimerRef.current = globalThis.setTimeout(() => {
-              clusterPopupOpenTimerRef.current = null;
-              setClusterInfo(payload);
-            }, 0);
+            });
           },
     });
     clustererRef.current = clusterer;
 
     return () => {
-      if (clusterPopupOpenTimerRef.current != null) {
-        globalThis.clearTimeout(clusterPopupOpenTimerRef.current);
-        clusterPopupOpenTimerRef.current = null;
-      }
       if (clustererRef.current) {
         clustererRef.current.clearMarkers();
         clustererRef.current.setMap(null);
@@ -511,7 +502,7 @@ function PortfolioMapMarkersAndCluster({
           position={singleInfo.position}
           shouldFocus={false}
           disableAutoPan
-          pixelOffset={[0, -14]}
+          pixelOffset={PORTFOLIO_MAP_IW_PIXEL_OFFSET_SINGLE}
           className="portfolio-map-iw"
           style={iwStyleSingle}
           onClose={closeSinglePopup}
@@ -525,7 +516,7 @@ function PortfolioMapMarkersAndCluster({
           position={clusterInfo.position}
           shouldFocus={false}
           disableAutoPan
-          pixelOffset={[0, -10]}
+          pixelOffset={PORTFOLIO_MAP_IW_PIXEL_OFFSET_CLUSTER}
           className="portfolio-map-iw"
           style={iwStyleCluster}
           onClose={closeClusterPopup}
