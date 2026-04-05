@@ -772,6 +772,29 @@ export function normalizeUnit(u) {
 }
 
 /**
+ * Label for Unit select options: short id (title) · address, PLZ Ort.
+ * Degrades if address or locality missing; prefers title/name over raw UUID.
+ * @param {object|null|undefined} u - Raw unit from API
+ * @returns {string}
+ */
+export function formatUnitSelectOptionLabel(u) {
+  if (!u) return "—";
+  const nu = normalizeUnit(u);
+  const idStr = String(nu.id || nu.unitId || "").trim();
+  const shortId =
+    String(nu.title || nu.name || "").trim() ||
+    (idStr.length > 12 ? `${idStr.slice(0, 8)}…` : idStr) ||
+    "—";
+  const addr = String(nu.address || "").trim();
+  const pc = String(nu.zip || nu.postal_code || "").trim();
+  const city = String(nu.city || "").trim();
+  const placePart = [pc, city].filter(Boolean).join(" ");
+  const tail = [addr, placePart].filter(Boolean).join(", ");
+  if (tail) return `${shortId} · ${tail}`;
+  return shortId;
+}
+
+/**
  * Normalize room from API for pages that expect unitId, status, priceMonthly.
  * room.price / priceMonthly = planned target rent (Soll); actual rent is on tenancy.
  */

@@ -12,6 +12,7 @@ import {
   updateInventoryAssignment,
   deleteInventoryAssignment,
   normalizeUnit,
+  formatUnitSelectOptionLabel,
 } from "../../api/adminData";
 import { formatAuditLog, auditActorDisplay } from "../../utils/auditDisplay";
 import { AdminAuditTimeline, AdminAuditTimelineEntry } from "../../components/admin/AuditLogVisual";
@@ -913,7 +914,7 @@ export default function AdminInventoryDetailPage() {
                     const id = nu.id || nu.unitId;
                     return (
                       <option key={id} value={id}>
-                        {unitLabel(nu)}
+                        {formatUnitSelectOptionLabel(u)}
                       </option>
                     );
                   })}
@@ -1003,7 +1004,7 @@ export default function AdminInventoryDetailPage() {
                     const id = nu.id || nu.unitId;
                     return (
                       <option key={id} value={id}>
-                        {unitLabel(nu)}
+                        {formatUnitSelectOptionLabel(u)}
                       </option>
                     );
                   })}
